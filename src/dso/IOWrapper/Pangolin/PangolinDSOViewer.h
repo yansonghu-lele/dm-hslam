@@ -83,7 +83,7 @@ public:
     virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) override;
     virtual void publishSystemStatus(dmvio::SystemStatus systemStatus) override;
 
-    void addGTCamPose(const Sophus::SE3& gtPose);
+    void addGTCamPose(const Sophus::SE3d& gtPose);
 
     virtual void pushLiveFrame(FrameHessian* image) override;
     virtual void pushDepthImage(MinimalImageB3* image) override;
@@ -109,9 +109,14 @@ private:
 
 	// images rendering
 	boost::mutex openImagesMutex;
-	MinimalImageB3* internalVideoImg;
-	MinimalImageB3* internalKFImg;
-	MinimalImageB3* internalResImg;
+	std::unique_ptr<MinimalImageB3> internalVideoImg;
+	std::unique_ptr<MinimalImageB3> internalKFImg;
+	std::unique_ptr<MinimalImageB3> internalResImg;
+
+	pangolin::View *d_kfDepth;
+	pangolin::View *d_video;
+	pangolin::View *d_residual;
+	
 	bool videoImgChanged, kfImgChanged, resImgChanged;
 
 
@@ -128,6 +133,11 @@ private:
 
 
 	// render settings
+	bool setting_render_display3D;
+	bool setting_render_displayDepth;
+	bool setting_render_displayResidual;
+	bool setting_render_displayVideo;
+
 	bool settings_showKFCameras;
 	bool settings_showCurrentCamera;
 	bool settings_showTrajectory;

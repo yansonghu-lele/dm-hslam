@@ -26,6 +26,7 @@
 
 #include "util/NumType.h"
 #include "algorithm"
+#include <pangolin/pangolin.h>
 
 namespace dso
 {
@@ -126,37 +127,12 @@ public:
 	}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-private:
+protected:
 	bool ownData;
 };
 
 typedef Eigen::Matrix<unsigned char,3,1> Vec3b;
+
 typedef MinimalImage<float> MinimalImageF;
 typedef MinimalImage<Vec3f> MinimalImageF3;
 typedef MinimalImage<unsigned char> MinimalImageB;

@@ -172,14 +172,16 @@ extern float setting_trace_extraSlackOnTH;
 extern float setting_trace_slackInterval;
 extern float setting_trace_minImprovementFactor;
 
-
+// Debugging Plot Settings
 extern bool setting_render_displayCoarseTrackingFull;
 extern bool setting_render_renderWindowFrames;
 extern bool setting_render_plotTrackingFull;
-extern bool setting_render_display3D;
-extern bool setting_render_displayResidual;
-extern bool setting_render_displayVideo;
-extern bool setting_render_displayDepth;
+// Pangolin Plot Settings
+#define SETTING_RENDER_DISPLAY3D_DEFAULT true
+#define SETTING_RENDER_DISPLAYRESIDUAL_DEFAULT true
+#define SETTING_RENDER_DISPLAYVIDEO_DEFAULT true
+#define SETTING_RENDER_DISPLAYDEPTH_DEFAULT true
+
 
 extern bool setting_fullResetRequested;
 

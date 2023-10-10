@@ -52,9 +52,9 @@ PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread, std::sha
 
 	{
 		boost::unique_lock<boost::mutex> lk(openImagesMutex);
-		internalVideoImg = new MinimalImageB3(w,h);
-		internalKFImg = new MinimalImageB3(w,h);
-		internalResImg = new MinimalImageB3(w,h);
+		internalVideoImg = std::unique_ptr<MinimalImageB3>(new MinimalImageB3(w,h));
+		internalKFImg = std::unique_ptr<MinimalImageB3>(new MinimalImageB3(w,h));
+		internalResImg = std::unique_ptr<MinimalImageB3>(new MinimalImageB3(w,h));
 		videoImgChanged=kfImgChanged=resImgChanged=true;
 
 		internalVideoImg->setBlack();
@@ -106,14 +106,9 @@ void PangolinDSOViewer::run()
 
 
 	// 3 images
-	pangolin::View& d_kfDepth = pangolin::Display("imgKFDepth")
-	    .SetAspect(w/(float)h);
-
-	pangolin::View& d_video = pangolin::Display("imgVideo")
-	    .SetAspect(w/(float)h);
-
-	pangolin::View& d_residual = pangolin::Display("imgResidual")
-	    .SetAspect(w/(float)h);
+	d_kfDepth = &pangolin::Display("imgKFDepth").SetAspect(w/(float)h);
+	d_video = &pangolin::Display("imgVideo").SetAspect(w/(float)h);
+	d_residual = &pangolin::Display("imgResidual").SetAspect(w/(float)h);
 
 	pangolin::GlTexture texKFDepth(w,h,GL_RGB,false,0,GL_RGB,GL_UNSIGNED_BYTE);
 	pangolin::GlTexture texVideo(w,h,GL_RGB,false,0,GL_RGB,GL_UNSIGNED_BYTE);
@@ -123,9 +118,9 @@ void PangolinDSOViewer::run()
     pangolin::CreateDisplay()
 		  .SetBounds(0.0, 0.3, pangolin::Attach::Pix(UI_WIDTH), 1.0)
 		  .SetLayout(pangolin::LayoutEqual)
-		  .AddDisplay(d_kfDepth)
-		  .AddDisplay(d_video)
-		  .AddDisplay(d_residual);
+		  .AddDisplay(*d_kfDepth)
+		  .AddDisplay(*d_video)
+		  .AddDisplay(*d_residual);
 
 	// parameter reconfigure gui
 	pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
@@ -140,10 +135,10 @@ void PangolinDSOViewer::run()
 	pangolin::Var<bool> settings_showAllConstraints("ui.AllConst",false,true);
 
 
-	pangolin::Var<bool> settings_show3D("ui.show3D",true,true);
-	pangolin::Var<bool> settings_showLiveDepth("ui.showDepth",true,true);
-	pangolin::Var<bool> settings_showLiveVideo("ui.showVideo",true,true);
-    pangolin::Var<bool> settings_showLiveResidual("ui.showResidual",false,true);
+	pangolin::Var<bool> settings_show3D("ui.show3D",SETTING_RENDER_DISPLAY3D_DEFAULT,true);
+	pangolin::Var<bool> settings_showLiveDepth("ui.showDepth",SETTING_RENDER_DISPLAYDEPTH_DEFAULT,true);
+	pangolin::Var<bool> settings_showLiveVideo("ui.showVideo",SETTING_RENDER_DISPLAYVIDEO_DEFAULT,true);
+    pangolin::Var<bool> settings_showLiveResidual("ui.showResidual",SETTING_RENDER_DISPLAYRESIDUAL_DEFAULT,true);
 
 	pangolin::Var<bool> settings_showFramesWindow("ui.showFramesWindow",false,true);
 	pangolin::Var<bool> settings_showFullTracking("ui.showFullTracking",false,true);
@@ -280,21 +275,21 @@ void PangolinDSOViewer::run()
 
 		if(setting_render_displayVideo)
 		{
-			d_video.Activate();
+			d_video->Activate();
 			glColor4f(1.0f,1.0f,1.0f,1.0f);
 			texVideo.RenderToViewportFlipY();
 		}
 
 		if(setting_render_displayDepth)
 		{
-			d_kfDepth.Activate();
+			d_kfDepth->Activate();
 			glColor4f(1.0f,1.0f,1.0f,1.0f);
 			texKFDepth.RenderToViewportFlipY();
 		}
 
 		if(setting_render_displayResidual)
 		{
-			d_residual.Activate();
+			d_residual->Activate();
 			glColor4f(1.0f,1.0f,1.0f,1.0f);
 			texResidual.RenderToViewportFlipY();
 		}
@@ -628,7 +623,7 @@ void PangolinDSOViewer::publishSystemStatus(dmvio::SystemStatus systemStatus)
     this->systemStatus = systemStatus;
 }
 
-void PangolinDSOViewer::addGTCamPose(const Sophus::SE3& gtPose)
+void PangolinDSOViewer::addGTCamPose(const Sophus::SE3d& gtPose)
 {
 	boost::unique_lock<boost::mutex> lk(model3DMutex);
 
