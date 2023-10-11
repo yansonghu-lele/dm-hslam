@@ -26,7 +26,6 @@
 
 #include "util/NumType.h"
 #include "algorithm"
-#include <pangolin/pangolin.h>
 
 namespace dso
 {

@@ -60,6 +60,29 @@ struct GraphConnection
 	int fwdMarg, bwdMarg, fwdAct, bwdAct;
 };
 
+class InternalImageB3: public MinimalImage<Vec3b> {
+public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	pangolin::GlTexture FeatureFrameTexture;
+	bool IsTextureGood;
+	bool HaveNewImage;
+
+	InternalImageB3(int w_, int h_) : MinimalImage(w_, h_)
+	{
+		IsTextureGood = false;
+		HaveNewImage = false;
+	}
+
+	InternalImageB3(int w_, int h_, Vec3b* data_) : MinimalImage(w_, h_, data_)
+	{
+		IsTextureGood = false;
+		HaveNewImage = false;
+	}
+
+	~InternalImageB3()
+	{
+	}
+};
 
 class PangolinDSOViewer : public Output3DWrapper
 {
@@ -109,16 +132,13 @@ private:
 
 	// images rendering
 	boost::mutex openImagesMutex;
-	std::unique_ptr<MinimalImageB3> internalVideoImg;
-	std::unique_ptr<MinimalImageB3> internalKFImg;
-	std::unique_ptr<MinimalImageB3> internalResImg;
+	std::unique_ptr<InternalImageB3> internalVideoImg;
+	std::unique_ptr<InternalImageB3> internalKFImg;
+	std::unique_ptr<InternalImageB3> internalResImg;
 
 	pangolin::View *d_kfDepth;
 	pangolin::View *d_video;
 	pangolin::View *d_residual;
-	
-	bool videoImgChanged, kfImgChanged, resImgChanged;
-
 
     CalibHessian *HCalib;
 
