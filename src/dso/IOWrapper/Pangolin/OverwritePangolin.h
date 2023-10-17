@@ -45,15 +45,15 @@ namespace pangolin
 
         void Mouse(View &In_, MouseButton button, int x, int y, bool pressed, int button_state)
         {
-            float TopBound = In_.top.p;
+            float BottomBound = In_.bottom.p;
 
-            if (button == MouseWheelDown) //MouseButtonRight
-                TopBound = std::max(0.1, TopBound - 0.01);
+            if (button == MouseWheelDown)
+                BottomBound = std::max(0.5, BottomBound - 0.01);
 
-            if (button == MouseWheelUp) //MouseButtonLeft
-                TopBound = std::min(0.5, TopBound + 0.01);
+            if (button == MouseWheelUp)
+                BottomBound = std::min(0.9, BottomBound + 0.01);
 
-            In_.SetBounds(In_.bottom, TopBound, In_.left, In_.right);
+            In_.SetBounds(BottomBound, In_.top, In_.left, In_.right);
         }
 
         void MouseMotion(View &, int x, int y, int button_state)

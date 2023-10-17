@@ -119,8 +119,9 @@ void PangolinDSOViewer::run()
 	internalResImg->FeatureFrameTexture.Reinitialise(w,h,GL_RGB,false,0,GL_RGB,GL_UNSIGNED_BYTE);
 
     pangolin::CreateDisplay()
-		  .SetBounds(0.0, 0.3, pangolin::Attach::Pix(UI_WIDTH), 1.0)
+		  .SetBounds(0.7, 1.0, pangolin::Attach::Pix(UI_WIDTH), 1.0)
 		  .SetLayout(pangolin::LayoutEqual)
+		  .SetLock(pangolin::LockLeft, pangolin::LockTop)
 		  .AddDisplay(*d_kfDepth)
 		  .AddDisplay(*d_video)
 		  .AddDisplay(*d_residual)
@@ -183,6 +184,7 @@ void PangolinDSOViewer::run()
 	while(running)
 	{
 		// Clear entire screen
+		glClearColor(0.36, 0.36, 0.55, 0.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		if(setting_render_display3D)
@@ -204,11 +206,10 @@ void PangolinDSOViewer::run()
                 sizeFactor = *normalizeCamSize / transformDSOToIMU->getScale();
             }
 
-			//pangolin::glDrawColouredCube();
 			int refreshed=0;
 			for(KeyFrameDisplay* fh : keyframes)
 			{
-				float blue[3] = {0,0,1};
+				float blue[3] = {0.32,0.7,0.8};
 				if(this->settings_showKFCameras) fh->drawCam(1,blue,0.1 * sizeFactor);
 
 
@@ -218,10 +219,10 @@ void PangolinDSOViewer::run()
 			}
 			if(this->settings_showCurrentCamera) currentCam->drawCam(2,0,0.2 * sizeFactor);
 
-			float green[3] = {0,1,0};
+			float yellow[3] = {0.94,0.82,0.0};
             if(gtCamPoseSet)
             {
-                currentGTCam->drawCam(2, green, 0.2 * sizeFactor);
+                currentGTCam->drawCam(2, yellow, 0.2 * sizeFactor);
             }
 
             drawConstraints();
@@ -416,7 +417,7 @@ void PangolinDSOViewer::drawConstraints()
 	{
 		// draw constraints
 		glLineWidth(1);
-		glColor3f(0,1,0);
+		glColor3f(0.94,0.82,0.0);
 		glBegin(GL_LINES);
 
 		for(unsigned int i=0;i<connections.size();i++)
@@ -438,7 +439,7 @@ void PangolinDSOViewer::drawConstraints()
 	if(settings_showActiveConstraints)
 	{
 		glLineWidth(3);
-		glColor3f(0,0,1);
+		glColor3f(0.32,0.7,0.8);
 		glBegin(GL_LINES);
 
 		for(unsigned int i=0;i<connections.size();i++)
@@ -459,8 +460,8 @@ void PangolinDSOViewer::drawConstraints()
 
 	if(settings_showTrajectory)
 	{
-        float colorGreen[3] = {0,1,0};
-		glColor3f(colorGreen[0],colorGreen[1],colorGreen[2]);
+        float colorYellow[3] = {0.94,0.82,0.0};
+		glColor3f(colorYellow[0],colorYellow[1],colorYellow[2]);
 		glLineWidth(3);
 
 		glBegin(GL_LINE_STRIP);
@@ -475,7 +476,7 @@ void PangolinDSOViewer::drawConstraints()
 
 	if(settings_showFullTrajectory)
 	{
-        float colorRed[3] = {1,0,0};
+        float colorRed[3] = {0.875,0.1,0.3};
 		glColor3f(colorRed[0],colorRed[1],colorRed[2]);
 		glLineWidth(3);
 
@@ -489,9 +490,6 @@ void PangolinDSOViewer::drawConstraints()
 		glEnd();
 	}
 }
-
-
-
 
 
 

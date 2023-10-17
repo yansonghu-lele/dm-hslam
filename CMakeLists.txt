@@ -12,6 +12,7 @@ set(BUILD_TYPE RelWithDebInfo)
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+set(DBoW3_DIR ${PROJECT_SOURCE_DIR}/thirdparty/DBow3/build)
 
 # required libraries
 find_package(SuiteParse REQUIRED)
@@ -19,6 +20,7 @@ find_package(Eigen3 REQUIRED)
 find_package(Boost COMPONENTS system thread filesystem chrono serialization date_time timer)
 find_package(GTSAM REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(DBoW3 REQUIRED)
 
 find_package(realsense2 QUIET)
 
@@ -126,6 +128,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/src/dso
   ${PROJECT_SOURCE_DIR}/thirdparty/Sophus
   ${PROJECT_SOURCE_DIR}/thirdparty/sse2neon
+  ${PROJECT_SOURCE_DIR}/Thirdparty/DBow3
   ${EIGEN3_INCLUDE_DIR}
   ${GTSAM_INCLUDE_DIR}
 ) 
@@ -190,7 +193,16 @@ endif()
 if (OpenCV_FOUND AND Pangolin_FOUND)
 	message("--- compiling dmvio_dataset.")
 	add_executable(dmvio_dataset ${PROJECT_SOURCE_DIR}/src/main_dmvio_dataset.cpp)
-	set(DMVIO_LINKED_LIBRARIES boost_system cxsparse ${BOOST_THREAD_LIBRARY} ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS} gtsam ${YAML_CPP_LIBRARIES} ${STACKTRACE_LIBRARIES})
+	set(DMVIO_LINKED_LIBRARIES
+	 boost_system cxsparse
+	 ${BOOST_THREAD_LIBRARY}
+	 ${LIBZIP_LIBRARY}
+	 ${Pangolin_LIBRARIES}
+	 ${DBoW3_LIB_DIR}/libDBoW3.so
+	 ${OpenCV_LIBS}
+	 gtsam
+	 ${YAML_CPP_LIBRARIES}
+	 ${STACKTRACE_LIBRARIES})
     target_link_libraries(dmvio_dataset dmvio ${DMVIO_LINKED_LIBRARIES})
 
 	if(realsense2_FOUND)
