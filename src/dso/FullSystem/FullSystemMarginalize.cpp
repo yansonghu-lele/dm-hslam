@@ -219,20 +219,24 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 		frameHessians[i]->idx = i;
 
 
-    int numDel = 0;
-    for(auto it = ef->connectivityMap.begin(); it != ef->connectivityMap.end();)
-    {
-        int host = (int)(it->first >> 32);
-        int target = (int)(it->first & (uint64_t)0xFFFFFFFF);
-        if(host == frameID || target == frameID)
-        {
-            numDel++;
-            it = ef->connectivityMap.erase(it);
-        }else
-        {
-            it++;
-        }
-    }
+	// Culling the connectivity map is incompatible with viewing full constraints in GUI
+	// Culled connectivity map information is unneeded for operation and culling results in performance improvement
+	if (disableAllDisplay){
+		int numDel = 0;
+		for(auto it = ef->connectivityMap.begin(); it != ef->connectivityMap.end();)
+		{
+			int host = (int)(it->first >> 32);
+			int target = (int)(it->first & (uint64_t)0xFFFFFFFF);
+			if(host == frameID || target == frameID)
+			{
+				numDel++;
+				it = ef->connectivityMap.erase(it);
+			}else
+			{
+				it++;
+			}
+		}
+	}
 
     setPrecalcValues();
 	ef->setAdjointsF(&Hcalib);

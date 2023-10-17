@@ -176,12 +176,6 @@ extern float setting_trace_minImprovementFactor;
 extern bool setting_render_displayCoarseTrackingFull;
 extern bool setting_render_renderWindowFrames;
 extern bool setting_render_plotTrackingFull;
-// Pangolin Plot Settings
-#define SETTING_RENDER_DISPLAY3D_DEFAULT true
-#define SETTING_RENDER_DISPLAYRESIDUAL_DEFAULT true
-#define SETTING_RENDER_DISPLAYVIDEO_DEFAULT true
-#define SETTING_RENDER_DISPLAYDEPTH_DEFAULT true
-
 
 extern bool setting_fullResetRequested;
 

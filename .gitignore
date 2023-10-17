@@ -33,6 +33,8 @@
 
 
 build/
+thirdparty/
+cmake-build-relwithdebinfo/
 .vscode/
 
 *.avi

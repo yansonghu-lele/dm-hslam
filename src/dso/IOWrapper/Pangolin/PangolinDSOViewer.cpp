@@ -134,16 +134,16 @@ void PangolinDSOViewer::run()
 
 	pangolin::Var<bool> settings_showKFCameras("ui.KFCam",false,true);
 	pangolin::Var<bool> settings_showCurrentCamera("ui.CurrCam",true,true);
-	pangolin::Var<bool> settings_showTrajectory("ui.Trajectory",false,true);
+	pangolin::Var<bool> settings_showTrajectory("ui.KFTrajectory",false,true);
 	pangolin::Var<bool> settings_showFullTrajectory("ui.FullTrajectory",true,true);
 	pangolin::Var<bool> settings_showActiveConstraints("ui.ActiveConst",true,true);
 	pangolin::Var<bool> settings_showAllConstraints("ui.AllConst",false,true);
 
 
-	pangolin::Var<bool> settings_show3D("ui.show3D",SETTING_RENDER_DISPLAY3D_DEFAULT,true);
-	pangolin::Var<bool> settings_showLiveDepth("ui.showDepth",SETTING_RENDER_DISPLAYDEPTH_DEFAULT,true);
-	pangolin::Var<bool> settings_showLiveVideo("ui.showVideo",SETTING_RENDER_DISPLAYVIDEO_DEFAULT,true);
-    pangolin::Var<bool> settings_showLiveResidual("ui.showResidual",SETTING_RENDER_DISPLAYRESIDUAL_DEFAULT,true);
+	pangolin::Var<bool> settings_show3D("ui.show3D",true,true);
+	pangolin::Var<bool> settings_showLiveDepth("ui.showDepth",true,true);
+	pangolin::Var<bool> settings_showLiveVideo("ui.showVideo",true,true);
+    pangolin::Var<bool> settings_showLiveResidual("ui.showResidual",false,true);
 
 	pangolin::Var<bool> settings_showFramesWindow("ui.showFramesWindow",false,true);
 	pangolin::Var<bool> settings_showFullTracking("ui.showFullTracking",false,true);
@@ -417,7 +417,7 @@ void PangolinDSOViewer::drawConstraints()
 	{
 		// draw constraints
 		glLineWidth(1);
-		glColor3f(0.94,0.82,0.0);
+		glColor3f(0.625,0.85,0.88);
 		glBegin(GL_LINES);
 
 		for(unsigned int i=0;i<connections.size();i++)
