@@ -632,7 +632,7 @@ float FullSystem::optimize(int mnumOptIts)
 		boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
 		for(FrameHessian* fh : frameHessians)
 		{
-			fh->shell->camToWorld = fh->PRE_camToWorld;
+			fh->shell->setPose(fh->PRE_camToWorld);
 			fh->shell->aff_g2l = fh->aff_g2l();
 		}
 	}

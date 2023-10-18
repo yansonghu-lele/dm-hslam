@@ -176,10 +176,10 @@ dmvio::CoarseIMUInitOptimizer::OptimizationResult dmvio::CoarseIMUInitOptimizer:
                     {
                         const auto* shell = activeShells.at(sym.index());
                         // compute updated camToWorld
-                        Sophus::SE3d camToWorld = shell->camToWorld;
+                        Sophus::SE3d camToWorld = shell->getPose();
                         if(shell->keyframeId == -1)
                         {
-                            camToWorld = shell->trackingRef->camToWorld * shell->camToTrackingRef;
+                            camToWorld = shell->trackingRef->getPose() * shell->camToTrackingRef;
                         }
                         assert(sym.index() == shell->id);
                         eraseAndInsert(casted->fixedValues, key, gtsam::Pose3(camToWorld.inverse().matrix()));
@@ -241,7 +241,7 @@ void CoarseIMUInitOptimizer::addPose(const dso::FrameShell& shell, const gtsam::
     {
         activeShells[shell.id] = &shell;
     }
-    addPose(shell.id, shell.camToWorld, imuData);
+    addPose(shell.id, shell.getPose(), imuData);
 }
 
 

@@ -84,7 +84,7 @@ public:
                        f->shell->incoming_id,
                        f->shell->timestamp,
                        (int)f->pointHessians.size(), (int)f->pointHessiansMarginalized.size(), (int)f->immaturePoints.size());
-                std::cout << f->shell->camToWorld.matrix3x4() << "\n";
+                std::cout << f->shell->getPose().matrix3x4() << "\n";
 
 
                 int maxWrite = 5;
@@ -104,7 +104,7 @@ public:
                    frame->incoming_id,
                    frame->timestamp,
                    frame->id);
-            std::cout << frame->camToWorld.matrix3x4() << "\n";
+            std::cout << frame->getPose().matrix3x4() << "\n";
         }
 
 
@@ -129,7 +129,7 @@ public:
                    KF->shell->incoming_id,
                    KF->shell->timestamp,
                    KF->shell->id);
-            std::cout << KF->shell->camToWorld.matrix3x4() << "\n";
+            std::cout << KF->shell->getPose().matrix3x4() << "\n";
 
             int maxWrite = 5;
             for(int y=0;y<image->h;y++)

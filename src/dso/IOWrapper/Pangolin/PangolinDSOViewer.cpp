@@ -576,7 +576,7 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 	this->HCalib = HCalib;
 
 	currentCam->setFromF(frame, HCalib);
-	allFramePoses.push_back(frame->camToWorld.translation().cast<float>());
+	allFramePoses.push_back(frame->getPose().translation().cast<float>());
 }
 
 

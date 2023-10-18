@@ -32,7 +32,7 @@
 
 namespace dso
 {
-
+class Frame;
 
 class FrameShell
 {
@@ -41,13 +41,14 @@ public:
 	int id; 			// INTERNAL ID, starting at zero.
 	int incoming_id;	// ID passed into DSO
 	double timestamp;		// timestamp passed into DSO.
+	size_t KfId;
 
+	int trackingRefId;
 	// set once after tracking
 	SE3 camToTrackingRef;
 	FrameShell* trackingRef;
 
 	// constantly adapted.
-	SE3 camToWorld;				// Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].
 	AffLight aff_g2l;
 	bool poseValid;
 	bool trackingWasGood;
@@ -60,14 +61,18 @@ public:
 	int marginalizedAt;
 	double movedByOpt;
 
+	std::shared_ptr<Frame> frame;
+
     static boost::mutex shellPoseMutex;
 
 	inline FrameShell()
 	{
 		id=0;
+		KfId = 0;
 		poseValid=true;
 		trackingWasGood = true;
 		camToWorld = SE3();
+		aff_g2l = AffLight(0,0);
 		timestamp=0;
 		marginalizedAt=-1;
 		movedByOpt=0;
@@ -75,6 +80,32 @@ public:
 		trackingRef=0;
 		camToTrackingRef = SE3();
 	}
+
+	SE3 getPose() const
+	{
+		return camToWorld;
+	}
+
+	void setPose(const SE3 &_Twc) {
+		camToWorld = _Twc;
+		Tcw = camToWorld.inverse();
+		Ow = -camToWorld.rotationMatrix() * Tcw.translation();
+	}
+
+	SE3 getPoseInverse() const
+	{
+		return Tcw;
+	}
+
+	Vec3 getCameraCenter() const
+	{
+		return Ow;
+	}
+
+	private:
+		SE3 camToWorld; // Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].
+		SE3 Tcw;
+		Vec3 Ow;
 };
 
 

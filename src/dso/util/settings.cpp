@@ -33,6 +33,11 @@ namespace dso
 {
 int pyrLevelsUsed = PYR_LEVELS;
 
+float mnMinX = 0;
+float mnMaxX = 640;
+float mnMinY = 0;
+float mnMaxY = 480;
+
 bool setting_useIMU = true; // Use IMU data (false will disable all IMU integration).
 bool setting_useGTSAMIntegration = true; // Use the GTSAM integration for integrating addtional factors to the BA. Needed when useIMU==true).
 
@@ -55,9 +60,9 @@ float setting_minIdepth = 0.02f;
 /* Parameters controlling when KF's are taken */
 float setting_keyframesPerSecond = 0;   // if !=0, takes a fixed number of KF per second.
 bool setting_realTimeMaxKF = false;   // if true, takes as many KF's as possible (will break the system if the camera stays stationary)
-float setting_maxShiftWeightT= 0.04f * (640+480);
-float setting_maxShiftWeightR= 0.0f * (640+480);
-float setting_maxShiftWeightRT= 0.02f * (640+480);
+float setting_maxShiftWeightT= 0.04f * (mnMaxY + mnMaxX); //(640+480);
+float setting_maxShiftWeightR= 0.0f * (mnMaxY + mnMaxX);//(640+480);
+float setting_maxShiftWeightRT= 0.02f * (mnMaxY + mnMaxX);//(640+480);
 float setting_kfGlobalWeight = 1;   // general weight on threshold, the larger the more KF's are taken (e.g., 2 = double the amount of KF's).
 float setting_maxAffineWeight= 2;
 
@@ -73,7 +78,17 @@ float setting_initialAffAPrior = 1e14;
 float setting_initialCalibHessian = 5e9;
 
 
+// Indirect Parameters
+int minThFAST = 7; //8
+int minIndDist = 4; //9x9
+int minDirDist = 1; //3x3
+int indFeaturesToExtract = 1000;
 
+int gridSize = 10;
+int mnGridCols = 64;
+int mnGridRows = 48;
+float mfGridElementWidthInv = (float)mnGridCols/(float)(mnMaxX-mnMinX);
+float mfGridElementHeightInv = (float)mnGridRows/(float)(mnMaxY-mnMinY);
 
 
 /* some modes for solving the resulting linear system (e.g. orthogonalize wrt. unobservable dimensions) */

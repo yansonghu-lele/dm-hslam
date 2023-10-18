@@ -64,6 +64,16 @@ extern double setting_minFramesBetweenKeyframes;
 
 extern float setting_minIdepth;
 
+
+extern int minThFAST;
+extern int minIndDist;
+extern int minDirDist;
+extern int indFeaturesToExtract;
+
+extern int gridSize;
+extern int mnGridCols, mnGridRows;
+extern float mnMinX, mnMaxX, mnMinY, mnMaxY, mfGridElementWidthInv, mfGridElementHeightInv;
+
 extern float setting_keyframesPerSecond;
 extern bool setting_realTimeMaxKF;
 extern float setting_maxShiftWeightT;

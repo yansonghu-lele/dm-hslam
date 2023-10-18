@@ -269,12 +269,12 @@ void FullSystem::printResult(std::string file, bool onlyLogKFPoses, bool saveMet
 		if(onlyLogKFPoses && s->marginalizedAt == s->id) continue;
 
         // firstPose is transformFirstToWorld. We actually want camToFirst here ->
-        Sophus::SE3d camToWorld = s->camToWorld;
+        Sophus::SE3d camToWorld = s->getPose();
 
         // Use camToTrackingReference for nonKFs and the updated camToWorld for KFs.
         if(useCamToTrackingRef && s->keyframeId == -1)
         {
-            camToWorld = s->trackingRef->camToWorld * s->camToTrackingRef;
+            camToWorld = s->trackingRef->getPose() * s->camToTrackingRef;
         }
         Sophus::SE3d camToFirst = firstPose.inverse() * camToWorld;
 
@@ -353,8 +353,8 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
             SE3 lastF_2_slast;
             {	// lock on global pose consistency!
                 boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-                slast_2_sprelast = sprelast->camToWorld.inverse() * slast->camToWorld;
-                lastF_2_slast = slast->camToWorld.inverse() * lastF->shell->camToWorld;
+                slast_2_sprelast = sprelast->getPoseInverse() * slast->getPose();
+                lastF_2_slast = slast->getPoseInverse() * lastF->shell->getPose();
                 aff_last_2_l = slast->aff_g2l;
             }
             SE3 fh_2_slast = slast_2_sprelast;// assumed to be the same as fh_2_slast.
@@ -509,7 +509,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 	fh->shell->camToTrackingRef = lastF_2_fh.inverse();
 	fh->shell->trackingRef = lastF->shell;
 	fh->shell->aff_g2l = aff_g2l;
-	fh->shell->camToWorld = fh->shell->trackingRef->camToWorld * fh->shell->camToTrackingRef;
+	fh->shell->setPose(fh->shell->trackingRef->getPose() * fh->shell->camToTrackingRef);
 	fh->shell->trackingWasGood = trackingGoodRet;
 
 
@@ -527,7 +527,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 						<< fh->shell->id << " "
 						<< fh->shell->timestamp << " "
 						<< fh->ab_exposure << " "
-						<< fh->shell->camToWorld.log().transpose() << " "
+						<< fh->shell->getPose().log().transpose() << " "
 						<< aff_g2l.a << " "
 						<< aff_g2l.b << " "
 						<< achievedRes[0] << " "
@@ -895,7 +895,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 	// =========================== add into allFrameHistory =========================
 	FrameHessian* fh = new FrameHessian();
 	FrameShell* shell = new FrameShell();
-	shell->camToWorld = SE3(); 		// no lock required, as fh is not used anywhere yet.
+	shell->setPose(SE3()) ; 		// no lock required, as fh is not used anywhere yet.
 	shell->aff_g2l = AffLight(0,0);
     shell->marginalizedAt = shell->id = allFrameHistory.size();
     shell->timestamp = image->timestamp;
@@ -1275,8 +1275,8 @@ void FullSystem::mappingLoop()
 				{
 					boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
 					assert(fh->shell->trackingRef != 0);
-					fh->shell->camToWorld = fh->shell->trackingRef->camToWorld * fh->shell->camToTrackingRef;
-					fh->setEvalPT_scaled(fh->shell->camToWorld.inverse(),fh->shell->aff_g2l);
+					fh->shell->setPose(fh->shell->trackingRef->getPose() * fh->shell->camToTrackingRef);
+					fh->setEvalPT_scaled(fh->shell->getPoseInverse(),fh->shell->aff_g2l);
 				}
 				delete fh;
 			}
@@ -1326,8 +1326,8 @@ void FullSystem::makeNonKeyFrame( FrameHessian* fh)
 	{
 		boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
 		assert(fh->shell->trackingRef != 0);
-		fh->shell->camToWorld = fh->shell->trackingRef->camToWorld * fh->shell->camToTrackingRef;
-		fh->setEvalPT_scaled(fh->shell->camToWorld.inverse(),fh->shell->aff_g2l);
+		fh->shell->setPose(fh->shell->trackingRef->getPose() * fh->shell->camToTrackingRef);
+		fh->setEvalPT_scaled(fh->shell->getPoseInverse(),fh->shell->aff_g2l);
 	}
 
 	traceNewCoarse(fh);
@@ -1341,8 +1341,8 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 	{
 		boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
 		assert(fh->shell->trackingRef != 0);
-		fh->shell->camToWorld = fh->shell->trackingRef->camToWorld * fh->shell->camToTrackingRef;
-		fh->setEvalPT_scaled(fh->shell->camToWorld.inverse(),fh->shell->aff_g2l);
+		fh->shell->setPose(fh->shell->trackingRef->getPose() * fh->shell->camToTrackingRef);
+		fh->setEvalPT_scaled(fh->shell->getPoseInverse(),fh->shell->aff_g2l);
 		int prevKFId = fh->shell->trackingRef->id;
 		int framesBetweenKFs = fh->shell->id - prevKFId - 1;
         if(!setting_debugout_runquiet)
@@ -1402,7 +1402,7 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
     if(setting_useGTSAMIntegration)
     {
         // Adds new keyframe to the BA graph, together with matching factors (e.g. IMUFactors).
-        baIntegration->addKeyframeToBA(fh->shell->id, fh->shell->camToWorld, ef->frames);
+        baIntegration->addKeyframeToBA(fh->shell->id, fh->shell->getPose(), ef->frames);
     }
 
 	// =========================== OPTIMIZE ALL =========================
@@ -1617,16 +1617,16 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 	// really no lock required, as we are initializing.
 	{
 		boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-        firstFrame->shell->camToWorld = firstPose;
+        firstFrame->shell->setPose(firstPose);
 		firstFrame->shell->aff_g2l = AffLight(0,0);
-		firstFrame->setEvalPT_scaled(firstFrame->shell->camToWorld.inverse(),firstFrame->shell->aff_g2l);
+		firstFrame->setEvalPT_scaled(firstFrame->shell->getPoseInverse(),firstFrame->shell->aff_g2l);
 		firstFrame->shell->trackingRef=0;
 		firstFrame->shell->camToTrackingRef = SE3();
 		firstFrame->shell->keyframeId = 0;
 
-		newFrame->shell->camToWorld = firstPose * firstToNew.inverse();
+		newFrame->shell->setPose(firstPose * firstToNew.inverse());
 		newFrame->shell->aff_g2l = AffLight(0,0);
-        newFrame->setEvalPT_scaled(newFrame->shell->camToWorld.inverse(),newFrame->shell->aff_g2l);
+        newFrame->setEvalPT_scaled(newFrame->shell->getPoseInverse(),newFrame->shell->aff_g2l);
 		newFrame->shell->trackingRef = firstFrame->shell;
 		newFrame->shell->camToTrackingRef = firstToNew.inverse();
 

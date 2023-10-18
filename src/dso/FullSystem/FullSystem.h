@@ -66,6 +66,10 @@ class CoarseDistanceMap;
 
 class EnergyFunctional;
 
+class FeatureDetector;
+class Map;
+class Matcher;
+
 template<typename T> inline void deleteOut(std::vector<T*> &v, const int i)
 {
 	delete v[i];
@@ -136,13 +140,13 @@ inline bool eigenTestNan(const MatXX &m, std::string msg)
 
 class FullSystem {
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	FullSystem(bool linearizeOperationPassed, const dmvio::IMUCalibration& imuCalibration,
-               dmvio::IMUSettings& imuSettings);
+			   dmvio::IMUSettings& imuSettings);
 	virtual ~FullSystem();
 
 	// adds a new frame, and creates point & residual structs.
-    void addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData* imuData, dmvio::GTData* gtData);
+	void addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData* imuData, dmvio::GTData* gtData);
 
 	// marginalizes a frame. drops / marginalizes points & residuals.
 	void marginalizeFrame(FrameHessian* frame);
@@ -157,7 +161,7 @@ public:
 	void printFrameLifetimes();
 	// contains pointers to active frames
 
-    std::vector<IOWrap::Output3DWrapper*> outputWrapper;
+	std::vector<IOWrap::Output3DWrapper*> outputWrapper;
 
 	bool isLost;
 	bool initFailed;
@@ -166,35 +170,37 @@ public:
 
 
 	void setGammaFunction(float* BInv);
-    void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
+	void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
 
-private:
-
-    dmvio::IMUIntegration imuIntegration;
-    bool imuUsedBefore = false;
-    dmvio::BAGTSAMIntegration* baIntegration = nullptr;
-public:
 	dmvio::IMUIntegration &getImuIntegration();
 
 	Sophus::SE3d firstPose; // contains transform from first to world.
 
 private:
+
+	dmvio::IMUIntegration imuIntegration;
+	bool imuUsedBefore = false;
+	dmvio::BAGTSAMIntegration* baIntegration = nullptr;
+
+	dmvio::GravityInitializer gravityInit;
+
 	CalibHessian Hcalib;
+	std::shared_ptr<Matcher> matcher;
+	std::shared_ptr<Map> globalMap;
+	std::shared_ptr<FeatureDetector> detector;
 
-    dmvio::GravityInitializer gravityInit;
-
-    double framesBetweenKFsRest = 0.0;
+	double framesBetweenKFsRest = 0.0;
 
 
 
-    // opt single point
+	// opt single point
 	int optimizePoint(PointHessian* point, int minObs, bool flagOOB);
 	PointHessian* optimizeImmaturePoint(ImmaturePoint* point, int minObs, ImmaturePointTemporaryResidual* residuals);
 
 	double linAllPointSinle(PointHessian* point, float outlierTHSlack, bool plot);
 
 	// mainPipelineFunctions
-    std::pair<Vec4, bool> trackNewCoarse(FrameHessian* fh, Sophus::SE3d *referenceToFrameHint = 0);
+	std::pair<Vec4, bool> trackNewCoarse(FrameHessian* fh, Sophus::SE3d *referenceToFrameHint = 0);
 	void traceNewCoarse(FrameHessian* fh);
 	void activatePoints();
 	void activatePointsMT();

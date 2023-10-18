@@ -352,6 +352,13 @@ EIGEN_ALWAYS_INLINE Eigen::Vector2f getInterpolatedElement42(const Eigen::Vector
 }
 
 
+template<typename T>
+void releaseVec(std::vector<T>& vec) {
+	vec.clear();
+	std::vector<T>().swap(vec);
+	return;
+}
+
 
 inline Vec3f makeRainbowf3F(float id)
 {
