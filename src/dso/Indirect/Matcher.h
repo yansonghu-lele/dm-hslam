@@ -23,6 +23,8 @@
 #endif
 #endif
 
+// TODO: Make the popcnt universally compatible
+
 namespace dso
 {
     class MapPoint;
