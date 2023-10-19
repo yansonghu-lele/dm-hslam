@@ -35,6 +35,10 @@
 #include "FullSystem/ImmaturePoint.h"
 #include "OverwritePangolin.h"
 
+#include "Indirect/Map.h"
+#include "Indirect/MapPoint.h"
+#include "Indirect/Frame.h"
+
 namespace dso
 {
 namespace IOWrap
@@ -74,6 +78,8 @@ PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread, std::sha
 
 	needReset = false;
 
+	nGlobalPoints = 0;
+	ngoodPoints = 0;
 
     if(startRunThread)
         runThread = boost::thread(&PangolinDSOViewer::run, this);
@@ -226,6 +232,7 @@ void PangolinDSOViewer::run()
             }
 
             drawConstraints();
+			DrawIndirectMap();
 			lk3d.unlock();
 		}
 
@@ -407,6 +414,12 @@ void PangolinDSOViewer::reset_internal()
 
 	openImagesMutex.unlock();
 
+	globalmap.reset();
+	nGlobalPoints = 0;
+	ngoodPoints = 0;
+	IndcolorBuffer.Free();
+	IndvertexBuffer.Free();
+
 	needReset = false;
 }
 
@@ -490,6 +503,80 @@ void PangolinDSOViewer::drawConstraints()
 		glEnd();
 	}
 }
+
+void PangolinDSOViewer::DrawIndirectMap()
+{
+	if (!globalmap)
+		return;
+
+	std::vector<std::shared_ptr<MapPoint>> vpMPs;
+	globalmap->GetAllMapPoints(vpMPs);
+	auto vpRefMPs = globalmap->GetReferenceMapPoints();
+
+	if (vpMPs.empty())
+		return;
+
+	std::set<std::shared_ptr<MapPoint>> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
+	Vec3f *tmpIndirectBuffer = new Vec3f[vpMPs.size()];
+	Vec3b *tmpIndirectColorBuffer = new Vec3b[vpMPs.size()];
+
+	Vec3b blue(0, 0, 255);
+	Vec3b red(255, 0, 0);
+
+	double scaledVarThresh = 0.001;
+	double absVarTH = 0.001;
+	ngoodPoints = 0;
+
+	for (size_t i = 0, iend = vpMPs.size(); i < iend; i++)
+	{
+		if (vpMPs[i]->isBad())
+			continue;
+
+		//if(!vpMPs[i]->checkVar())
+		//	continue;
+
+		tmpIndirectBuffer[ngoodPoints] = vpMPs[i]->getWorldPose();
+		if (spRefMPs.count(vpMPs[i]))
+			tmpIndirectColorBuffer[ngoodPoints] = red;
+		else
+			tmpIndirectColorBuffer[ngoodPoints] = blue;
+		ngoodPoints = ngoodPoints + 1;
+	}
+
+	if (ngoodPoints > nGlobalPoints)
+	{
+		nGlobalPoints = ngoodPoints * 1.3;
+		IndvertexBuffer.Reinitialise(pangolin::GlArrayBuffer, nGlobalPoints, GL_FLOAT, 3, GL_DYNAMIC_DRAW);
+		IndcolorBuffer.Reinitialise(pangolin::GlArrayBuffer, nGlobalPoints, GL_UNSIGNED_BYTE, 3, GL_DYNAMIC_DRAW);
+	}
+	if (ngoodPoints <= 0)
+		return;
+
+	IndvertexBuffer.Upload(tmpIndirectBuffer, sizeof(float) * 3 * ngoodPoints, 0);
+	IndcolorBuffer.Upload(tmpIndirectColorBuffer, sizeof(unsigned char) * 3 * ngoodPoints, 0);
+
+	delete[] tmpIndirectBuffer;
+	delete[] tmpIndirectColorBuffer;
+
+	GLfloat mPointSize = 5;
+
+	glPointSize(mPointSize);
+	IndcolorBuffer.Bind();
+	glColorPointer(IndcolorBuffer.count_per_element, IndcolorBuffer.datatype, 0, 0);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+	IndvertexBuffer.Bind();
+	glVertexPointer(IndvertexBuffer.count_per_element, IndvertexBuffer.datatype, 0, 0);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glDrawArrays(GL_POINTS, 0, ngoodPoints);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	IndvertexBuffer.Unbind();
+
+	glDisableClientState(GL_COLOR_ARRAY);
+	IndcolorBuffer.Unbind();
+}
+
+
 
 
 
@@ -579,6 +666,10 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 	allFramePoses.push_back(frame->getPose().translation().cast<float>());
 }
 
+void PangolinDSOViewer::publishGlobalMap(std::shared_ptr<Map> _globalMap)
+{
+	globalmap = _globalMap;
+}
 
 void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 {

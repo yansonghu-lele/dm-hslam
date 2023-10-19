@@ -163,6 +163,7 @@ public:
 		heightOrg = undistort->getOriginalSize()[1];
 		width=undistort->getSize()[0];
 		height=undistort->getSize()[1];
+		set_indirect_frame_sz(width, height);
 
 
 		// load timestamps if possible.

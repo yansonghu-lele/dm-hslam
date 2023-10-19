@@ -36,6 +36,9 @@
 #include "FullSystem/HessianBlocks.h"
 #include "util/globalFuncs.h"
 
+#include "util/FrameShell.h"
+#include "Indirect/Frame.h"
+
 namespace dso
 {
 
@@ -352,6 +355,18 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 
 
 	int n3=0, n2=0, n4=0;
+
+	//this allows to track indirect features within the map_out struct (they start at idx 5)
+	if(fh->shell->frame)
+	{
+		for (int i = 0; i < fh->shell->frame->nFeatures; ++i)
+		{
+			// idx is position of the keypoint
+			int idx = fh->shell->frame->mvKeys[i].pt.x + fh->shell->frame->mvKeys[i].pt.y * wG[0];
+			map_out[idx] = i+5;
+		}
+	}
+
 	for(int y4=0;y4<h;y4+=(4*pot)) for(int x4=0;x4<w;x4+=(4*pot))
 	{
 		int my3 = std::min((4*pot), h-y4);
@@ -384,51 +399,63 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 
 					if(xf<4 || xf>=w-5 || yf<4 || yf>h-4) continue;
 
-
-                    float pixelTH0 = thsSmoothed[xf / bW + (yf / bH) * thsStep];
-					float pixelTH1 = pixelTH0*dw1;
-					float pixelTH2 = pixelTH1*dw2;
-
-
-					float ag0 = mapmax0[idx];
-					if(ag0 > pixelTH0*thFactor)
+					if( map_out[idx]>4 ) // Indirect
 					{
-						Vec2f ag0d = map0[idx].tail<2>();
-						float dirNorm = fabsf((float)(ag0d.dot(dir2)));
-						if(!setting_selectDirectionDistribution) dirNorm = ag0;
-
-						if(dirNorm > bestVal2)
-						{ bestVal2 = dirNorm; bestIdx2 = idx; bestIdx3 = -2; bestIdx4 = -2;}
+						// Indirect
+						bestVal2 = 1e10;
+						bestIdx2 = idx;
+						bestIdx3 = -2;
+						bestIdx4=-2;
 					}
-					if(bestIdx3==-2) continue;
+					else
+					{ 
+						//Direct
+						float pixelTH0 = thsSmoothed[xf / bW + (yf / bH) * thsStep];
+						float pixelTH1 = pixelTH0*dw1;
+						float pixelTH2 = pixelTH1*dw2;
 
-					float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1];
-					if(ag1 > pixelTH1*thFactor)
-					{
-						Vec2f ag0d = map0[idx].tail<2>();
-						float dirNorm = fabsf((float)(ag0d.dot(dir3)));
-						if(!setting_selectDirectionDistribution) dirNorm = ag1;
 
-						if(dirNorm > bestVal3)
-						{ bestVal3 = dirNorm; bestIdx3 = idx; bestIdx4 = -2;}
-					}
-					if(bestIdx4==-2) continue;
+						float ag0 = mapmax0[idx];
+						if(ag0 > pixelTH0*thFactor)
+						{
+							Vec2f ag0d = map0[idx].tail<2>();
+							float dirNorm = fabsf((float)(ag0d.dot(dir2)));
+							if(!setting_selectDirectionDistribution) dirNorm = ag0;
 
-					float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2];
-					if(ag2 > pixelTH2*thFactor)
-					{
-						Vec2f ag0d = map0[idx].tail<2>();
-						float dirNorm = fabsf((float)(ag0d.dot(dir4)));
-						if(!setting_selectDirectionDistribution) dirNorm = ag2;
+							if(dirNorm > bestVal2)
+							{ bestVal2 = dirNorm; bestIdx2 = idx; bestIdx3 = -2; bestIdx4 = -2;}
+						}
+						if(bestIdx3==-2) continue;
 
-						if(dirNorm > bestVal4)
-						{ bestVal4 = dirNorm; bestIdx4 = idx; }
+						float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1];
+						if(ag1 > pixelTH1*thFactor)
+						{
+							Vec2f ag0d = map0[idx].tail<2>();
+							float dirNorm = fabsf((float)(ag0d.dot(dir3)));
+							if(!setting_selectDirectionDistribution) dirNorm = ag1;
+
+							if(dirNorm > bestVal3)
+							{ bestVal3 = dirNorm; bestIdx3 = idx; bestIdx4 = -2;}
+						}
+						if(bestIdx4==-2) continue;
+
+						float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2];
+						if(ag2 > pixelTH2*thFactor)
+						{
+							Vec2f ag0d = map0[idx].tail<2>();
+							float dirNorm = fabsf((float)(ag0d.dot(dir4)));
+							if(!setting_selectDirectionDistribution) dirNorm = ag2;
+
+							if(dirNorm > bestVal4)
+							{ bestVal4 = dirNorm; bestIdx4 = idx; }
+						}
 					}
 				}
 
 				if(bestIdx2>0)
 				{
-					map_out[bestIdx2] = 1;
+					if( map_out[bestIdx2] <= 4 )
+						map_out[bestIdx2] = 1;
 					bestVal3 = 1e10;
 					n2++;
 				}

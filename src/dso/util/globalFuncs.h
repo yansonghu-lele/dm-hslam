@@ -30,7 +30,9 @@
 #include "util/NumType.h"
 #include "IOWrapper/ImageDisplay.h"
 #include "fstream"
+
 #include <iostream>
+#include <numeric>
 
 #ifdef STACKTRACE
 #include <boost/stacktrace.hpp>
@@ -421,8 +423,83 @@ inline Vec3b makeRedGreen3B(float val)	// 0 = red, 1=green, 0.5=yellow.
 
 }
 
+inline double getStdDev(std::vector<double> _in)
+{
+	size_t size = _in.size();
+	if(size == 0 )
+		return 1.0;
 
+	double sum = std::accumulate(_in.begin(), _in.end(), 0.0);
+	double mean = sum / size;
 
+	std::vector<double> diff(size);
+	std::transform(_in.begin(), _in.end(), diff.begin(),
+				   std::bind2nd(std::minus<double>(), mean));
+	double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+	double stdev = std::sqrt(sq_sum / size);
 
+	return stdev;
+}
 
+//https://github.com/libigl/libigl/blob/master/include/igl/median.cpp
+
+inline double computeMedian(std::vector<double> & V)
+{
+	double median = 0.0;
+	if (V.size() == 0)
+		return median;
+	
+	// http://stackoverflow.com/a/1719155/148668
+	sort(V.begin(), V.end());
+	size_t n = V.size() / 2;
+	if (V.size() % 2 == 0)
+	{
+		// std::nth_element(V.begin(), V.begin() + n - 1, V.end());
+		median = 0.5 * (V[n] + V[n - 1]);
+	}
+	else
+	{
+		median = V[n];
+	}
+	return median;
+}
+
+inline double computeScale(std::vector<double>& _vec)
+{
+	double errmedian = computeMedian(_vec);
+
+	for (auto &element : _vec)
+		element = std::abs(element - errmedian);
+
+	double mad = computeMedian(_vec);
+
+	if (mad > 0.0 && errmedian > 0.0)
+		return 1.4826 * mad;
+	else
+		return 1.0;
+}
+
+template <typename Derived>
+bool writeVector(std::ostream &os, const Eigen::DenseBase<Derived> &b)
+{
+	for (int i = 0; i < b.size(); i++)
+		os << b(i) << " ";
+	return os.good();
+}
+
+template <typename Derived>
+bool readVector(std::istream &is, Eigen::DenseBase<Derived> &b)
+{
+	for (int i = 0; i < b.size() && is.good(); i++)
+		is >> b(i);
+	return is.good() || is.eof();
+}
+
+inline Vec2 project(const Vec3 &v)
+{
+	Vec2 res;
+	res(0) = v(0) / v(2);
+	res(1) = v(1) / v(2);
+	return res;
+}
 }

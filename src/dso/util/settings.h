@@ -214,6 +214,7 @@ extern float freeDebugParam5;
 
 
 void handleKey(char k);
+void set_indirect_frame_sz(int size_x, int size_y);
 
 
 

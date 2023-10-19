@@ -29,6 +29,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <memory>
 
 #include "util/NumType.h"
 #include "util/MinimalImage.h"
@@ -63,6 +64,7 @@ namespace dso
 class FrameHessian;
 class CalibHessian;
 class FrameShell;
+class Map;
 
 namespace IOWrap
 {
@@ -179,8 +181,11 @@ public:
          */
         virtual void publishGraph(const std::map<uint64_t,Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i> > > &connectivity) {}
 
-
-
+        /*
+         * Usage:
+         * Moves the global indirect map into the GUI
+         */
+        virtual void publishGlobalMap(std::shared_ptr<Map> _globalMap) {}
 
 
         /* Usage:

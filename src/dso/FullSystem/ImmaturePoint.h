@@ -26,8 +26,11 @@
 
  
 #include "util/NumType.h"
+#include <memory>
  
 #include "FullSystem/HessianBlocks.h"
+#include "Indirect/MapPoint.h"
+
 namespace dso
 {
 
@@ -62,7 +65,7 @@ public:
 
 
 
-
+	std::weak_ptr<MapPoint> Mp;
 
 	Mat22f gradH;
 	Vec2f gradH_ev;

@@ -31,6 +31,7 @@
 #include "IOWrapper/Output3DWrapper.h"
 #include <map>
 #include <deque>
+#include <memory>
 #include "util/SettingsUtil.h"
 #include "FollowCamMode.h"
 
@@ -107,6 +108,8 @@ public:
     virtual void publishSystemStatus(dmvio::SystemStatus systemStatus) override;
 
     void addGTCamPose(const Sophus::SE3d& gtPose);
+
+	virtual void publishGlobalMap(std::shared_ptr<Map> _globalMap) override;
 
     virtual void pushLiveFrame(FrameHessian* image) override;
     virtual void pushDepthImage(MinimalImageB3* image) override;
@@ -193,6 +196,13 @@ private:
     FollowCamMode followCam;
 
 	std::shared_ptr<dmvio::SettingsUtil> settingsUtil;
+
+	void DrawIndirectMap();
+	std::shared_ptr<Map> globalmap;
+	pangolin::GlBuffer IndvertexBuffer;
+	pangolin::GlBuffer IndcolorBuffer;
+	int ngoodPoints;
+	int nGlobalPoints;
 };
 
 

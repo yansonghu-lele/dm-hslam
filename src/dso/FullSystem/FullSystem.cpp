@@ -221,8 +221,11 @@ FullSystem::~FullSystem()
 	for(FrameShell* s : allFrameHistory)
 		delete s;
 	for(FrameHessian* fh : unmappedTrackedFrames)
+	{
+		if (fh->shell->frame)
+			fh->shell->frame.reset();
 		delete fh;
-
+	}
 	delete coarseDistanceMap;
 	delete coarseTracker;
 	delete coarseTracker_forNewKF;
@@ -719,7 +722,7 @@ void FullSystem::activatePointsMT()
 
 				float dist = coarseDistanceMap->fwdWarpedIDDistFinal[u+wG[1]*v] + (ptp[0]-floorf((float)(ptp[0])));
 
-				if(dist>=currentMinActDist* ph->my_type)
+				if(dist>=currentMinActDist* ((ph->my_type <= 4) ? ph->my_type : 1))
 				{
 					coarseDistanceMap->addIntoDistFinal(u,v);
 					toOptimize.push_back(ph);
@@ -755,6 +758,20 @@ void FullSystem::activatePointsMT()
 		{
 			newpoint->host->immaturePoints[ph->idxInImmaturePoints]=0;
 			newpoint->host->pointHessians.push_back(newpoint);
+
+			// Indirect			
+			if (newpoint->my_type > 4)
+			{
+				if (!(newpoint->host->shell->frame->getMapPoint(newpoint->my_type - 5)))
+				{
+					std::shared_ptr<MapPoint> pMP = std::make_shared<MapPoint>(newpoint, globalMap);
+					newpoint->host->shell->frame->addMapPoint(pMP);
+					newpoint->Mp = pMP;
+					pMP->AddObservation(pMP->sourceFrame, pMP->index);
+					globalMap->AddMapPoint(pMP);
+				}
+			}
+
 			ef->insertPoint(newpoint);
 			for(PointFrameResidual* r : newpoint->residuals)
 				ef->insertResidual(r);
@@ -764,7 +781,9 @@ void FullSystem::activatePointsMT()
 		else if(newpoint == (PointHessian*)((long)(-1)) || ph->lastTraceStatus==IPS_OOB)
 		{
 			ph->host->immaturePoints[ph->idxInImmaturePoints]=0;
-            delete ph;
+			delete ph;
+			if(!ph->Mp.expired()) ph->Mp.lock()->setDirStatus(MapPoint::removed);
+			ph->host->immaturePoints[ph->idxInImmaturePoints] = nullptr;
 		}
 		else
 		{
@@ -832,6 +851,8 @@ void FullSystem::flagPointsForRemoval()
 			{
 				host->pointHessiansOut.push_back(ph);
 				ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
+				if(!ph->Mp.expired())
+					ph->Mp.lock()->setDirStatus(MapPoint::removed);
 				host->pointHessians[i]=0;
 				flag_nores++;
 			}
@@ -859,11 +880,16 @@ void FullSystem::flagPointsForRemoval()
 						flag_inin++;
 						ph->efPoint->stateFlag = EFPointStatus::PS_MARGINALIZE;
 						host->pointHessiansMarginalized.push_back(ph);
+						
+						if(!ph->Mp.expired())
+							ph->Mp.lock()->setDirStatus(MapPoint::marginalized);
 					}
 					else
 					{
 						ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
 						host->pointHessiansOut.push_back(ph);
+						if(!ph->Mp.expired())
+							ph->Mp.lock()->setDirStatus(MapPoint::removed);
 					}
 
 
@@ -872,7 +898,8 @@ void FullSystem::flagPointsForRemoval()
 				{
 					host->pointHessiansOut.push_back(ph);
 					ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
-
+					if(!ph->Mp.expired())
+						ph->Mp.lock()->setDirStatus(MapPoint::removed);
 
 					//printf("drop point in frame %d (%d goodRes, %d activeRes)\n", ph->host->idx, ph->numGoodResiduals, (int)ph->residuals.size());
 				}
@@ -912,6 +939,9 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 	// =========================== add into allFrameHistory =========================
 	FrameHessian* fh = new FrameHessian();
 	FrameShell* shell = new FrameShell();
+
+	shell->frame = std::make_shared<Frame>(image->image, detector, &Hcalib, fh, shell, globalMap);
+
 	shell->setPose(SE3()) ; 		// no lock required, as fh is not used anywhere yet.
 	shell->aff_g2l = AffLight(0,0);
 	shell->marginalizedAt = shell->id = allFrameHistory.size();
@@ -980,6 +1010,8 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 				}else
 				{
 					fh->shell->poseValid = false;
+					if(fh->shell->frame)
+						fh->shell->frame.reset();
 					delete fh;
 				}
 			}
@@ -1520,6 +1552,7 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 	{
 		ow->publishGraph(ef->connectivityMap);
 		ow->publishKeyframes(frameHessians, false, &Hcalib);
+		ow->publishGlobalMap(globalMap);
 	}
 	timeMeasurementPublish.end();
 
@@ -1628,6 +1661,15 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 
 		firstFrame->pointHessians.push_back(ph);
 		ef->insertPoint(ph);
+		
+		if (ph->my_type > 4)
+		{
+			std::shared_ptr<MapPoint> pMP = std::make_shared<MapPoint>(ph, globalMap);
+			ph->host->shell->frame->addMapPoint(pMP);
+			ph->Mp = pMP;
+			pMP->AddObservation(firstFrame->shell->frame, pMP->index);
+			globalMap->AddMapPoint(pMP);
+		}
 	}
 
 
