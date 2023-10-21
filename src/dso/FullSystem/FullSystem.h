@@ -341,8 +341,28 @@ private:
 
 	int lastRefStopID;
 
-
 	bool secondKeyframeDone;
+
+
+	void IndirectMapper(std::shared_ptr<Frame> frame);
+	bool TrackLocalMap(std::shared_ptr<Frame> frame);
+
+	void updateLocalKeyframes(std::shared_ptr<Frame> frame);
+	void updateLocalPoints(std::shared_ptr<Frame> frame);
+	void CheckReplacedInLastFrame();
+	int SearchLocalPoints(std::shared_ptr<Frame> frame, int th = 1, float nnratio = 0.8);
+	int updatePoseOptimizationData(std::shared_ptr<Frame> frame, int & nmatches, bool istrackingLastFrame = true);
+
+	size_t mnLastKeyFrameId;
+	std::shared_ptr<Frame> mpLastKeyFrame;
+	std::vector<std::shared_ptr<MapPoint>> mvpLocalMapPoints;
+	std::vector<std::shared_ptr<Frame>> mvpLocalKeyFrames;
+	std::shared_ptr<Frame> mpReferenceKF;
+	std::shared_ptr<Frame> mLastFrame;
+
+	int nIndmatches;
+
+	boost::mutex localMapMtx;
 };
 }
 

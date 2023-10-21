@@ -43,7 +43,6 @@ public:
 	double timestamp;		// timestamp passed into DSO.
 	size_t KfId;
 
-	int trackingRefId;
 	// set once after tracking
 	SE3 camToTrackingRef;
 	FrameShell* trackingRef;
@@ -73,6 +72,8 @@ public:
 		trackingWasGood = true;
 		camToWorld = SE3();
 		aff_g2l = AffLight(0,0);
+		worldToCamOpti = Sim3();
+		worldToCamOptiInv = Sim3();
 		timestamp=0;
 		marginalizedAt=-1;
 		movedByOpt=0;
@@ -102,8 +103,30 @@ public:
 		return Ow;
 	}
 
+	// get and write the optimized pose by loop closing
+	Sim3 getPoseOpti() {
+		return worldToCamOpti;
+	}
+
+	Sim3 getPoseOptiInv() {
+		return worldToCamOptiInv;
+	}
+
+	void setPoseOpti(const Sim3 &Scw)
+	{
+		worldToCamOpti = Scw;
+		worldToCamOptiInv = Scw.inverse();
+
+		camToWorld = SE3(worldToCamOptiInv.rotationMatrix(), worldToCamOptiInv.translation());
+		Tcw = camToWorld.inverse();
+		Ow = -camToWorld.rotationMatrix() * Tcw.translation();
+	}
+
 	private:
 		SE3 camToWorld; // Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].
+		Sim3 worldToCamOpti;
+		Sim3 worldToCamOptiInv;
+
 		SE3 Tcw;
 		Vec3 Ow;
 };

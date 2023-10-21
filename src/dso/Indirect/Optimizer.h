@@ -297,7 +297,7 @@ namespace dso
     dso::Sim3 g2oSim3_to_sophusSim3(dso::Sim3Vertex &g2o_sim3);
     g2o::Sim3 sophusSim3_to_g2oSim3(dso::Sim3 sophus_sim3);
 
-    bool PoseOptimization(std::shared_ptr<Frame> pFrame, CalibHessian *calib, bool updatePose = true);
+    bool PoseOptimization(std::shared_ptr<Frame> pFrame, CalibHessian *calib, Sophus::SE3d *referenceToFrameHint, Sophus::SE3d currentFrame, bool updatePose = true);
 } // namespace dso
 
 #endif

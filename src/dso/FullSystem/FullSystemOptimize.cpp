@@ -41,6 +41,9 @@
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 #include "util/TimeMeasurement.h"
 
+#include "Indirect/MapPoint.h"
+#include "Indirect/Frame.h"
+
 #include <cmath>
 
 #include <algorithm>
@@ -632,8 +635,24 @@ float FullSystem::optimize(int mnumOptIts)
 		boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
 		for(FrameHessian* fh : frameHessians)
 		{
-			fh->shell->setPose(fh->PRE_camToWorld);
+			
+			fh->shell->setPoseOpti(Sim3(fh->PRE_camToWorld.inverse().matrix()));
 			fh->shell->aff_g2l = fh->aff_g2l();
+
+			auto Mps = fh->shell->frame->getMapPointsV();
+			
+			for (auto &it: Mps)
+			{
+				if(it)
+				{
+					if(it->getDirStatus() == it->active) //it->ph if ph still exists update the depth values
+						it->updateDepth();
+
+					if (it->sourceFrame == fh->shell->frame) // if this is the origin of the mapPoint update the points' 3D pose
+						it->updateGlobalPose();
+				}
+					
+			}
 		}
 	}
 
@@ -688,6 +707,8 @@ void FullSystem::removeOutliers()
 			{
 				fh->pointHessiansOut.push_back(ph);
 				ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
+				if(!ph->Mp.expired())
+					ph->Mp.lock()->setDirStatus(MapPoint::removed);
 				fh->pointHessians[i] = fh->pointHessians.back();
 				fh->pointHessians.pop_back();
 				i--;

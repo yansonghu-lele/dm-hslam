@@ -49,7 +49,7 @@ namespace dso
 {
 
 CoarseInitializer::CoarseInitializer(int ww, int hh)
-        : thisToNext_aff(0, 0), thisToNext(SE3())
+		: thisToNext_aff(0, 0), thisToNext(SE3())
 {
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
@@ -86,8 +86,8 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 {
 	newFrame = newFrameHessian;
 
-    for(IOWrap::Output3DWrapper* ow : wraps)
-        ow->pushLiveFrame(newFrameHessian);
+	for(IOWrap::Output3DWrapper* ow : wraps)
+		ow->pushLiveFrame(newFrameHessian);
 
 	int maxIterations[] = {5,5,10,30,50};
 
@@ -165,20 +165,20 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 			bl = wM * bl * (0.01f/(w[lvl]*h[lvl]));
 
 
-            Vec8f inc;
-            SE3 refToNew_new;
-            if (fixAffine)
-            {
-                // Note as we set the weights of rotation and translation to 1 the wM is just the identity in this case.
-                inc.head<6>() = -(wM.toDenseMatrix().topLeftCorner<6, 6>() *
-                                  (Hl.topLeftCorner<6, 6>().ldlt().solve(bl.head<6>())));
-                inc.tail<2>().setZero();
-            } else
-                inc = -(wM * (Hl.ldlt().solve(bl)));    //=-H^-1 * b.
+			Vec8f inc;
+			SE3 refToNew_new;
+			if (fixAffine)
+			{
+				// Note as we set the weights of rotation and translation to 1 the wM is just the identity in this case.
+				inc.head<6>() = -(wM.toDenseMatrix().topLeftCorner<6, 6>() *
+								  (Hl.topLeftCorner<6, 6>().ldlt().solve(bl.head<6>())));
+				inc.tail<2>().setZero();
+			} else
+				inc = -(wM * (Hl.ldlt().solve(bl)));    //=-H^-1 * b.
 
-            double incNorm = inc.norm();
+			double incNorm = inc.norm();
 
-            refToNew_new = SE3::exp(inc.head<6>().cast<double>()) * refToNew_current;
+			refToNew_new = SE3::exp(inc.head<6>().cast<double>()) * refToNew_current;
 
 			AffLight refToNew_aff_new = refToNew_aff_current;
 			refToNew_aff_new.a += inc[6];
@@ -273,7 +273,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 
 
-    debugPlot(0,wraps);
+	debugPlot(0,wraps);
 
 
 
@@ -282,10 +282,10 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*> &wraps)
 {
-    bool needCall = false;
-    for(IOWrap::Output3DWrapper* ow : wraps)
-        needCall = needCall || ow->needPushDepthImage();
-    if(!needCall) return;
+	bool needCall = false;
+	for(IOWrap::Output3DWrapper* ow : wraps)
+		needCall = needCall || ow->needPushDepthImage();
+	if(!needCall) return;
 
 
 	int wl = w[lvl], hl = h[lvl];
@@ -325,8 +325,8 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
 
 	//IOWrap::displayImage("idepth-R", &iRImg, false);
-    for(IOWrap::Output3DWrapper* ow : wraps)
-        ow->pushDepthImage(&iRImg);
+	for(IOWrap::Output3DWrapper* ow : wraps)
+		ow->pushDepthImage(&iRImg);
 }
 
 // calculates residual, Hessian and Hessian-block neede for re-substituting depth.
@@ -351,169 +351,169 @@ Vec3f CoarseInitializer::calcResAndGS(
 
 
 
-    for(auto&& acc9 : acc9s)
-    {
-        acc9.initialize();
-    }
-    for(auto&& E : accE)
-    {
-        E.initialize();
-    }
+	for(auto&& acc9 : acc9s)
+	{
+		acc9.initialize();
+	}
+	for(auto&& E : accE)
+	{
+		E.initialize();
+	}
 
 	int npts = numPoints[lvl];
 	Pnt* ptsl = points[lvl];
 
-    // This part takes most of the time for this method --> parallelize this only.
-    auto processPointsForReduce = [&](int min=0, int max=1, double* stats=0, int tid=0)
-    {
-        auto& acc9 = acc9s[tid];
-        auto& E = accE[tid];
-        for(int i = min; i < max; i++)
-        {
-            Pnt* point = ptsl + i;
+	// This part takes most of the time for this method --> parallelize this only.
+	auto processPointsForReduce = [&](int min=0, int max=1, double* stats=0, int tid=0)
+	{
+		auto& acc9 = acc9s[tid];
+		auto& E = accE[tid];
+		for(int i = min; i < max; i++)
+		{
+			Pnt* point = ptsl + i;
 
-            point->maxstep = 1e10;
-            if(!point->isGood)
-            {
-                E.updateSingle((float) (point->energy[0]));
-                point->energy_new = point->energy;
-                point->isGood_new = false;
-                continue;
-            }
+			point->maxstep = 1e10;
+			if(!point->isGood)
+			{
+				E.updateSingle((float) (point->energy[0]));
+				point->energy_new = point->energy;
+				point->isGood_new = false;
+				continue;
+			}
 
-            VecNRf dp0;
-            VecNRf dp1;
-            VecNRf dp2;
-            VecNRf dp3;
-            VecNRf dp4;
-            VecNRf dp5;
-            VecNRf dp6;
-            VecNRf dp7;
-            VecNRf dd;
-            VecNRf r;
-            JbBuffer_new[i].setZero();
+			VecNRf dp0;
+			VecNRf dp1;
+			VecNRf dp2;
+			VecNRf dp3;
+			VecNRf dp4;
+			VecNRf dp5;
+			VecNRf dp6;
+			VecNRf dp7;
+			VecNRf dd;
+			VecNRf r;
+			JbBuffer_new[i].setZero();
 
-            // sum over all residuals.
-            bool isGood = true;
-            float energy = 0;
-            for(int idx = 0; idx < patternNum; idx++)
-            {
-                int dx = patternP[idx][0];
-                int dy = patternP[idx][1];
-
-
-                Vec3f pt = RKi * Vec3f(point->u + dx, point->v + dy, 1) + t * point->idepth_new;
-                float u = pt[0] / pt[2];
-                float v = pt[1] / pt[2];
-                float Ku = fxl * u + cxl;
-                float Kv = fyl * v + cyl;
-                float new_idepth = point->idepth_new / pt[2];
-
-                if(!(Ku > 1 && Kv > 1 && Ku < wl - 2 && Kv < hl - 2 && new_idepth > 0))
-                {
-                    isGood = false;
-                    break;
-                }
-
-                Vec3f hitColor = getInterpolatedElement33(colorNew, Ku, Kv, wl);
-                //Vec3f hitColor = getInterpolatedElement33BiCub(colorNew, Ku, Kv, wl);
-
-                //float rlR = colorRef[point->u+dx + (point->v+dy) * wl][0];
-                float rlR = getInterpolatedElement31(colorRef, point->u + dx, point->v + dy, wl);
-
-                if(!std::isfinite(rlR) || !std::isfinite((float) hitColor[0]))
-                {
-                    isGood = false;
-                    break;
-                }
+			// sum over all residuals.
+			bool isGood = true;
+			float energy = 0;
+			for(int idx = 0; idx < patternNum; idx++)
+			{
+				int dx = patternP[idx][0];
+				int dy = patternP[idx][1];
 
 
-                float residual = hitColor[0] - r2new_aff[0] * rlR - r2new_aff[1];
-                float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
-                energy += hw * residual * residual * (2 - hw);
+				Vec3f pt = RKi * Vec3f(point->u + dx, point->v + dy, 1) + t * point->idepth_new;
+				float u = pt[0] / pt[2];
+				float v = pt[1] / pt[2];
+				float Ku = fxl * u + cxl;
+				float Kv = fyl * v + cyl;
+				float new_idepth = point->idepth_new / pt[2];
+
+				if(!(Ku > 1 && Kv > 1 && Ku < wl - 2 && Kv < hl - 2 && new_idepth > 0))
+				{
+					isGood = false;
+					break;
+				}
+
+				Vec3f hitColor = getInterpolatedElement33(colorNew, Ku, Kv, wl);
+				//Vec3f hitColor = getInterpolatedElement33BiCub(colorNew, Ku, Kv, wl);
+
+				//float rlR = colorRef[point->u+dx + (point->v+dy) * wl][0];
+				float rlR = getInterpolatedElement31(colorRef, point->u + dx, point->v + dy, wl);
+
+				if(!std::isfinite(rlR) || !std::isfinite((float) hitColor[0]))
+				{
+					isGood = false;
+					break;
+				}
 
 
-                float dxdd = (t[0] - t[2] * u) / pt[2];
-                float dydd = (t[1] - t[2] * v) / pt[2];
-
-                if(hw < 1) hw = sqrtf(hw);
-                float dxInterp = hw * hitColor[1] * fxl;
-                float dyInterp = hw * hitColor[2] * fyl;
-                dp0[idx] = new_idepth * dxInterp;
-                dp1[idx] = new_idepth * dyInterp;
-                dp2[idx] = -new_idepth * (u * dxInterp + v * dyInterp);
-                dp3[idx] = -u * v * dxInterp - (1 + v * v) * dyInterp;
-                dp4[idx] = (1 + u * u) * dxInterp + u * v * dyInterp;
-                dp5[idx] = -v * dxInterp + u * dyInterp;
-                dp6[idx] = -hw * r2new_aff[0] * rlR;
-                dp7[idx] = -hw * 1;
-                dd[idx] = dxInterp * dxdd + dyInterp * dydd;
-                r[idx] = hw * residual;
-
-                float maxstep = 1.0f / Vec2f(dxdd * fxl, dydd * fyl).norm();
-                if(maxstep < point->maxstep) point->maxstep = maxstep;
-
-                // immediately compute dp*dd' and dd*dd' in JbBuffer1.
-                JbBuffer_new[i][0] += dp0[idx] * dd[idx];
-                JbBuffer_new[i][1] += dp1[idx] * dd[idx];
-                JbBuffer_new[i][2] += dp2[idx] * dd[idx];
-                JbBuffer_new[i][3] += dp3[idx] * dd[idx];
-                JbBuffer_new[i][4] += dp4[idx] * dd[idx];
-                JbBuffer_new[i][5] += dp5[idx] * dd[idx];
-                JbBuffer_new[i][6] += dp6[idx] * dd[idx];
-                JbBuffer_new[i][7] += dp7[idx] * dd[idx];
-                JbBuffer_new[i][8] += r[idx] * dd[idx];
-                JbBuffer_new[i][9] += dd[idx] * dd[idx];
-            }
-
-            if(!isGood || energy > point->outlierTH * 20)
-            {
-                E.updateSingle((float) (point->energy[0]));
-                point->isGood_new = false;
-                point->energy_new = point->energy;
-                continue;
-            }
+				float residual = hitColor[0] - r2new_aff[0] * rlR - r2new_aff[1];
+				float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+				energy += hw * residual * residual * (2 - hw);
 
 
-            // add into energy.
-            E.updateSingle(energy);
-            point->isGood_new = true;
-            point->energy_new[0] = energy;
+				float dxdd = (t[0] - t[2] * u) / pt[2];
+				float dydd = (t[1] - t[2] * v) / pt[2];
 
-            // update Hessian matrix.
-            for(int i = 0; i + 3 < patternNum; i += 4)
-                acc9.updateSSE(
-                        _mm_load_ps(((float*) (&dp0)) + i),
-                        _mm_load_ps(((float*) (&dp1)) + i),
-                        _mm_load_ps(((float*) (&dp2)) + i),
-                        _mm_load_ps(((float*) (&dp3)) + i),
-                        _mm_load_ps(((float*) (&dp4)) + i),
-                        _mm_load_ps(((float*) (&dp5)) + i),
-                        _mm_load_ps(((float*) (&dp6)) + i),
-                        _mm_load_ps(((float*) (&dp7)) + i),
-                        _mm_load_ps(((float*) (&r)) + i));
+				if(hw < 1) hw = sqrtf(hw);
+				float dxInterp = hw * hitColor[1] * fxl;
+				float dyInterp = hw * hitColor[2] * fyl;
+				dp0[idx] = new_idepth * dxInterp;
+				dp1[idx] = new_idepth * dyInterp;
+				dp2[idx] = -new_idepth * (u * dxInterp + v * dyInterp);
+				dp3[idx] = -u * v * dxInterp - (1 + v * v) * dyInterp;
+				dp4[idx] = (1 + u * u) * dxInterp + u * v * dyInterp;
+				dp5[idx] = -v * dxInterp + u * dyInterp;
+				dp6[idx] = -hw * r2new_aff[0] * rlR;
+				dp7[idx] = -hw * 1;
+				dd[idx] = dxInterp * dxdd + dyInterp * dydd;
+				r[idx] = hw * residual;
+
+				float maxstep = 1.0f / Vec2f(dxdd * fxl, dydd * fyl).norm();
+				if(maxstep < point->maxstep) point->maxstep = maxstep;
+
+				// immediately compute dp*dd' and dd*dd' in JbBuffer1.
+				JbBuffer_new[i][0] += dp0[idx] * dd[idx];
+				JbBuffer_new[i][1] += dp1[idx] * dd[idx];
+				JbBuffer_new[i][2] += dp2[idx] * dd[idx];
+				JbBuffer_new[i][3] += dp3[idx] * dd[idx];
+				JbBuffer_new[i][4] += dp4[idx] * dd[idx];
+				JbBuffer_new[i][5] += dp5[idx] * dd[idx];
+				JbBuffer_new[i][6] += dp6[idx] * dd[idx];
+				JbBuffer_new[i][7] += dp7[idx] * dd[idx];
+				JbBuffer_new[i][8] += r[idx] * dd[idx];
+				JbBuffer_new[i][9] += dd[idx] * dd[idx];
+			}
+
+			if(!isGood || energy > point->outlierTH * 20)
+			{
+				E.updateSingle((float) (point->energy[0]));
+				point->isGood_new = false;
+				point->energy_new = point->energy;
+				continue;
+			}
 
 
-            for(int i = ((patternNum >> 2) << 2); i < patternNum; i++)
-                acc9.updateSingle(
-                        (float) dp0[i], (float) dp1[i], (float) dp2[i], (float) dp3[i],
-                        (float) dp4[i], (float) dp5[i], (float) dp6[i], (float) dp7[i],
-                        (float) r[i]);
+			// add into energy.
+			E.updateSingle(energy);
+			point->isGood_new = true;
+			point->energy_new[0] = energy;
+
+			// update Hessian matrix.
+			for(int i = 0; i + 3 < patternNum; i += 4)
+				acc9.updateSSE(
+						_mm_load_ps(((float*) (&dp0)) + i),
+						_mm_load_ps(((float*) (&dp1)) + i),
+						_mm_load_ps(((float*) (&dp2)) + i),
+						_mm_load_ps(((float*) (&dp3)) + i),
+						_mm_load_ps(((float*) (&dp4)) + i),
+						_mm_load_ps(((float*) (&dp5)) + i),
+						_mm_load_ps(((float*) (&dp6)) + i),
+						_mm_load_ps(((float*) (&dp7)) + i),
+						_mm_load_ps(((float*) (&r)) + i));
 
 
-        }
-    };
+			for(int i = ((patternNum >> 2) << 2); i < patternNum; i++)
+				acc9.updateSingle(
+						(float) dp0[i], (float) dp1[i], (float) dp2[i], (float) dp3[i],
+						(float) dp4[i], (float) dp5[i], (float) dp6[i], (float) dp7[i],
+						(float) r[i]);
 
-    reduce.reduce(processPointsForReduce, 0, npts, 50);
 
-    for(auto&& acc9 : acc9s)
-    {
-        acc9.finish();
-    }
-    for(auto&& E : accE)
-    {
-        E.finish();
-    }
+		}
+	};
+
+	reduce.reduce(processPointsForReduce, 0, npts, 50);
+
+	for(auto&& acc9 : acc9s)
+	{
+		acc9.finish();
+	}
+	for(auto&& E : accE)
+	{
+		E.finish();
+	}
 
 
 	// calculate alpha energy, and decide if we cap it.
@@ -524,10 +524,10 @@ Vec3f CoarseInitializer::calcResAndGS(
 		Pnt* point = ptsl+i;
 		if(!point->isGood_new)
 		{
-            // This should actually be EAlpha, but it seems like fixing this might change the optimal values of some
-            // parameters, so it's kept like it is (see https://github.com/JakobEngel/dso/issues/52)
-            // At the moment, this code will not change the value of E.A (because E.finish() is not called again after
-            // this. It will however change E.num.
+			// This should actually be EAlpha, but it seems like fixing this might change the optimal values of some
+			// parameters, so it's kept like it is (see https://github.com/JakobEngel/dso/issues/52)
+			// At the moment, this code will not change the value of E.A (because E.finish() is not called again after
+			// this. It will however change E.num.
 			accE[0].updateSingle((float)(point->energy[1]));
 		}
 		else
@@ -582,14 +582,14 @@ Vec3f CoarseInitializer::calcResAndGS(
 	acc9SC.finish();
 
 
-    H_out.setZero();
-    b_out.setZero();
-    // This needs to sum up the acc9s from all the workers!
-    for(auto&& acc9 : acc9s)
-    {
-        H_out += acc9.H.topLeftCorner<8,8>();// / acc9.num;
-        b_out += acc9.H.topRightCorner<8,1>();// / acc9.num;
-    }
+	H_out.setZero();
+	b_out.setZero();
+	// This needs to sum up the acc9s from all the workers!
+	for(auto&& acc9 : acc9s)
+	{
+		H_out += acc9.H.topLeftCorner<8,8>();// / acc9.num;
+		b_out += acc9.H.topRightCorner<8,1>();// / acc9.num;
+	}
 	H_out_sc = acc9SC.H.topLeftCorner<8,8>();// / acc9.num;
 	b_out_sc = acc9SC.H.topRightCorner<8,1>();// / acc9.num;
 
@@ -606,20 +606,20 @@ Vec3f CoarseInitializer::calcResAndGS(
 
 
 	// Add zero prior to translation.
-    // setting_weightZeroPriorDSOInitY is the squared weight of the prior residual.
-    H_out(1, 1) += setting_weightZeroPriorDSOInitY;
-    b_out(1) += setting_weightZeroPriorDSOInitY * refToNew.translation().y();
+	// setting_weightZeroPriorDSOInitY is the squared weight of the prior residual.
+	H_out(1, 1) += setting_weightZeroPriorDSOInitY;
+	b_out(1) += setting_weightZeroPriorDSOInitY * refToNew.translation().y();
 
-    H_out(0, 0) += setting_weightZeroPriorDSOInitX;
-    b_out(0) += setting_weightZeroPriorDSOInitX * refToNew.translation().x();
+	H_out(0, 0) += setting_weightZeroPriorDSOInitX;
+	b_out(0) += setting_weightZeroPriorDSOInitX * refToNew.translation().x();
 
-    double A = 0;
-    int num = 0;
-    for(auto&& E : accE)
-    {
-        A += E.A;
-        num += E.num;
-    }
+	double A = 0;
+	int num = 0;
+	for(auto&& E : accE)
+	{
+		A += E.A;
+		num += E.num;
+	}
 
 	return Vec3f(A, alphaEnergy, num);
 }

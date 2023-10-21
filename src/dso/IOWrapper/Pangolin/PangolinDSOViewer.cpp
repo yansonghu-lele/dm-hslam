@@ -532,8 +532,8 @@ void PangolinDSOViewer::DrawIndirectMap()
 		if (vpMPs[i]->isBad())
 			continue;
 
-		//if(!vpMPs[i]->checkVar())
-		//	continue;
+		if(!vpMPs[i]->checkVar())
+			continue;
 
 		tmpIndirectBuffer[ngoodPoints] = vpMPs[i]->getWorldPose();
 		if (spRefMPs.count(vpMPs[i]))

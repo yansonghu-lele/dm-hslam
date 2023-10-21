@@ -82,7 +82,7 @@ namespace dso
         // Vec3f getWorldPosewPose(SE3& pose);
         Vec3f getWorldPose();
 
-        void updateGlobalPose(Sim3& worldToCamOptiInv);
+        void updateGlobalPose();
 
 
         void ComputeDistinctiveDescriptors(bool isQuick);

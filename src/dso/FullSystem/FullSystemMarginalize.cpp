@@ -53,6 +53,8 @@
 
 #include "FullSystem/CoarseTracker.h"
 
+#include "Indirect/Frame.h"
+
 namespace dso
 {
 
@@ -198,7 +200,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 	}
 
     // ef->marginalizeFrame does not delete efFrame anymore, because it's field frameID was needed in dropResidual.
-    delete frame->efFrame;
+	delete frame->efFrame;
 	frame->efFrame = nullptr;
 
     {
@@ -213,6 +215,10 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 	frame->shell->movedByOpt = frame->w2c_leftEps().norm();
 
 	auto frameID = frame->frameID;
+
+	// Marginalize Indirect
+	if(frame->shell->frame)
+		frame->shell->frame->ReduceToEssential();
 
 	deleteOutOrder<FrameHessian>(frameHessians, frame);
 	for(unsigned int i=0;i<frameHessians.size();i++)

@@ -57,7 +57,6 @@ namespace dso
             releaseVec(tMapPoints);
             releaseVec(mvbOutlier);
             setState(kfstate::marginalized);
-            // NeedRefresh = true;
         }
         return;
     }

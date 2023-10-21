@@ -59,11 +59,11 @@ namespace dso
     }
 
 
-    void MapPoint::updateGlobalPose(Sim3& worldToCamOptiInv)
+    void MapPoint::updateGlobalPose()
     {
         boost::lock_guard<boost::mutex> l(_mtx);
         auto calib = sourceFrame->HCalib;
-        worldPose = worldToCamOptiInv.cast<float>() * (Vec3f((pt[0] * calib->fxli() + calib->cxli()), (pt[1] * calib->fyli() + calib->cyli()), 1.0f) * (1.0f/idepth));
+        worldPose = sourceFrame->fs->getPoseOptiInv().cast<float>() * (Vec3f((pt[0] * calib->fxli() + calib->cxli()), (pt[1] * calib->fyli() + calib->cyli()), 1.0f) * (1.0f/idepth));
     }
 
     void MapPoint::updateDepth()
