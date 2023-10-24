@@ -45,6 +45,7 @@ template<typename T> gtsam::Matrix getCoarseReferenceDerivative(const PoseTransf
 class TransformDSOToIMU : public PoseTransformation
 {
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // optScale, optGravity, and optT_Cam_imu define which additional variables shall be optimized.
     // We pass them as a pointers, so that they can be set to false for all instances of this class simultaneously when optimization of them shall be stopped.
     // if fixZ is true, the z-axis of gravity direction is fixed (which makes sense because yaw is not observable with an IMU).
@@ -139,6 +140,7 @@ private:
 template<typename T> class TransformIMUToDSOForCoarse : public PoseTransformation
 {
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Pass the used transformDSOToIMU and the id of the keyframe (reference frame).
     // Note, that a pointer to transformDSOToIMU is kept, so changes to it will also effect this object.
     TransformIMUToDSOForCoarse(std::shared_ptr<T> transformDSOToIMU, int keyframeId);

@@ -4,6 +4,8 @@
 #include "util/settings.h"
 #include "util/NumType.h"
 
+#include "DBoW3/Vocabulary.h"
+
 #include <memory>
 #include <set>
 
@@ -11,6 +13,7 @@ namespace dso
 {
     class MapPoint;
     class Frame;
+    class KeyFrameDatabase;
 
     class Map
     {
@@ -46,6 +49,7 @@ namespace dso
 
         void GetAllKeyFrames(std::vector<std::shared_ptr<Frame>> &_Out);
         void GetAllMapPoints(std::vector<std::shared_ptr<MapPoint>> &_Out);
+        void m_setVocab(DBoW3::Vocabulary *_Vocabpnt);
         std::vector<std::shared_ptr<MapPoint>> GetReferenceMapPoints();
 
         long unsigned int MapPointsInMap();
@@ -68,6 +72,36 @@ namespace dso
         }
 
         std::vector<std::shared_ptr<Frame>> mvpKeyFrameOrigins;
+        std::shared_ptr<KeyFrameDatabase> KfDB;
         boost::mutex mMutexMapUpdate;
+    };
+
+    class KeyFrameDatabase
+    {
+    public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        KeyFrameDatabase();
+
+        void add(std::shared_ptr<Frame> pKF);
+
+        void erase(std::shared_ptr<Frame> pKF);
+
+        void kf_setVocab(DBoW3::Vocabulary *_Vocabpnt);
+
+        void resize();
+
+        void clear();
+
+        // Loop Detection
+        std::vector<std::shared_ptr<Frame>> DetectLoopCandidates(std::shared_ptr<Frame> pKF, float minScore);
+
+    protected:
+        // Inverted file
+        std::vector<std::list<std::shared_ptr<Frame>>> mvInvertedFile;
+
+        DBoW3::Vocabulary* m_Vocabpnt;
+
+        // Mutex
+        boost::mutex mMutex;
     };
 } // namespace dso

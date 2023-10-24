@@ -58,6 +58,11 @@ extern double setting_weightZeroPriorDSOInitY;
 extern double setting_weightZeroPriorDSOInitX;
 extern double setting_forceNoKFTranslationThresh;
 
+extern bool LoopClosure;
+extern int minKfIdDist_LoopCandidate;
+extern int kfGap;
+extern int mnCovisibilityConsistencyTh;
+
 extern double setting_maxTimeBetweenKeyframes;
 
 extern double setting_minFramesBetweenKeyframes;

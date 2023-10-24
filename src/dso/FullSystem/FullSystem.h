@@ -47,6 +47,8 @@
 #include <math.h>
 #include "IMUInitialization/GravityInitializer.h"
 
+#include "DBoW3/Vocabulary.h"
+
 namespace dso
 {
 namespace IOWrap
@@ -69,6 +71,7 @@ class EnergyFunctional;
 class FeatureDetector;
 class Map;
 class Matcher;
+class LoopCloser;
 
 template<typename T> inline void deleteOut(std::vector<T*> &v, const int i)
 {
@@ -161,6 +164,8 @@ public:
 	void printFrameLifetimes();
 	// contains pointers to active frames
 
+	void setVocab(DBoW3::Vocabulary* _Vocabpnt);
+
 	std::vector<IOWrap::Output3DWrapper*> outputWrapper;
 
 	bool isLost;
@@ -176,6 +181,13 @@ public:
 
 	Sophus::SE3d firstPose; // contains transform from first to world.
 
+	std::shared_ptr<Map> globalMap;
+	std::shared_ptr<Matcher> matcher;
+
+	std::vector<FrameHessian*> frameHessians;
+	EnergyFunctional* ef;
+	std::vector<FrameShell*> allKeyFramesHistory;
+
 private:
 
 	dmvio::IMUIntegration imuIntegration;
@@ -185,8 +197,6 @@ private:
 	dmvio::GravityInitializer gravityInit;
 
 	CalibHessian Hcalib;
-	std::shared_ptr<Matcher> matcher;
-	std::shared_ptr<Map> globalMap;
 	std::shared_ptr<FeatureDetector> detector;
 
 	double framesBetweenKFsRest = 0.0;
@@ -285,16 +295,16 @@ private:
 
 	// ================== changed by mapper-thread. protected by mapMutex ===============
 	boost::mutex mapMutex;
-	std::vector<FrameShell*> allKeyFramesHistory;
+	// std::vector<FrameShell*> allKeyFramesHistory;
 
-	EnergyFunctional* ef;
+	// EnergyFunctional* ef;
 	IndexThreadReduce<Vec10> treadReduce;
 
 	float* selectionMap;
 	PixelSelector* pixelSelector;
 	CoarseDistanceMap* coarseDistanceMap;
 
-	std::vector<FrameHessian*> frameHessians;	// ONLY changed in marginalizeFrame and addFrame.
+	// std::vector<FrameHessian*> frameHessians;	// ONLY changed in marginalizeFrame and addFrame.
 	std::vector<PointFrameResidual*> activeResiduals;
 	float currentMinActDist;
 
@@ -361,6 +371,8 @@ private:
 	std::shared_ptr<Frame> mLastFrame;
 
 	int nIndmatches;
+
+	std::shared_ptr<LoopCloser> loopCloser;
 
 	boost::mutex localMapMtx;
 };

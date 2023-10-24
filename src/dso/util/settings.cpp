@@ -35,7 +35,11 @@ int pyrLevelsUsed = PYR_LEVELS;
 
 bool setting_useIMU = true; // Use IMU data (false will disable all IMU integration).
 bool setting_useGTSAMIntegration = true; // Use the GTSAM integration for integrating addtional factors to the BA. Needed when useIMU==true).
+bool LoopClosure = false;
 
+int minKfIdDist_LoopCandidate = 50; // min number of keyframes between current and candidate to consider the candidate as potential loop closure.
+int kfGap = 64; // minimum number of keyframes have passed since last loop closure performed.
+int mnCovisibilityConsistencyTh = 1; //number of candidates connected to the loop candidate must also confirm for loop closure to take place
 // If non-zero we set a prior to the x or y direction of the translation during the coarse visual initializer (useful for car datasets).
 double setting_weightZeroPriorDSOInitY = 0.0;
 double setting_weightZeroPriorDSOInitX = 0.0;

@@ -4,6 +4,8 @@
 #include <boost/thread.hpp>
 #include <opencv2/core.hpp>
 
+#include "DBoW3/Vocabulary.h"
+
 #include <memory>
 
 namespace dso
@@ -30,6 +32,7 @@ namespace dso
         bool PosInGrid(const cv::KeyPoint &kp, int &posX, int &posY);
 
         std::vector<size_t> GetFeaturesInArea(const float &x, const float &y, const float &r) const;
+        void ComputeBoVW(DBoW3::Vocabulary* _Vocabpnt);
         void assignFeaturesToGrid();
         
         inline std::shared_ptr<MapPoint> getMapPoint(int idx)
@@ -136,6 +139,9 @@ namespace dso
         std::weak_ptr<Frame> mpReferenceKF;
 
         cv::Mat Descriptors;
+        //BoW
+        DBoW3::BowVector mBowVec;
+        DBoW3::FeatureVector mFeatVec;
 
         int nFeatures;
         bool isReduced;

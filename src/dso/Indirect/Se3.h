@@ -212,28 +212,6 @@ namespace dso
             _error = obs - cam->cam_map( (T_p_from_world->estimate() * T_anchor_from_world->estimate().inverse()) * (cam->camInvMap(psi->UV) * (1.0/psi->estimate()))); //invert_depth
         }
 
-        // void linearizeOplus()
-        // {
-        //     VertexPointIDepth *vpoint = static_cast<VertexPointIDepth *>(_vertices[0]);
-        //     double idepth = vpoint->estimate();
-
-        //     SE3Vertex *vpose = static_cast<SE3Vertex *>(_vertices[1]);
-        //     SE3 T_cw = vpose->estimate();
-        //     SE3Vertex *vanchor = static_cast<SE3Vertex *>(_vertices[2]);
-        //     SE3 A_aw = vanchor->estimate();
-
-        //     const dso::camParams *cam = static_cast<const dso::camParams *>(parameter(0));
-        //     SE3 T_ca = T_cw * A_aw.inverse();
-        //     Vec3 x_a = cam->camInvMap(vpoint->UV) * (1.0/idepth);
-
-        //     Vec3 y = (T_ca * cam->camInvMap(vpoint->UV)) * (1.0 / idepth);
-        //     Eigen::Matrix<number_t, 2, 3, Eigen::ColMajor> Jcam = d_proj_d_y(cam->focal_length, y);
-        //     _jacobianOplus[0] = -Jcam * d_Tinvpsi_d_psi(T_ca, psi_a);
-
-        //     _jacobianOplus[1] = -Jcam * d_expy_d_y(y);
-        //     _jacobianOplus[2] = Jcam * T_ca.rotationMatrix() * d_expy_d_y(x_a);
-        // }
-
         Eigen::Matrix<double, 2, 3, Eigen::ColMajor> d_proj_d_y(const Vec2 &f, const Vec3 &xyz)
         {
             double z_sq = xyz[2] * xyz[2];
@@ -251,28 +229,8 @@ namespace dso
             return J;
         }
 
-        // inline Mat33 d_Tinvpsi_d_psi(const SE3 &T, const Vec3 &psi)
-        // {
-        //     Mat33 R = T.rotationMatrix();
-        //     Vec3 x = invert_depth(psi);
-        //     Vec3 r1 = R.col(0);
-        //     Vec3 r2 = R.col(1);
-        //     Mat33 J;
-        //     J.col(0) = r1;
-        //     J.col(1) = r2;
-        //     J.col(2) = -R * x;
-        //     J *= 1. / psi.z();
-        //     return J;
-        // }
-
         dso::camParams *_cam;
     };
-
-    // inline Vec3 invert_depth(const Vec3 &x)
-    // {
-    //     Vec3 res = x;
-    //     return res / x(2);
-    // }
 
     Vec3 unproject2d(const Vec2 &v)
     {

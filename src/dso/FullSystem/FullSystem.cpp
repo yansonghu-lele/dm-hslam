@@ -54,7 +54,9 @@
 #include "Indirect/MapPoint.h"
 #include "Indirect/Map.h"
 #include "Indirect/Matcher.h"
+
 #include "Indirect/Optimizer.h"
+#include "Indirect/LoopCloser.h"
 
 #include "OptimizationBackend/EnergyFunctional.h"
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
@@ -164,6 +166,10 @@ FullSystem::FullSystem(bool linearizeOperationPassed, const dmvio::IMUCalibratio
 	globalMap = std::make_shared<Map>();
 	matcher = std::make_shared<Matcher>();
 
+	if(LoopClosure)
+		// std::make_shared will not use the eigen alignment macro and cause an alignment error
+		loopCloser = std::shared_ptr<LoopCloser> (new LoopCloser(this));
+
 	statistics_lastNumOptIts=0;
 	statistics_numDroppedPoints=0;
 	statistics_numActivatedPoints=0;
@@ -238,6 +244,8 @@ FullSystem::~FullSystem()
 	matcher.reset();
 	detector.reset();
 	globalMap.reset();
+
+	loopCloser.reset();
 }
 
 void FullSystem::setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH)
@@ -1074,6 +1082,20 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 		
 		nMatches = matcher->SearchByProjectionFrameToFrame(shell->frame, mLastFrame, 15, true);
 
+		FrameHessian* lastF = coarseTracker->lastRef;
+		FrameShell* slast = allFrameHistory[allFrameHistory.size()-2];
+		FrameShell* sprelast = allFrameHistory[allFrameHistory.size()-3];
+		SE3 slast_2_sprelast;
+		SE3 lastF_2_slast;
+		{	// lock on global pose consistency!
+			boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+			slast_2_sprelast = sprelast->getPoseInverse() * slast->getPose();
+			lastF_2_slast = slast->getPoseInverse() * lastF->shell->getPose();
+		}
+		SE3 fh_2_slast = slast_2_sprelast;// assumed to be the same as fh_2_slast.
+
+		PoseOptimization(shell->frame, &Hcalib, referenceToFramePassed, fh_2_slast.inverse() * lastF_2_slast);
+ 
 		nIndmatches = updatePoseOptimizationData(shell->frame, nMatches, true);
 
 		// Direct Tracking
@@ -1387,6 +1409,11 @@ void FullSystem::blockUntilMappingIsFinished()
 	runMapping = false;
 	trackedFrameSignal.notify_all();
 	lock.unlock();
+
+	if (loopCloser)
+	{
+		loopCloser->SetFinish(true);
+	}
 
 	mappingThread.join();
 
@@ -1744,6 +1771,9 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 			pMP->increaseFound();
 	}
 
+	if (loopCloser)
+		loopCloser->InsertKeyFrame(firstFrame->shell->frame, globalMap->GetMaxMPid());
+
 	// really no lock required, as we are initializing.
 	{
 		boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
@@ -2034,6 +2064,9 @@ void FullSystem::IndirectMapper(std::shared_ptr<Frame> frame)
 
 	mnLastKeyFrameId = frame->fs->id;
     	mpLastKeyFrame = frame;
+
+	if (loopCloser)
+		loopCloser->InsertKeyFrame(frame, globalMap->GetMaxMPid());
 }
 
 int FullSystem::SearchLocalPoints(std::shared_ptr<Frame> frame, int th, float nnratio)
@@ -2274,5 +2307,12 @@ int FullSystem::updatePoseOptimizationData(std::shared_ptr<Frame> frame, int & n
 	// std::cout << "rejected outliers " + out << outliers << " total matches "<< nmatchesMap<< std::endl;
 	return nmatchesMap;
 }
+
+void FullSystem::setVocab(DBoW3::Vocabulary* _Vocabpnt)
+{
+	loopCloser->lc_setVocab(_Vocabpnt);
+	globalMap->m_setVocab(_Vocabpnt);
+}
+
 
 }

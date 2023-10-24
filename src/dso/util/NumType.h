@@ -27,6 +27,8 @@
 #include "Eigen/Core"
 #include "sophus/sim3.hpp"
 #include "sophus/se3.hpp"
+#include <memory>
+#include <set>
 
 
 namespace dso
@@ -161,7 +163,10 @@ typedef Eigen::Matrix<float,14,1> Vec14f;
 typedef Eigen::Matrix<double,14,14> Mat1414;
 typedef Eigen::Matrix<double,14,1> Vec14;
 
-
+// For loopclosure
+class Frame;
+typedef std::pair<std::set<std::shared_ptr<Frame>,std::owner_less<std::shared_ptr<Frame>>>, int> ConsistentGroup;
+typedef std::map<std::shared_ptr<Frame>, Sim3, std::less<std::shared_ptr<Frame>>, Eigen::aligned_allocator<std::pair<std::shared_ptr<Frame> const, Sim3>>> KeyFrameAndPose;
 
 
 

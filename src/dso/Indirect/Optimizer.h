@@ -291,13 +291,22 @@ namespace dso
 
             camParams *_cam;
         };
-
     } // namespace OptimizationStructs
 
     dso::Sim3 g2oSim3_to_sophusSim3(dso::Sim3Vertex &g2o_sim3);
     g2o::Sim3 sophusSim3_to_g2oSim3(dso::Sim3 sophus_sim3);
 
-    bool PoseOptimization(std::shared_ptr<Frame> pFrame, CalibHessian *calib, Sophus::SE3d *referenceToFrameHint, Sophus::SE3d currentFrame, bool updatePose = true);
+    void PoseOptimization(std::shared_ptr<Frame> pFrame, CalibHessian *calib, Sophus::SE3d *referenceToFrameHint, Sophus::SE3d FrameBackUp);
+    
+    int OptimizeSim3(std::shared_ptr<Frame> pKF1, std::shared_ptr<Frame> pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches1, Sim3 &g2oS12, const float th2, const bool bFixScale);
+
+    void OptimizeEssentialGraph(std::vector<FrameShell*> & vpKFs, std::vector<std::shared_ptr<MapPoint>> &allMapPoints,  std::set<std::shared_ptr<Frame>> &TempFixed, 
+                                std::shared_ptr<Frame> pLoopKF, std::shared_ptr<Frame> pCurKF,
+                                const KeyFrameAndPose &NonCorrectedSim3, const KeyFrameAndPose &CorrectedSim3,
+                                const std::map<std::shared_ptr<Frame>, std::set<std::shared_ptr<Frame>, std::owner_less<std::shared_ptr<Frame>>>, std::owner_less<std::shared_ptr<Frame>>> &LoopConnections,
+                                const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>> &connectivity,
+                                const size_t maxKfIdatCand, const size_t minActkfid, const size_t maxMPIdatCand, const bool &bFixScale);
+
 } // namespace dso
 
 #endif

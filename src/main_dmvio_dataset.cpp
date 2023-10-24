@@ -54,14 +54,17 @@
 #include "IOWrapper/Pangolin/PangolinDSOViewer.h"
 #include "IOWrapper/OutputWrapper/SampleOutputWrapper.h"
 
+#include "DBoW3/Vocabulary.h"
+
 std::string gtFile = "";
 std::string source = "";
 std::string imuFile = "";
+std::string vocab = "";
 
 bool reverse = false;
 int start = 0;
 int end = 100000;
-int maxPreloadImages = 0; // If set we only preload if there are less images to be loade.
+int maxPreloadImages = 0; // If set we only preload if there are less images to be loaded
 bool useSampleOutput = false;
 
 using namespace dso;
@@ -93,7 +96,7 @@ void exitThread()
 
 
 
-void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
+void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer, DBoW3::Vocabulary* Vocabpnt)
 {
 
     if(setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0)
@@ -130,6 +133,11 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     FullSystem* fullSystem = new FullSystem(linearizeOperation, imuCalibration, imuSettings);
     fullSystem->setGammaFunction(reader->getPhotometricGamma());
 
+    if(LoopClosure && Vocabpnt)
+	{
+		fullSystem->setVocab(Vocabpnt);
+		printf("Vocabulary Set\n");
+	}
 
     if(viewer != 0)
     {
@@ -271,6 +279,12 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
                 fullSystem->setGammaFunction(reader->getPhotometricGamma());
                 fullSystem->outputWrapper = wraps;
 
+                if(LoopClosure && Vocabpnt)
+                {
+                    fullSystem->setVocab(Vocabpnt);
+                    printf("Vocabulary Set\n");
+                }
+
                 setting_fullResetRequested = false;
             }
         }
@@ -342,6 +356,12 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     printf("DELETE READER!\n");
     delete reader;
 
+    if(LoopClosure && Vocabpnt)
+	{
+        printf("DELETE VOCAB!\n");
+		delete Vocabpnt;
+	}
+
     printf("EXIT NOW!\n");
 }
 
@@ -373,6 +393,7 @@ int main(int argc, char** argv)
     settingsUtil->registerArg("reverse", reverse);
     settingsUtil->registerArg("use16Bit", use16Bit);
     settingsUtil->registerArg("maxPreloadImages", maxPreloadImages);
+    settingsUtil->registerArg("vocab", vocab);
 
     // This call will parse all commandline arguments and potentially also read a settings yaml file if passed.
     mainSettings.parseArguments(argc, argv, *settingsUtil);
@@ -398,12 +419,32 @@ int main(int argc, char** argv)
     reader->loadIMUData(imuFile);
     reader->setGlobalCalibration();
 
+    DBoW3::Vocabulary* Vocabpnt = nullptr;
+    if(vocab!="")
+	{
+		Vocabpnt = new DBoW3::Vocabulary();
+		Vocabpnt->load(vocab.c_str());
+        LoopClosure = true;
+
+		if (Vocabpnt->empty() || Vocabpnt == NULL)
+		{
+			printf("Failed to load vocabulary! Exit\n");
+			exit(1);
+		}
+        printf("Loaded Vocabulary from %s!\n", vocab.c_str());
+	}
+	else
+	{
+		std::cout << "No vocabulary path provided! disabling loop closure." << std::endl;
+		LoopClosure = false; 
+	}
+
     if(!disableAllDisplay)
     {
         IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(wG[0], hG[0], false, settingsUtil,
                                                                           nullptr);
 
-        boost::thread runThread = boost::thread(boost::bind(run, reader, viewer));
+        boost::thread runThread = boost::thread(boost::bind(run, reader, viewer, Vocabpnt));
 
         viewer->run();
 
@@ -413,7 +454,7 @@ int main(int argc, char** argv)
         runThread.join();
     }else
     {
-        run(reader, 0);
+        run(reader, 0, Vocabpnt);
     }
 
 
