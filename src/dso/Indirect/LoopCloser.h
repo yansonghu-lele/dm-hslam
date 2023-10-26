@@ -30,6 +30,7 @@ namespace dso {
         }
 
         void InsertKeyFrame(std::shared_ptr<Frame> &frame, int maxMpId);
+        void setScale(double _scale);
         bool DetectLoop();
         bool computeSim3();
         void CorrectLoop();
@@ -83,6 +84,8 @@ namespace dso {
         std::vector<std::shared_ptr<Frame>> ActiveFrames;
 
         DBoW3::Vocabulary* lc_Vocabpnt;
+
+        double scale;
     };
 }
 

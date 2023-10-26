@@ -140,8 +140,8 @@ void PangolinDSOViewer::run()
 
 	pangolin::Var<bool> settings_showKFCameras("ui.KFCam",false,true);
 	pangolin::Var<bool> settings_showCurrentCamera("ui.CurrCam",true,true);
-	pangolin::Var<bool> settings_showTrajectory("ui.KFTrajectory",false,true);
-	pangolin::Var<bool> settings_showFullTrajectory("ui.FullTrajectory",true,true);
+	pangolin::Var<bool> settings_showTrajectory("ui.KFTrajectory",true,true);
+	// pangolin::Var<bool> settings_showFullTrajectory("ui.FullTrajectory",true,true);
 	pangolin::Var<bool> settings_showActiveConstraints("ui.ActiveConst",true,true);
 	pangolin::Var<bool> settings_showAllConstraints("ui.AllConst",false,true);
 
@@ -218,11 +218,20 @@ void PangolinDSOViewer::run()
 				float blue[3] = {0.32,0.7,0.8};
 				if(this->settings_showKFCameras) fh->drawCam(1,blue,0.1 * sizeFactor);
 
+				bool overWriteRefresh = false;
+				if (fh->originFrame->doesNeedRefresh())
+				{
+					fh->camToWorld = fh->originFrame->getPose();
+					fh->needRefresh = true;
+					overWriteRefresh = true;
+					fh->originFrame->setRefresh(false);
+				}
 
 				refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
 						this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
 				fh->drawPC(1);
 			}
+
 			if(this->settings_showCurrentCamera) currentCam->drawCam(2,0,0.2 * sizeFactor);
 
 			float yellow[3] = {0.94,0.82,0.0};
@@ -320,7 +329,7 @@ void PangolinDSOViewer::run()
 	    this->settings_showCurrentCamera = settings_showCurrentCamera.Get();
 	    this->settings_showKFCameras = settings_showKFCameras.Get();
 	    this->settings_showTrajectory = settings_showTrajectory.Get();
-	    this->settings_showFullTrajectory = settings_showFullTrajectory.Get();
+	    // this->settings_showFullTrajectory = settings_showFullTrajectory.Get();
 
 		setting_render_display3D = settings_show3D.Get();
 		setting_render_displayDepth = settings_showLiveDepth.Get();
@@ -397,7 +406,7 @@ void PangolinDSOViewer::reset_internal()
 	model3DMutex.lock();
 	for(size_t i=0; i<keyframes.size();i++) delete keyframes[i];
 	keyframes.clear();
-	allFramePoses.clear();
+	// allFramePoses.clear();
 	keyframesByKFID.clear();
 	connections.clear();
 	model3DMutex.unlock();
@@ -487,7 +496,7 @@ void PangolinDSOViewer::drawConstraints()
 		glEnd();
 	}
 
-	if(settings_showFullTrajectory)
+	/* if(settings_showFullTrajectory)
 	{
         float colorRed[3] = {0.875,0.1,0.3};
 		glColor3f(colorRed[0],colorRed[1],colorRed[2]);
@@ -501,7 +510,7 @@ void PangolinDSOViewer::drawConstraints()
 					(float)allFramePoses[i][2]);
 		}
 		glEnd();
-	}
+	} */
 }
 
 void PangolinDSOViewer::DrawIndirectMap()
@@ -663,7 +672,7 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 	this->HCalib = HCalib;
 
 	currentCam->setFromF(frame, HCalib);
-	allFramePoses.push_back(frame->getPose().translation().cast<float>());
+	// allFramePoses.push_back(frame->getPose().translation().cast<float>());
 }
 
 void PangolinDSOViewer::publishGlobalMap(std::shared_ptr<Map> _globalMap)

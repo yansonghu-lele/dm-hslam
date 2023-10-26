@@ -63,7 +63,7 @@ KeyFrameDisplay::KeyFrameDisplay()
 	my_displayMode = 1;
 	my_minRelBS = 0;
 	my_sparsifyFactor = 1;
-
+	originFrame = nullptr;
 	numGLBufferPoints=0;
 	bufferValid = false;
 }
@@ -82,6 +82,7 @@ void KeyFrameDisplay::setFromF(FrameShell* frame, CalibHessian* HCalib)
 	cyi = -cy / fy;
 	camToWorld = frame->getPose();
 	needRefresh=true;
+	originFrame = frame;
 }
 
 void KeyFrameDisplay::setFromPose(const Sophus::SE3d& pose, CalibHessian *HCalib)

@@ -149,7 +149,7 @@ private:
 	boost::mutex model3DMutex;
 	KeyFrameDisplay* currentCam, *currentGTCam;
 	std::vector<KeyFrameDisplay*> keyframes;
-	std::vector<Vec3f,Eigen::aligned_allocator<Vec3f>> allFramePoses;
+	// std::vector<Vec3f,Eigen::aligned_allocator<Vec3f>> allFramePoses;
 	std::map<int, KeyFrameDisplay*> keyframesByKFID;
 	std::vector<GraphConnection,Eigen::aligned_allocator<GraphConnection>> connections;
 

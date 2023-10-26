@@ -394,3 +394,8 @@ double IMUIntegration::getCoarseScale()
 {
     return coarseLogic->getScale();
 }
+
+double IMUIntegration::getTransformDSOToIMUScale()
+{
+    return baLogic->getTransformDSOToIMU()->getScale();
+}

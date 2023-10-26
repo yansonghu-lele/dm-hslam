@@ -1094,7 +1094,11 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 		}
 		SE3 fh_2_slast = slast_2_sprelast;// assumed to be the same as fh_2_slast.
 
-		PoseOptimization(shell->frame, &Hcalib, referenceToFramePassed, fh_2_slast.inverse() * lastF_2_slast);
+		if (referenceToFramePassed){
+			PoseOptimization(shell->frame, &Hcalib, referenceToFramePassed, fh_2_slast.inverse() * lastF_2_slast, -1);
+		} else {
+			PoseOptimization(shell->frame, &Hcalib, nullptr, fh_2_slast.inverse() * lastF_2_slast, imuIntegration.getTransformDSOToIMUScale());
+		}
  
 		nIndmatches = updatePoseOptimizationData(shell->frame, nMatches, true);
 
@@ -1573,6 +1577,8 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 
 	debugPlot("post Optimize");
 
+	if (loopCloser)
+		loopCloser->setScale(imuIntegration.getTransformDSOToIMUScale());
 
 	for(auto* ow : outputWrapper)
 	{
@@ -1585,8 +1591,6 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 		ow->publishTransformDSOToIMU(imuIntegration.getTransformDSOToIMU());
 	}
 	imuUsedBefore = imuReady;
-
-
 
 	// =========================== (Activate-)Marginalize Points =========================
 	dmvio::TimeMeasurement timeMeasurementMarginalizePoints("marginalizeAndRemovePoints");

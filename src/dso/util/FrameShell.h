@@ -60,6 +60,8 @@ public:
 	int marginalizedAt;
 	double movedByOpt;
 
+	bool needRefresh;
+
 	std::shared_ptr<Frame> frame;
 
     static boost::mutex shellPoseMutex;
@@ -80,6 +82,7 @@ public:
 		statistics_outlierResOnThis=statistics_goodResOnThis=0;
 		trackingRef=0;
 		camToTrackingRef = SE3();
+		needRefresh = false;
 	}
 
 	SE3 getPose() const
@@ -120,6 +123,17 @@ public:
 		camToWorld = SE3(worldToCamOptiInv.rotationMatrix(), worldToCamOptiInv.translation());
 		Tcw = camToWorld.inverse();
 		Ow = -camToWorld.rotationMatrix() * Tcw.translation();
+		needRefresh = true;
+	}
+
+	bool doesNeedRefresh()
+	{
+		return needRefresh;
+	}
+
+	void setRefresh(bool _refresh)
+	{
+		needRefresh = _refresh;
 	}
 
 	private:

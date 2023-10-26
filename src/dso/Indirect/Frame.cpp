@@ -624,6 +624,9 @@ namespace dso
         }
 
         globalMap->EraseKeyFrame(thisptr);
+        globalMap->KfDB->erase(thisptr);
+        mFeatVec.clear();
+        mBowVec.clear();
         Descriptors.release();
         releaseVec(mvbOutlier);
         releaseVec(tMapPoints);

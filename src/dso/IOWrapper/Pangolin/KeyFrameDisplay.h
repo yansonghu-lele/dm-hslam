@@ -88,26 +88,26 @@ public:
 	void drawCam(float lineWidth = 1, float* color = 0, float sizeFactor=1);
 	void drawPC(float pointSize);
 
+	FrameShell* originFrame;
+
 	int id;
 	bool active;
 	SE3 camToWorld;
-
+	int width, height;
     inline bool operator < (const KeyFrameDisplay& other) const
     {
         return (id < other.id);
     }
 
-
+	bool needRefresh;
 private:
 	float fx,fy,cx,cy;
 	float fxi,fyi,cxi,cyi;
-	int width, height;
 
 	float my_scaledTH, my_absTH, my_scale;
 	int my_sparsifyFactor;
 	int my_displayMode;
 	float my_minRelBS;
-	bool needRefresh;
 
 
 	int numSparsePoints;

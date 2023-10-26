@@ -21,6 +21,7 @@ namespace dso {
         currMaxKF = 0;
         minActId = 0;
         lc_Vocabpnt = nullptr;
+        scale = 0;
     }
 
     void LoopCloser::InsertKeyFrame(shared_ptr<Frame> &frame, int maxMpId)
@@ -32,6 +33,11 @@ namespace dso {
         frame->SetNotErase();
         copyActiveMapData(curActKF, curActMP);
         KFqueue.push_back(std::make_tuple(frame, curActKF, curActMP, frame->fs->KfId, maxMpId));
+    }
+
+    void LoopCloser::setScale(double _scale)
+    {
+        scale = 1.0/_scale;
     }
 
     void LoopCloser::Run() {
@@ -337,7 +343,14 @@ namespace dso {
 
                     Mat33f R = pSolver->GetEstimatedRotation();
                     Vec3f t = pSolver->GetEstimatedTranslation();
-                    const float s = pSolver->GetEstimatedScale();
+
+                    float s;
+                    if (scale <= 0){
+                        s = pSolver->GetEstimatedScale();
+                    } else {
+                        s = scale;
+                    }
+
                     if(s < 0 )
                     {
                         vbDiscarded[i] = true;
@@ -350,7 +363,12 @@ namespace dso {
                     Sim3 gScm = Sim3(SE3(R.cast<double>(), t.cast<double>()).matrix());
                     gScm.setScale(s);
 
-                    const int nInliers = OptimizeSim3(pKF, currentKF, vpMapPointMatches, gScm, 10, false); //def: currentKf, pKF
+                    int nInliers;
+                    if (scale <= 0){
+                        nInliers = OptimizeSim3(pKF, currentKF, vpMapPointMatches, gScm, 10, -1); //def: currentKf, pKF
+                    } else {
+                        nInliers = OptimizeSim3(pKF, currentKF, vpMapPointMatches, gScm, 10, scale); //def: currentKf, pKF
+                    }
                     // If optimization is succesful stop ransacs and continue
                     if (nInliers >= 16) //20
                     {
@@ -591,9 +609,14 @@ namespace dso {
 
         // Optimize graph 
         //this allows future data captured since the candidate detection to also fix the gauge freedom and prevent unwanted errors!
-        OptimizeEssentialGraph(fullSystem->allKeyFramesHistory, allMapPoints, TempFixed, currentKF ,candidateKF , NonCorrectedSim3, CorrectedSim3, LoopConnections, 
-                                fullSystem->ef->connectivityMap, currMaxKF, minActId, currMaxMp, false); //mpMatchedKF, mpCurrentKF,
-        
+        if (scale <= 0){
+            OptimizeEssentialGraph(fullSystem->allKeyFramesHistory, allMapPoints, TempFixed, currentKF ,candidateKF , NonCorrectedSim3, CorrectedSim3, LoopConnections, 
+                                fullSystem->ef->connectivityMap, currMaxKF, minActId, currMaxMp, -1); //mpMatchedKF, mpCurrentKF,
+        } else{
+            OptimizeEssentialGraph(fullSystem->allKeyFramesHistory, allMapPoints, TempFixed, currentKF ,candidateKF , NonCorrectedSim3, CorrectedSim3, LoopConnections, 
+                    fullSystem->ef->connectivityMap, currMaxKF, minActId, currMaxMp, -1); //mpMatchedKF, mpCurrentKF,
+        }
+
         gMap->InformNewBigChange();
 
         // Add loop edge
@@ -601,6 +624,9 @@ namespace dso {
         currentKF->AddLoopEdge(candidateKF);
 
         mbStopGBA = false;
+
+	for (auto it : fullSystem->allKeyFramesHistory)
+            it->setRefresh(true);
 
         mLastLoopKFid = currentKF->fs->KfId;
         cout << "Loop correction complete!" << endl;

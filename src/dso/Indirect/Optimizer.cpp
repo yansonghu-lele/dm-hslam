@@ -28,21 +28,29 @@ namespace dso
 	using namespace std;
 	using namespace OptimizationStructs;
 
-	dso::Sim3 g2oSim3_to_sophusSim3(Sim3Vertex &g2o_sim3)
+	dso::Sim3 g2oSim3_to_sophusSim3(Sim3Vertex &g2o_sim3, const double scale)
 	{
 		Mat44 sim_transform;
 		sim_transform.topLeftCorner(3, 3) = g2o_sim3.estimate().rotation().toRotationMatrix();
 		sim_transform.topRightCorner(3, 1) = g2o_sim3.estimate().translation();
-		sim_transform.topLeftCorner(3, 3) *= g2o_sim3.estimate().scale();
+		if (scale <= 0){
+			sim_transform.topLeftCorner(3, 3) *= g2o_sim3.estimate().scale();
+		} else {
+			sim_transform.topLeftCorner(3, 3) *= scale;
+		}
 		return Sim3(sim_transform);
 	}
 
-	g2o::Sim3 sophusSim3_to_g2oSim3(dso::Sim3 sophus_sim3)
-	{
-		return g2o::Sim3(sophus_sim3.rotationMatrix(), sophus_sim3.translation(), sophus_sim3.scale());
+	g2o::Sim3 sophusSim3_to_g2oSim3(dso::Sim3 sophus_sim3, const double scale)
+	{			
+		if (scale <= 0){
+			return g2o::Sim3(sophus_sim3.rotationMatrix(), sophus_sim3.translation(), sophus_sim3.scale());
+		} else {
+			return g2o::Sim3(sophus_sim3.rotationMatrix(), sophus_sim3.translation(), scale);
+		}
 	}
 
- 	void PoseOptimization(std::shared_ptr<Frame> pFrame, CalibHessian *calib, Sophus::SE3d *referenceToFrameHint, Sophus::SE3d FrameBackUp)
+ 	void PoseOptimization(std::shared_ptr<Frame> pFrame, CalibHessian *calib, Sophus::SE3d *referenceToFrameHint, Sophus::SE3d FrameBackUp, double scale)
 	{
 		g2o::SparseOptimizer optimizer;
 		auto linearSolver = g2o::make_unique<g2o::LinearSolverDense<g2o::BlockSolver_6_3::PoseMatrixType>>();
@@ -68,6 +76,7 @@ namespace dso
 		vector<size_t> vnIndexEdgeMono;
 		vector<double> initErr;
 		double initScale = 1.0;
+		if (scale > 0) initScale = scale;
 		initErr.reserve(2 * N);
 		vpEdgesMono.reserve(N);
 		vnIndexEdgeMono.reserve(N);
@@ -121,7 +130,7 @@ namespace dso
 			//compute information vector distribution:
 			stdDev = getStdDev(vInformation);
 
-			initScale = getStdDev(initErr); //computeScale(initErr);
+			if (scale <= 0) initScale = getStdDev(initErr);
 
 			for (int i = 0, iend = vpEdgesMono.size(); i < iend; ++i)
 			{
@@ -133,17 +142,14 @@ namespace dso
 		if (nInitialCorrespondences < 10 || optimizer.edges().size() < 10)
 			return;
 
-		printf("Actually Doing PoseOptimization\n");
+		printf("Doing InDirect PoseOptimization\n");
 
 		const float chi2Mono = 1.345;
 		const int its = 10;
 
-		printf("Setting Pose\n");
 		if(referenceToFrameHint){
-			printf("Use IMU\n");
 			vSE3->setEstimate(*referenceToFrameHint);
 		}else{
-			printf("Use Backup\n");
 			vSE3->setEstimate(FrameBackUp);
 		}
 
@@ -179,7 +185,7 @@ namespace dso
 		return;
 	}
  
-	int OptimizeSim3(std::shared_ptr<Frame> pKF1, std::shared_ptr<Frame> pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches1, Sim3 &g2oS12, const float th2, const bool bFixScale)
+	int OptimizeSim3(std::shared_ptr<Frame> pKF1, std::shared_ptr<Frame> pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches1, Sim3 &g2oS12, const float th2, const double bFixScale)
 	{
 
 		g2o::SparseOptimizer optimizer;
@@ -198,11 +204,16 @@ namespace dso
 		size_t id = 0;
 		// Set Sim3 vertex
 		Sim3Vertex* vSim3 = new Sim3Vertex();
-		vSim3->setData(pKF1->HCalib->fxl(), pKF1->HCalib->fyl(), pKF1->HCalib->cxl(), pKF1->HCalib->cyl(), bFixScale);
+		vSim3->setData(pKF1->HCalib->fxl(), pKF1->HCalib->fyl(), pKF1->HCalib->cxl(), pKF1->HCalib->cyl());
 		vSim3->setData2(pKF2->HCalib->fxl(), pKF2->HCalib->fyl(), pKF2->HCalib->cxl(), pKF2->HCalib->cyl());
 		vSim3->setId(id);
 		vSim3->setFixed(false);
-		vSim3->setEstimate(g2o::Sim3(g2oS12.rotationMatrix(), g2oS12.translation(), g2oS12.scale()));
+		if (bFixScale <= 0) {
+			vSim3->setEstimate(g2o::Sim3(g2oS12.rotationMatrix(), g2oS12.translation(), g2oS12.scale()));
+		} else {
+			vSim3->setEstimate(g2o::Sim3(g2oS12.rotationMatrix(), g2oS12.translation(), bFixScale));
+		}
+
 		optimizer.addVertex(vSim3);
 		id++;
 		// Set MapPoint vertices
@@ -378,7 +389,7 @@ namespace dso
 								const KeyFrameAndPose &NonCorrectedSim3, const KeyFrameAndPose &CorrectedSim3, 
 								const std::map<std::shared_ptr<Frame>, std::set<std::shared_ptr<Frame>, std::owner_less<std::shared_ptr<Frame>>>, std::owner_less<std::shared_ptr<Frame>>> &LoopConnections,
 								const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>> &connectivity,
-								const size_t maxKfIdatCand, const size_t minActkfid,const size_t maxMPIdatCand, const bool &bFixScale)
+								const size_t maxKfIdatCand, const size_t minActkfid,const size_t maxMPIdatCand, const double bFixScale)
 	{
 
 		g2o::SparseOptimizer optimizer;
@@ -416,7 +427,7 @@ namespace dso
 			keyframesByKFID[nIDi] = pKF;
 
 			Sim3Vertex *VSim3 = new Sim3Vertex();
-			auto TempSiw = sophusSim3_to_g2oSim3(vpKFs[i]->getPoseOpti());
+			auto TempSiw = sophusSim3_to_g2oSim3(vpKFs[i]->getPoseOpti(), bFixScale);
 			vScw[nIDi] = TempSiw; //Siw
 			VSim3->setEstimate(TempSiw);
 			VSim3->setFixed(false);

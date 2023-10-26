@@ -166,6 +166,7 @@ public:
     TransformDSOToIMU& getTransformDSOToIMU();
     // Get the scale of TransformDSOToIMU used for the coarse tracking currently (can be called from any thread).
     double getCoarseScale();
+    double getTransformDSOToIMUScale();
 
 private:
     IMUCalibration imuCalibration;
