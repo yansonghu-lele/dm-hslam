@@ -12,6 +12,7 @@ set(BUILD_TYPE RelWithDebInfo)
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/thirdparty/CompiledLibs/lib/cmake)
 set(DBoW3_DIR ${PROJECT_SOURCE_DIR}/thirdparty/DBow3/build)
 
 # required libraries
@@ -19,13 +20,14 @@ find_package(SuiteParse REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Boost COMPONENTS system thread filesystem chrono serialization date_time timer)
 find_package(GTSAM REQUIRED)
+find_package(G2O REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(DBoW3 REQUIRED)
 
 find_package(realsense2 QUIET)
 
 IF(${Boost_VERSION} GREATER_EQUAL 106500)
-    message("Building with stacktrace support.")
+	message("Building with stacktrace support.")
 	set(STACKTRACE_LIBRARIES dl)
 	set(STACKTRACE_DEFINES "-DSTACKTRACE -DBOOST_STACKTRACE_USE_ADDR2LINE")
 ENDIF()
@@ -33,20 +35,20 @@ ENDIF()
 # optional libraries
 find_package(LibZip QUIET)
 find_package(Pangolin 0.2 QUIET)
-find_package(OpenCV QUIET)
+find_package(OpenCV 3.4.16 REQUIRED PATHS /home/gy/devel/fslam_ros_docker_VI/FSLAM/Thirdparty/CompiledLibs NO_DEFAULT_PATH)
 
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    MESSAGE(Mac OS X specific code)
-    include_directories(/usr/local/include)
-    link_directories(/usr/local/lib)
+	MESSAGE(Mac OS X specific code)
+	include_directories(/usr/local/include)
+	link_directories(/usr/local/lib)
 ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 
 # flags
 add_definitions("-DENABLE_SSE")
 set(CMAKE_CXX_FLAGS
-    "${SSE_FLAGS}"
+	"${SSE_FLAGS}"
 )
 set(CMAKE_CXX_FLAGS_DEBUG
 	"-O2 -g -fno-omit-frame-pointer -DEIGEN_INITIALIZE_MATRICES_WITH_NAN -DDEBUG ${STACKTRACE_DEFINES}"
@@ -61,24 +63,24 @@ set(CMAKE_CXX_FLAGS_RELEASE
 set(CMAKE_CXX_STANDARD 14)
 
 if (MSVC)
-     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+	 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif (MSVC)
 
 set(DSO_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src/dso)
 
 # DSO Source files
 set(dso_SOURCE_FILES
-        ${DSO_SOURCE_DIR}/FullSystem/FullSystem.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/FullSystemOptimize.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/FullSystemOptPoint.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/FullSystemDebugStuff.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/FullSystemMarginalize.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/Residuals.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/CoarseTracker.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/CoarseInitializer.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/ImmaturePoint.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/HessianBlocks.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/PixelSelector2.cpp
+		${DSO_SOURCE_DIR}/FullSystem/FullSystem.cpp
+		${DSO_SOURCE_DIR}/FullSystem/FullSystemOptimize.cpp
+		${DSO_SOURCE_DIR}/FullSystem/FullSystemOptPoint.cpp
+		${DSO_SOURCE_DIR}/FullSystem/FullSystemDebugStuff.cpp
+		${DSO_SOURCE_DIR}/FullSystem/FullSystemMarginalize.cpp
+		${DSO_SOURCE_DIR}/FullSystem/Residuals.cpp
+		${DSO_SOURCE_DIR}/FullSystem/CoarseTracker.cpp
+		${DSO_SOURCE_DIR}/FullSystem/CoarseInitializer.cpp
+		${DSO_SOURCE_DIR}/FullSystem/ImmaturePoint.cpp
+		${DSO_SOURCE_DIR}/FullSystem/HessianBlocks.cpp
+		${DSO_SOURCE_DIR}/FullSystem/PixelSelector2.cpp
 		${DSO_SOURCE_DIR}/OptimizationBackend/EnergyFunctional.cpp
 		${DSO_SOURCE_DIR}/OptimizationBackend/AccumulatedTopHessian.cpp
 		${DSO_SOURCE_DIR}/OptimizationBackend/AccumulatedSCHessian.cpp
@@ -86,12 +88,20 @@ set(dso_SOURCE_FILES
 		${DSO_SOURCE_DIR}/util/settings.cpp
 		${DSO_SOURCE_DIR}/util/Undistort.cpp
 		${DSO_SOURCE_DIR}/util/globalCalib.cpp
+		${DSO_SOURCE_DIR}/Indirect/Frame.cpp
+		${DSO_SOURCE_DIR}/Indirect/Detector.cpp
+		${DSO_SOURCE_DIR}/Indirect/MapPoint.cpp
+		${DSO_SOURCE_DIR}/Indirect/Matcher.cpp
+		${DSO_SOURCE_DIR}/Indirect/Map.cpp
+		${DSO_SOURCE_DIR}/Indirect/Optimizer.cpp
+		${DSO_SOURCE_DIR}/Indirect/Sim3Solver.cpp
+		${DSO_SOURCE_DIR}/Indirect/LoopCloser.cpp
 		)
 
 set(dmvio_SOURCE_FILES
 		src/IMU/IMUIntegration.cpp
 		src/GTSAMIntegration/Sim3GTSAM.cpp
-        src/IMUInitialization/GravityInitializer.cpp
+		src/IMUInitialization/GravityInitializer.cpp
 		src/IMU/IMUTypes.cpp
 		src/IMU/IMUSettings.cpp
 		src/util/TimeMeasurement.cpp
@@ -103,22 +113,22 @@ set(dmvio_SOURCE_FILES
 		src/GTSAMIntegration/Marginalization.cpp
 		src/GTSAMIntegration/PoseTransformationIMU.cpp
 		src/GTSAMIntegration/PoseTransformationFactor.cpp
-        src/IMUInitialization/CoarseIMUInitOptimizer.cpp
-        src/IMUInitialization/IMUInitializer.cpp
+		src/IMUInitialization/CoarseIMUInitOptimizer.cpp
+		src/IMUInitialization/IMUInitializer.cpp
 		src/IMU/IMUUtils.cpp
-        src/IMUInitialization/IMUInitSettings.cpp
+		src/IMUInitialization/IMUInitSettings.cpp
 		src/GTSAMIntegration/GTSAMUtils.cpp
 		src/GTSAMIntegration/DelayedMarginalization.cpp
-        src/IMUInitialization/PoseGraphBundleAdjustment.cpp
-        src/GTSAMIntegration/FEJValues.cpp
-        src/IMUInitialization/IMUInitializerStates.cpp
-        src/IMUInitialization/IMUInitializerLogic.cpp
-        src/IMUInitialization/IMUInitializerTransitions.cpp
+		src/IMUInitialization/PoseGraphBundleAdjustment.cpp
+		src/GTSAMIntegration/FEJValues.cpp
+		src/IMUInitialization/IMUInitializerStates.cpp
+		src/IMUInitialization/IMUInitializerLogic.cpp
+		src/IMUInitialization/IMUInitializerTransitions.cpp
 		src/GTSAMIntegration/AugmentedScatter.cpp
 		src/live/FrameContainer.cpp
 		src/live/IMUInterpolator.cpp
-        src/util/MainSettings.cpp
-        src/live/FrameSkippingStrategy.cpp
+		src/util/MainSettings.cpp
+		src/live/FrameSkippingStrategy.cpp
 		src/live/DatasetSaver.cpp
 		)
 
@@ -131,6 +141,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/Thirdparty/DBow3
   ${EIGEN3_INCLUDE_DIR}
   ${GTSAM_INCLUDE_DIR}
+  ${G2O_INCLUDE_DIR}
 ) 
 
 
@@ -183,11 +194,12 @@ add_library(dmvio ${dso_SOURCE_FILES} ${dmvio_SOURCE_FILES} ${dso_opencv_SOURCE_
 
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin") # OSX
-    set(BOOST_THREAD_LIBRARY boost_thread-mt)
+	set(BOOST_THREAD_LIBRARY boost_thread-mt)
 else()
-    set(BOOST_THREAD_LIBRARY boost_thread)
+	set(BOOST_THREAD_LIBRARY boost_thread)
 endif()
 
+link_directories(${PROJECT_SOURCE_DIR}/thirdparty/CompiledLibs/lib)
 
 # build main executable (only if we have both OpenCV and Pangolin)
 if (OpenCV_FOUND AND Pangolin_FOUND)
@@ -196,6 +208,7 @@ if (OpenCV_FOUND AND Pangolin_FOUND)
 	set(DMVIO_LINKED_LIBRARIES
 	 boost_system cxsparse
 	 ${BOOST_THREAD_LIBRARY}
+	 ${G2O_LIBS}
 	 ${LIBZIP_LIBRARY}
 	 ${Pangolin_LIBRARIES}
 	 ${DBoW3_LIB_DIR}/libDBoW3.so
@@ -203,7 +216,7 @@ if (OpenCV_FOUND AND Pangolin_FOUND)
 	 gtsam
 	 ${YAML_CPP_LIBRARIES}
 	 ${STACKTRACE_LIBRARIES})
-    target_link_libraries(dmvio_dataset dmvio ${DMVIO_LINKED_LIBRARIES})
+	target_link_libraries(dmvio_dataset dmvio ${DMVIO_LINKED_LIBRARIES})
 
 	if(realsense2_FOUND)
 		message("--- compiling dmvio_t265.")

@@ -1082,7 +1082,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 		
 		nMatches = matcher->SearchByProjectionFrameToFrame(shell->frame, mLastFrame, 15, true);
 
-		FrameHessian* lastF = coarseTracker->lastRef;
+/* 		FrameHessian* lastF = coarseTracker->lastRef;
 		FrameShell* slast = allFrameHistory[allFrameHistory.size()-2];
 		FrameShell* sprelast = allFrameHistory[allFrameHistory.size()-3];
 		SE3 slast_2_sprelast;
@@ -1098,7 +1098,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			PoseOptimization(shell->frame, &Hcalib, referenceToFramePassed, fh_2_slast.inverse() * lastF_2_slast, -1);
 		} else {
 			PoseOptimization(shell->frame, &Hcalib, nullptr, fh_2_slast.inverse() * lastF_2_slast, imuIntegration.getTransformDSOToIMUScale());
-		}
+		} */
  
 		nIndmatches = updatePoseOptimizationData(shell->frame, nMatches, true);
 

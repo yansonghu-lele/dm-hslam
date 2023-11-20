@@ -1,6 +1,6 @@
 # Find the header files
 
-Set(G2O_INCLUDE_DIR /home/gy/devel/fslam_ros_docker_VI/FSLAM/Thirdparty/CompiledLibs/include/g2o)
+Set(G2O_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/thirdparty/CompiledLibs/include/g2o)
 
 # Macro to unify finding both the debug and release versions of the
 # libraries; this is adapted from the OpenSceneGraph FIND_LIBRARY
@@ -10,16 +10,11 @@ macro(FIND_G2O_LIBRARY MYLIBRARY MYLIBRARYNAME)
 
   find_library("${MYLIBRARY}_DEBUG"
     NAMES "g2o_${MYLIBRARYNAME}_d"
-    PATHS
-    ${PROJECT_SOURCE_DIR}/Thirdparty/CompiledLibs/lib
-    )
-  
+    PATHS ${PROJECT_SOURCE_DIR}/thirdparty/CompiledLibs/lib)
+
   find_library(${MYLIBRARY}
     NAMES "g2o_${MYLIBRARYNAME}"
-    PATHS
-    ${PROJECT_SOURCE_DIR}/Thirdparty/CompiledLibs/lib
-    )
-
+    PATHS ${PROJECT_SOURCE_DIR}/thirdparty/CompiledLibs/lib REQUIRED)
   
   if(NOT ${MYLIBRARY}_DEBUG)
     if(MYLIBRARY)
@@ -34,7 +29,7 @@ FIND_G2O_LIBRARY(G2O_STUFF_LIBRARY stuff)
 FIND_G2O_LIBRARY(G2O_CORE_LIBRARY core)
 
 # Find the CLI library
-FIND_G2O_LIBRARY(G2O_CLI_LIBRARY cli)
+# FIND_G2O_LIBRARY(G2O_CLI_LIBRARY cli)
 
 # Find the pluggable solvers
 FIND_G2O_LIBRARY(G2O_SOLVER_CHOLMOD solver_cholmod)
