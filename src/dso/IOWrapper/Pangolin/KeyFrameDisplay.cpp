@@ -132,6 +132,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 		pc[numSparsePoints].relObsBaseline = 0;
 		pc[numSparsePoints].numGoodRes = 1;
 		pc[numSparsePoints].status = 0;
+
 		numSparsePoints++;
 	}
 
@@ -161,6 +162,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 		pc[numSparsePoints].idepth_hessian = p->idepth_hessian;
 		pc[numSparsePoints].numGoodRes =  0;
 		pc[numSparsePoints].status=2;
+
 		numSparsePoints++;
 	}
 
@@ -175,6 +177,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 		pc[numSparsePoints].idepth_hessian = p->idepth_hessian;
 		pc[numSparsePoints].numGoodRes =  0;
 		pc[numSparsePoints].status=3;
+		
 		numSparsePoints++;
 	}
 	assert(numSparsePoints <= npoints);
@@ -235,20 +238,16 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 
 		if(originalInputSparse[i].idepth < 0) continue;
 
-
 		float depth = (1.0f / originalInputSparse[i].idepth);
-		float depth4 = depth*depth; depth4*= depth4;
+		float depth4 = depth*depth; depth4 *= depth4;
 		float var = (1.0f / (originalInputSparse[i].idepth_hessian+0.01));
 
-		if(var * depth4 > my_scaledTH)
-			continue;
+		if(var * depth4 > my_scaledTH) continue;
 
-		if(var > my_absTH)
-			continue;
+		if(var > my_absTH) continue;
 
-		if(originalInputSparse[i].relObsBaseline < my_minRelBS)
-			continue;
-
+		// All imature points have a placeholder relObsBaseline of 0, so they are excluded from this check
+		if((originalInputSparse[i].relObsBaseline < my_minRelBS) && (originalInputSparse[i].status != 0)) continue;
 
 		for(int pnt=0;pnt<patternNum;pnt++)
 		{
@@ -262,45 +261,46 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			tmpVertexBuffer[vertexBufferNumPoints][2] = depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f));
 
 			unsigned char color_intensity = originalInputSparse[i].color[pnt];
+			unsigned char scaled_color_intensity = 51 + (color_intensity/5)*4;
 
 			if(my_displayMode==0)
 			{
 				if(originalInputSparse[i].status==0)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 128 + color_intensity/2;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 128 + color_intensity/2;
+					tmpColorBuffer[vertexBufferNumPoints][0] = (51 + (color_intensity/5)*4)/4;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/5)*4;
 				}
 				else if(originalInputSparse[i].status==1)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 128 + color_intensity/2;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 255;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
 					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
 				}
 				else if(originalInputSparse[i].status==2)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 128 + color_intensity/2;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][2] = (51 + (color_intensity/5)*4)/4;
 				}
 				else if(originalInputSparse[i].status==3)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 128 + color_intensity/2;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
+					tmpColorBuffer[vertexBufferNumPoints][0] = (51 + (color_intensity/5)*4)/4;
+					tmpColorBuffer[vertexBufferNumPoints][1] = (51 + (color_intensity/5)*4)/4;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/5)*4;
 				}
 				else
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 128 + color_intensity/2;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 128 + color_intensity/2;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 128 + color_intensity/2;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/5)*4;
 				}
 
 			} else if(my_displayMode==2)
 			{
 				if(originalInputSparse[i].status==1)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 128 + color_intensity/2;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 255;
 					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
 					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
 				} else {
