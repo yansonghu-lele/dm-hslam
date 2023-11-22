@@ -130,7 +130,8 @@ void PangolinDSOViewer::run()
 	// parameter reconfigure gui
 	pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
 
-	pangolin::Var<int> settings_pointCloudMode("ui.PC_mode",1,0,3,false);
+	pangolin::Var<int> settings_pointCloudMode("ui.PC_mode",1,0,2,false);
+	pangolin::Var<bool> settings_showDrawPC("ui.PC_OnOff",true,true);
 
 	pangolin::Var<bool> settings_showKFCameras("ui.KFCam",false,true);
 	pangolin::Var<bool> settings_showCurrentCamera("ui.CurrCam",true,true);
@@ -215,7 +216,8 @@ void PangolinDSOViewer::run()
 
 				refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
 						this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
-				fh->drawPC(1);
+				
+				if (settings_showDrawPC) fh->drawPC(1);
 			}
 			if(this->settings_showCurrentCamera) currentCam->drawCam(2,0,0.2 * sizeFactor);
 
@@ -307,6 +309,7 @@ void PangolinDSOViewer::run()
 
 	    // update parameters
 	    this->settings_pointCloudMode = settings_pointCloudMode.Get();
+		this->settings_showDrawPC = settings_showDrawPC.Get();
 
 	    this->settings_showActiveConstraints = settings_showActiveConstraints.Get();
 	    this->settings_showAllConstraints = settings_showAllConstraints.Get();

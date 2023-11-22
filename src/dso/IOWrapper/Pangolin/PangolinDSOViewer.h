@@ -168,6 +168,7 @@ private:
 	float settings_scaledVarTH;
 	float settings_absVarTH;
 	int settings_pointCloudMode;
+	bool settings_showDrawPC;
 	float settings_minRelBS;
 	int settings_sparsity;
 

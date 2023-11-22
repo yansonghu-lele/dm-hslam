@@ -48,7 +48,7 @@ struct InputPointSparse
 {
 	float u;
 	float v;
-	float idpeth;
+	float idepth;
 	float idepth_hessian;
 	float relObsBaseline;
 	int numGoodRes;
