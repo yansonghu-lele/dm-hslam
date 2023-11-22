@@ -130,7 +130,7 @@ void PangolinDSOViewer::run()
 	// parameter reconfigure gui
 	pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
 
-	pangolin::Var<int> settings_pointCloudMode("ui.PC_mode",1,1,4,false);
+	pangolin::Var<int> settings_pointCloudMode("ui.PC_mode",1,0,3,false);
 
 	pangolin::Var<bool> settings_showKFCameras("ui.KFCam",false,true);
 	pangolin::Var<bool> settings_showCurrentCamera("ui.CurrCam",true,true);

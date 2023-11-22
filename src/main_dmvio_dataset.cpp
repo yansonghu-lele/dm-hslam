@@ -27,6 +27,7 @@
 
 #include "util/MainSettings.h"
 #include <thread>
+#include <memory>
 #include <locale.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -127,7 +128,8 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
                   << " because of non-realtime mode." << std::endl;
     }
 
-    FullSystem* fullSystem = new FullSystem(linearizeOperation, imuCalibration, imuSettings);
+    std::unique_ptr<FullSystem> fullSystem;
+    fullSystem = std::make_unique<FullSystem> (linearizeOperation, imuCalibration, imuSettings);
     fullSystem->setGammaFunction(reader->getPhotometricGamma());
 
 
@@ -264,10 +266,10 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             {
                 printf("RESETTING!\n");
                 std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
-                delete fullSystem;
+                fullSystem.reset();
                 for(IOWrap::Output3DWrapper* ow : wraps) ow->reset();
 
-                fullSystem = new FullSystem(linearizeOperation, imuCalibration, imuSettings);
+                fullSystem = std::make_unique<FullSystem>(linearizeOperation, imuCalibration, imuSettings);
                 fullSystem->setGammaFunction(reader->getPhotometricGamma());
                 fullSystem->outputWrapper = wraps;
 
@@ -337,7 +339,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 
 
     printf("DELETE FULLSYSTEM!\n");
-    delete fullSystem;
+    fullSystem.reset();
 
     printf("DELETE READER!\n");
     delete reader;
