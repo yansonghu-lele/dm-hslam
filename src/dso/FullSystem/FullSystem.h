@@ -273,7 +273,7 @@ private:
 	boost::mutex trackMutex;
 	std::vector<FrameShell*> allFrameHistory;
 	std::vector<Sophus::SE3d> gtPoses;
-	CoarseInitializer* coarseInitializer;
+	std::unique_ptr<CoarseInitializer> coarseInitializer;
 	Vec5 lastCoarseRMSE;
 
 
@@ -285,8 +285,8 @@ private:
 	IndexThreadReduce<Vec10> treadReduce;
 
 	float* selectionMap;
-	PixelSelector* pixelSelector;
-	CoarseDistanceMap* coarseDistanceMap;
+	std::unique_ptr<PixelSelector> pixelSelector;
+	std::unique_ptr<CoarseDistanceMap> coarseDistanceMap;
 
 	std::vector<FrameHessian*> frameHessians;	// ONLY changed in marginalizeFrame and addFrame.
 	std::vector<PointFrameResidual*> activeResiduals;

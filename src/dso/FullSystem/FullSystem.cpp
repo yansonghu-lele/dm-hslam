@@ -145,11 +145,11 @@ FullSystem::FullSystem(bool linearizeOperationPassed, const dmvio::IMUCalibratio
 
 	selectionMap = new float[wG[0]*hG[0]];
 
-	coarseDistanceMap = new CoarseDistanceMap(wG[0], hG[0]);
+	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (wG[0], hG[0]);
 	coarseTracker = new CoarseTracker(wG[0], hG[0], imuIntegration);
 	coarseTracker_forNewKF = new CoarseTracker(wG[0], hG[0], imuIntegration);
-	coarseInitializer = new CoarseInitializer(wG[0], hG[0]);
-	pixelSelector = new PixelSelector(wG[0], hG[0]);
+	coarseInitializer = std::make_unique<CoarseInitializer> (wG[0], hG[0]);
+	pixelSelector = std::make_unique<PixelSelector> (wG[0], hG[0]);
 
 	statistics_lastNumOptIts=0;
 	statistics_numDroppedPoints=0;
@@ -211,11 +211,11 @@ FullSystem::~FullSystem()
 	for(FrameHessian* fh : unmappedTrackedFrames)
 		delete fh;
 
-	delete coarseDistanceMap;
+	coarseDistanceMap.reset();
 	delete coarseTracker;
 	delete coarseTracker_forNewKF;
-	delete coarseInitializer;
-	delete pixelSelector;
+	coarseInitializer.reset();
+	pixelSelector.reset();
 	delete ef;
 }
 
@@ -446,7 +446,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 
 		if(i != 0)
 		{
-			printf("RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
+			printf("RE-TRACK ATTEMPT %u with initOption %u and start-lvl %u (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
 					i,
 					i, pyrLevelsUsed-1,
 					aff_g2l_this.a,aff_g2l_this.b,

@@ -90,7 +90,14 @@ int computeHistQuantil(int* hist, float below)
 	return 90;
 }
 
-
+/**
+ * @brief Makes histograms to find the approximate quantiles of the data. 
+ * 
+ * Using Histograms allows for calculation of approximate quantiles at O(n) speed
+ * Calculating actual quantile would require sorting, which is slower than O(n)
+ * 
+ * @param fh Input frame
+ */
 void PixelSelector::makeHists(const FrameHessian* const fh)
 {
 	gradHistFrame = fh;
@@ -103,20 +110,30 @@ void PixelSelector::makeHists(const FrameHessian* const fh)
 	int h32 = nbH;
 	thsStep = w32;
 
+	// Each bin is 1024 float intensity values between 0 and ~181.019
+	// Square-root choice is used to determine the number of bins (sqrt(32*32)=32)
 	for(int y=0;y<h32;y++)
 		for(int x=0;x<w32;x++)
 		{
 			float* map0 = mapmax0+bW*x+bH*y*w;
 			int* hist0 = gradHist;// + 50*(x+y*w32);
-			memset(hist0,0,sizeof(int)*50);
+			memset(hist0,0,sizeof(int)*33);
 
 			for(int j=0;j<bH;j++) for(int i=0;i<bW;i++)
 			{
 				int it = i+bW*x;
 				int jt = j+bH*y;
+
 				if(it>w-2 || jt>h-2 || it<1 || jt<1) continue;
+
+				// g is equal to sqrt(dx^2+dy^2)
+				// Absolute max value of g is around 181.019
 				int g = sqrtf(map0[i+j*w]);
-				if(g>48) g=48;
+				// Map 181.019 to 0 to 32
+				g = g/5-2;
+				if(g < 0) g = 0;
+				if(g > 31) g = 31;
+
 				hist0[g+1]++;
 				hist0[0]++;
 			}
@@ -124,6 +141,7 @@ void PixelSelector::makeHists(const FrameHessian* const fh)
 			ths[x+y*w32] = computeHistQuantil(hist0,setting_minGradHistCut) + setting_minGradHistAdd;
 		}
 
+	// Smooth out the quantiles using a box kernel
 	for(int y=0;y<h32;y++)
 		for(int x=0;x<w32;x++)
 		{
@@ -147,14 +165,10 @@ void PixelSelector::makeHists(const FrameHessian* const fh)
 			num++; sum+=ths[x+y*w32];
 
 			thsSmoothed[x+y*w32] = (sum/num) * (sum/num);
-
 		}
-
-
-
-
-
 }
+
+
 int PixelSelector::makeMaps(
 		const FrameHessian* const fh,
 		float* map_out, float density, int recursionsLeft, bool plot, float thFactor)

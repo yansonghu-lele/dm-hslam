@@ -237,8 +237,10 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 
 		if(setting_photometricCalibration==2)
 		{
-			for(int i=0; i<wh;i++)
+			for(int i=0; i<wh;i++){
 				data[i] *= vignetteMapInv[i];
+				if (data[i] > 255) data[i] = 255;
+			}
 		}
 
 		output->exposure_time = exposure_time;
@@ -578,8 +580,6 @@ void Undistort::applyBlurNoise(float* img) const
 			}
 			img[x+y*this->w] = sumCW / sumW;
 		}
-
-
 
 	delete[] noiseMapX;
 	delete[] noiseMapY;

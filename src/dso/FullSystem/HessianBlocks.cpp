@@ -124,17 +124,16 @@ void FrameHessian::release()
 	immaturePoints.clear();
 }
 
-
 void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 {
-
+	// dIp contains (color, dx, dy)
+	// absSquaredGrad contains the pixel gradient
 	for(int i=0;i<pyrLevelsUsed;i++)
 	{
 		dIp[i] = new Eigen::Vector3f[wG[i]*hG[i]];
 		absSquaredGrad[i] = new float[wG[i]*hG[i]];
 	}
 	dI = dIp[0];
-
 
 	// make d0
 	int w=wG[0];
@@ -145,16 +144,16 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
 		int wl = wG[lvl], hl = hG[lvl];
-		Eigen::Vector3f* dI_l = dIp[lvl];
 
+		// Set dI_l and dabs_l to point to the dIp and absSquaredGrad arrays
+		Eigen::Vector3f* dI_l = dIp[lvl];
 		float* dabs_l = absSquaredGrad[lvl];
+
 		if(lvl>0)
 		{
 			int lvlm1 = lvl-1;
 			int wlm1 = wG[lvlm1];
 			Eigen::Vector3f* dI_lm = dIp[lvlm1];
-
-
 
 			for(int y=0;y<hl;y++)
 				for(int x=0;x<wl;x++)
@@ -166,26 +165,38 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 				}
 		}
 
-		for(int idx=wl;idx < wl*(hl-1);idx++)
+		for(int idx=0;idx < wl*hl;idx++)
 		{
-			float dx = 0.5f*(dI_l[idx+1][0] - dI_l[idx-1][0]);
-			float dy = 0.5f*(dI_l[idx+wl][0] - dI_l[idx-wl][0]);
+			// Derivative is appying a [1/2 0 -1/2] kernel in the x or y directions
+			// Abosolute max value for derivative is 128
+			// Derivative is calculated at the sides using extend 
+			float dx = 0;
+			if((idx%wl!=0) && (idx%wl!=(wl-1))) dx = 0.5f*(dI_l[idx+1][0] - dI_l[idx-1][0]);
+			else if(idx%wl==0) dx = 0.5f*(dI_l[idx+1][0] - dI_l[idx][0]);
+			else if(idx%wl==(wl-1)) dx = 0.5f*(dI_l[idx][0] - dI_l[idx-1][0]);
 
-
+			float dy = 0;
+			if((idx>=wl) && (idx<(wl*hl-wl))) dy = 0.5f*(dI_l[idx+wl][0] - dI_l[idx-wl][0]);
+			else if(idx<wl) dy = 0.5f*(dI_l[idx+wl][0] - dI_l[idx][0]);
+			else if(idx>=(wl*hl-wl)) dy = 0.5f*(dI_l[idx][0] - dI_l[idx-wl][0]);
+			
 			if(!std::isfinite(dx)) dx=0;
 			if(!std::isfinite(dy)) dy=0;
 
 			dI_l[idx][1] = dx;
 			dI_l[idx][2] = dy;
 
-
+			// Absolute max value for gradient is 32768
 			dabs_l[idx] = dx*dx+dy*dy;
 
 			if(setting_gammaWeightsPixelSelect==1 && HCalib!=0)
 			{
 				float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
-				dabs_l[idx] *= gw*gw;	// convert to gradient of original color space (before removing response).
+				// convert to gradient of original color space (before removing response) by correcting gamma
+				dabs_l[idx] *= gw*gw;
 			}
+
+			if (dabs_l[idx] > 32768) dabs_l[idx] = 32768;
 		}
 	}
 }

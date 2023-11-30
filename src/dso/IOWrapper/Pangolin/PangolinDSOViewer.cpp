@@ -210,8 +210,10 @@ void PangolinDSOViewer::run()
 			int refreshed=0;
 			for(KeyFrameDisplay* fh : keyframes)
 			{
-				float blue[3] = {0.32,0.7,0.8};
-				if(this->settings_showKFCameras) fh->drawCam(1,blue,0.1 * sizeFactor);
+				if(this->settings_showKFCameras) {
+					float blue[3] = {0.32,0.7,0.8};
+					fh->drawCam(1,blue,0.1 * sizeFactor);
+				}
 
 
 				refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
@@ -221,9 +223,9 @@ void PangolinDSOViewer::run()
 			}
 			if(this->settings_showCurrentCamera) currentCam->drawCam(2,0,0.2 * sizeFactor);
 
-			float yellow[3] = {0.94,0.82,0.0};
             if(gtCamPoseSet)
             {
+				float yellow[3] = {0.94,0.82,0.0};
                 currentGTCam->drawCam(2, yellow, 0.2 * sizeFactor);
             }
 
@@ -251,15 +253,13 @@ void PangolinDSOViewer::run()
 		// update fps counters
 		{
 			openImagesMutex.lock();
-			float sd=0;
-			for(float d : lastNMappingMs) sd+=d;
+			float sd = std::accumulate(lastNMappingMs.begin(), lastNMappingMs.end(), 0);
 			settings_mapFps=lastNMappingMs.size()*1000.0f / sd;
 			openImagesMutex.unlock();
 		}
 		{
 			model3DMutex.lock();
-			float sd=0;
-			for(float d : lastNTrackingMs) sd+=d;
+			float sd = std::accumulate(lastNTrackingMs.begin(), lastNTrackingMs.end(), 0);
 			settings_trackFps = lastNTrackingMs.size()*1000.0f / sd;
 			model3DMutex.unlock();
 		}

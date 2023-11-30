@@ -46,27 +46,22 @@ namespace IOWrap
 {
 
 
-KeyFrameDisplay::KeyFrameDisplay()
-{
-	originalInputSparse = 0;
-	numSparseBufferSize=0;
-	numSparsePoints=0;
-
-	id = 0;
-	active= true;
-	camToWorld = SE3();
-
-	needRefresh=true;
-
-	my_scaledTH =1e10;
-	my_absTH = 1e10;
-	my_displayMode = 1;
-	my_minRelBS = 0;
-	my_sparsifyFactor = 1;
-
-	numGLBufferPoints=0;
-	bufferValid = false;
-}
+KeyFrameDisplay::KeyFrameDisplay() : 
+	originalInputSparse(0),
+	numSparseBufferSize(0),
+	numSparsePoints(0),
+	id(0),
+	active(true),
+	camToWorld(SE3()),
+	needRefresh(true),
+	my_scaledTH(1e10),
+	my_absTH(1e10),
+	my_displayMode(1),
+	my_minRelBS(0),
+	my_sparsifyFactor(1),
+	numGLBufferPoints(0),
+	bufferValid(false) {}
+	
 void KeyFrameDisplay::setFromF(FrameShell* frame, CalibHessian* HCalib)
 {
 	id = frame->id;
@@ -267,9 +262,9 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			{
 				if(originalInputSparse[i].status==0)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = (51 + (color_intensity/5)*4)/4;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/5)*4;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][0] = (81 + (color_intensity/4)*2)/2;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 81 + (color_intensity/4)*2;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 81 + (color_intensity/4)*2;
 				}
 				else if(originalInputSparse[i].status==1)
 				{
@@ -279,21 +274,21 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 				}
 				else if(originalInputSparse[i].status==2)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/5)*4;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/5)*4;
-					tmpColorBuffer[vertexBufferNumPoints][2] = (51 + (color_intensity/5)*4)/4;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/6)*4;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/6)*4;
+					tmpColorBuffer[vertexBufferNumPoints][2] = (51 + (color_intensity/6)*4)/4;
 				}
 				else if(originalInputSparse[i].status==3)
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = (51 + (color_intensity/5)*4)/4;
-					tmpColorBuffer[vertexBufferNumPoints][1] = (51 + (color_intensity/5)*4)/4;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][0] = (51 + (color_intensity/6)*4)/4;
+					tmpColorBuffer[vertexBufferNumPoints][1] = (51 + (color_intensity/6)*4)/4;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/6)*4;
 				}
 				else
 				{
-					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/5)*4;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/5)*4;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/5)*4;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/6)*4;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/6)*4;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/6)*4;
 				}
 
 			} else if(my_displayMode==2)
