@@ -160,7 +160,7 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 			}
 
 			// Calculate approximate threshold
-			ths[x+y*w32] = computeHistQuantil(gradHist, setting_minGradHistCut, num_hist_values) + setting_minGradHistAdd;
+			ths[x+y*w32] = computeHistQuantile(gradHist, setting_minGradHistCut, num_hist_values) + setting_minGradHistAdd;
 		}
 
 	// Smooth out the quantiles using a box kernel
