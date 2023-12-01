@@ -28,6 +28,11 @@
  
 #include "util/NumType.h"
 
+// Because histogram is only used to calculate quartiles
+// Number of bins only affects quartile resolution
+// Fixed to 50 to get a resolution of 2%
+#define NUM_BINS 50
+
 namespace dso
 {
 
@@ -35,11 +40,6 @@ enum PixelSelectorStatus {PIXSEL_VOID=0, PIXSEL_1, PIXSEL_2, PIXSEL_3};
 
 
 class FrameHessian;
-
-struct histogram{
-  std::vector<int> bins;
-  int num_values;
-};
 
 class PixelSelector
 {
@@ -55,7 +55,7 @@ public:
 
 
 	bool allowFast;
-	void makeHists(const FrameHessian* const fh);
+	void makeThresTable(const FrameHessian* const fh);
 private:
 
 	Eigen::Vector3i select(const FrameHessian* const fh,
@@ -64,8 +64,6 @@ private:
 
 	unsigned char* randomPattern;
 
-
-	int* gradHist;
 	float* ths;
 	float* thsSmoothed;
 	int thsStep;
@@ -75,8 +73,6 @@ private:
 	int bW, bH;
 	// number of blocks in x and y dimension.
 	int nbW, nbH;
-	// number of bins in histogram
-	int num_bins;
 };
 
 

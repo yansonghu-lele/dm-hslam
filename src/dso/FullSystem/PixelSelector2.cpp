@@ -1,6 +1,7 @@
 /**
 * This file is part of DSO, written by Jakob Engel.
 * It has been modified by Lukas von Stumberg for the inclusion in DM-VIO (http://vision.in.tum.de/dm-vio).
+* It has been modified by Yan Song Hu.
 *
 * Copyright 2022 Lukas von Stumberg <lukas dot stumberg at tum dot de>
 * Copyright 2016 Technical University of Munich and Intel.
@@ -26,9 +27,6 @@
 
 #include "FullSystem/PixelSelector2.h"
  
-// 
-
-
 
 #include "util/NumType.h"
 #include "IOWrapper/ImageDisplay.h"
@@ -39,73 +37,90 @@
 namespace dso
 {
 
-
+/**
+ * @brief Construct a new Pixel Selector:: Pixel Selector object
+ * 
+ * @param w 	Width of image
+ * @param h 	Height of image
+ */
 PixelSelector::PixelSelector(int w, int h)
 {
+	// To select random directions
 	randomPattern = new unsigned char[w*h];
-	std::srand(3141592);	// want to be deterministic.
+	std::srand(3141592);	// Want to be deterministic.
 	for(int i=0;i<w*h;i++) randomPattern[i] = rand() & 0xFF;
 
-	currentPotential=3;
+	// Grid thresholding is used to chose points
+	ths = new float[(nbW)*(nbH)];
+	thsSmoothed = new float[(nbW)*(nbH)];
 
+	// Block sizes for adaptive threshold grid
 	// We create n blocks in width dimension, and adjust the number of blocks for the height accordingly.
-    // Always use block size of 16.
+    // Always use block size divisable by 16.
     bW = 16;
     bH = 16;
     nbW = w / bW;
     nbH = h / bH;
+
     if(w != bW * nbW || h != bH * nbH)
     {
         std::cout << "ERROR: Height or width seem to be not divisible by 16!" << std::endl;
         assert(0);
     }
-
     std::cout << "PixelSelector: Using block sizes: " << bW << ", " << bH << '\n';
 
-	// Because histogram is only used to calculate quartiles
-	// Number of bins only affects quartile resolution
-	// Fixed to 50 to get a resolution of 2%
-	num_bins = 50;
+	gradHistFrame = 0;
 
-	gradHist = new int[num_bins+1];
-	ths = new float[(nbW)*(nbH)];
-	thsSmoothed = new float[(nbW)*(nbH)];
-
-
-	allowFast=false;
-	gradHistFrame=0;
+	// Potential is the minimum block size for the selector
+	currentPotential=3;
 }
 
+/**
+ * @brief Destroy the Pixel Selector:: Pixel Selector object
+ * 
+ */
 PixelSelector::~PixelSelector()
 {
 	delete[] randomPattern;
-	delete[] gradHist;
 	delete[] ths;
 	delete[] thsSmoothed;
 }
 
-float computeHistQuantil(int* hist, float below, int num)
+/**
+ * @brief Helper function to calcuate the approximate quantile to 1/NUM_BINS resolution
+ * 
+ * @param hist 		Input histogram
+ * @param quantil 	Desired quantile
+ * @param num_vals 	Total number of inputted values in histogram
+ * 
+ * @return float 	Approximate value of desired quantile
+ */
+inline float computeHistQuantile(const std::array <int, NUM_BINS>& hist, const float& quantile, const int& num_vals)
 {
-	int th = hist[0]*below+0.5f;
-	for(int i=0;i<num;i++)
+	int th = num_vals*quantile+0.5f;
+	for(int i=0;i<NUM_BINS;i++)
 	{
-		th -= hist[i+1];
-		if(th<0) return (i)/50.0f;
+		th -= hist[i];
+		if(th<0) return (i)/NUM_BINS;
 	}
-	return (num)/50.0f;
+	return 0.99f;
 }
 
 /**
- * @brief Makes histograms to find the approximate quantiles of the data. 
+ * @brief Makes thresold table to help chose points
  * 
+ * The table is a grid of gradient quantiles that a gradient must be greater than to be selected as a point
+ * A grid of thresholds is used instread of a global threshold to help spread out the points
+ * Histogram are used to find the quantiles
  * Using Histograms allows for calculation of approximate quantiles at O(n) speed
  * Calculating actual quantile would require sorting, which is slower than O(n)
  * 
  * @param fh Input frame
  */
-void PixelSelector::makeHists(const FrameHessian* const fh)
+void PixelSelector::makeThresTable(const FrameHessian* const fh)
 {
 	gradHistFrame = fh;
+	// absSquaredGrad contains normalized gradient values
 	float * mapmax0 = fh->absSquaredGrad[0];
 
 	int w = wG[0];
@@ -115,32 +130,41 @@ void PixelSelector::makeHists(const FrameHessian* const fh)
 	int h32 = nbH;
 	thsStep = w32;
 
+	std::array <int, NUM_BINS> gradHist;
+	int num_hist_values;
+
+	// For each grid
 	for(int y=0;y<h32;y++)
 		for(int x=0;x<w32;x++)
 		{
 			float* map0 = mapmax0+bW*x+bH*y*w;
-			int* hist0 = gradHist;
-			memset(hist0,0,sizeof(int)*(num_bins+1));
 
-			// Each bin has bH*bW float intensity values between 0 and 1
+			std::fill(std::begin(gradHist), std::end(gradHist), 0);
+			num_hist_values = 0;
+
+			// Create histogram for specific grid
+			// Each histogram bin has bH*bW float intensity values between 0 and 1
+			// For each values in a grid
 			for(int j=0;j<bH;j++) for(int i=0;i<bW;i++)
 			{
 				int it = i+bW*x;
 				int jt = j+bH*y;
 
-				// Ignore border
+				// Ignore border because gradients can't be calculated at the border properly
 				if(it>w-2 || jt>h-2 || it<1 || jt<1) continue;
 
-				int g = map0[i+j*w]*num_bins + 0.5f;
+				int g = map0[i+j*w]*NUM_BINS + 0.5f;
 
-				hist0[g+1]++;
-				hist0[0]++;
+				gradHist[g] = gradHist[g]+1;
+				num_hist_values++;
 			}
 
-			ths[x+y*w32] = computeHistQuantil(hist0,setting_minGradHistCut,num_bins) + setting_minGradHistAdd;
+			// Calculate approximate threshold
+			ths[x+y*w32] = computeHistQuantil(gradHist, setting_minGradHistCut, num_hist_values) + setting_minGradHistAdd;
 		}
 
 	// Smooth out the quantiles using a box kernel
+	// The conditons are used to handle border conditions
 	for(int y=0;y<h32;y++)
 		for(int x=0;x<w32;x++)
 		{
@@ -177,84 +201,54 @@ int PixelSelector::makeMaps(
 	float quotia;
 	int idealPotential = currentPotential;
 
+	// the number of selected pixels behaves approximately as
+	// K / (pot+1)^2, where K is a scene-dependent constant.
+	// we will allow sub-selecting pixels by up to a quotia of 0.25, otherwise we will re-select.
 
-//	if(setting_pixelSelectionUseFast>0 && allowFast)
-//	{
-//		memset(map_out, 0, sizeof(float)*wG[0]*hG[0]);
-//		std::vector<cv::KeyPoint> pts;
-//		cv::Mat img8u(hG[0],wG[0],CV_8U);
-//		for(int i=0;i<wG[0]*hG[0];i++)
-//		{
-//			float v = fh->dI[i][0]*0.8;
-//			img8u.at<uchar>(i) = (!std::isfinite(v) || v>255) ? 255 : v;
-//		}
-//		cv::FAST(img8u, pts, setting_pixelSelectionUseFast, true);
-//		for(unsigned int i=0;i<pts.size();i++)
-//		{
-//			int x = pts[i].pt.x+0.5;
-//			int y = pts[i].pt.y+0.5;
-//			map_out[x+y*wG[0]]=1;
-//			numHave++;
-//		}
-//
-//		printf("FAST selection: got %f / %f!\n", numHave, numWant);
-//		quotia = numWant / numHave;
-//	}
-//	else
+	if(fh != gradHistFrame) makeThresTable(fh);
+
+	// select!
+	Eigen::Vector3i n = this->select(fh, map_out,currentPotential, thFactor);
+
+	// sub-select!
+	numHave = n[0]+n[1]+n[2];
+	quotia = numWant / numHave;
+
+	// by default we want to over-sample by 40% just to be sure.
+	float K = numHave * (currentPotential+1) * (currentPotential+1);
+	idealPotential = sqrtf(K/numWant)-1;	// round down.
+	if(idealPotential<1) idealPotential=1;
+
+	if( recursionsLeft>0 && quotia > 1.25 && currentPotential>1)
 	{
+		//re-sample to get more points!
+		// potential needs to be smaller
+		if(idealPotential>=currentPotential)
+			idealPotential = currentPotential-1;
 
+//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+//				100*numHave/(float)(wG[0]*hG[0]),
+//				100*numWant/(float)(wG[0]*hG[0]),
+//				currentPotential,
+//				idealPotential);
+		currentPotential = idealPotential;
+		return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
+	}
+	else if(recursionsLeft>0 && quotia < 0.25)
+	{
+		// re-sample to get less points!
 
+		if(idealPotential<=currentPotential)
+			idealPotential = currentPotential+1;
 
+//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+//				100*numHave/(float)(wG[0]*hG[0]),
+//				100*numWant/(float)(wG[0]*hG[0]),
+//				currentPotential,
+//				idealPotential);
+		currentPotential = idealPotential;
+		return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
 
-		// the number of selected pixels behaves approximately as
-		// K / (pot+1)^2, where K is a scene-dependent constant.
-		// we will allow sub-selecting pixels by up to a quotia of 0.25, otherwise we will re-select.
-
-		if(fh != gradHistFrame) makeHists(fh);
-
-		// select!
-		Eigen::Vector3i n = this->select(fh, map_out,currentPotential, thFactor);
-
-		// sub-select!
-		numHave = n[0]+n[1]+n[2];
-		quotia = numWant / numHave;
-
-		// by default we want to over-sample by 40% just to be sure.
-		float K = numHave * (currentPotential+1) * (currentPotential+1);
-		idealPotential = sqrtf(K/numWant)-1;	// round down.
-		if(idealPotential<1) idealPotential=1;
-
-		if( recursionsLeft>0 && quotia > 1.25 && currentPotential>1)
-		{
-			//re-sample to get more points!
-			// potential needs to be smaller
-			if(idealPotential>=currentPotential)
-				idealPotential = currentPotential-1;
-
-	//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-	//				100*numHave/(float)(wG[0]*hG[0]),
-	//				100*numWant/(float)(wG[0]*hG[0]),
-	//				currentPotential,
-	//				idealPotential);
-			currentPotential = idealPotential;
-			return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
-		}
-		else if(recursionsLeft>0 && quotia < 0.25)
-		{
-			// re-sample to get less points!
-
-			if(idealPotential<=currentPotential)
-				idealPotential = currentPotential+1;
-
-	//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-	//				100*numHave/(float)(wG[0]*hG[0]),
-	//				100*numWant/(float)(wG[0]*hG[0]),
-	//				currentPotential,
-	//				idealPotential);
-			currentPotential = idealPotential;
-			return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
-
-		}
 	}
 
 	int numHaveSub = numHave;
