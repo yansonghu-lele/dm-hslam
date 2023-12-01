@@ -26,7 +26,6 @@
 
 
 #include "FullSystem/PixelSelector2.h"
- 
 
 #include "util/NumType.h"
 #include "IOWrapper/ImageDisplay.h"
@@ -51,8 +50,6 @@ PixelSelector::PixelSelector(int w, int h)
 	for(int i=0;i<w*h;i++) randomPattern[i] = rand() & 0xFF;
 
 	// Grid thresholding is used to chose points
-	ths = new float[(nbW)*(nbH)];
-	thsSmoothed = new float[(nbW)*(nbH)];
 
 	// Block sizes for adaptive threshold grid
 	// We create n blocks in width dimension, and adjust the number of blocks for the height accordingly.
@@ -61,6 +58,9 @@ PixelSelector::PixelSelector(int w, int h)
     bH = 16;
     nbW = w / bW;
     nbH = h / bH;
+
+	ths = new float[(nbW)*(nbH)];
+	thsSmoothed = new float[(nbW)*(nbH)];
 
     if(w != bW * nbW || h != bH * nbH)
     {
@@ -205,50 +205,52 @@ int PixelSelector::makeMaps(
 	// K / (pot+1)^2, where K is a scene-dependent constant.
 	// we will allow sub-selecting pixels by up to a quotia of 0.25, otherwise we will re-select.
 
-	if(fh != gradHistFrame) makeThresTable(fh);
-
-	// select!
-	Eigen::Vector3i n = this->select(fh, map_out,currentPotential, thFactor);
-
-	// sub-select!
-	numHave = n[0]+n[1]+n[2];
-	quotia = numWant / numHave;
-
-	// by default we want to over-sample by 40% just to be sure.
-	float K = numHave * (currentPotential+1) * (currentPotential+1);
-	idealPotential = sqrtf(K/numWant)-1;	// round down.
-	if(idealPotential<1) idealPotential=1;
-
-	if( recursionsLeft>0 && quotia > 1.25 && currentPotential>1)
 	{
-		//re-sample to get more points!
-		// potential needs to be smaller
-		if(idealPotential>=currentPotential)
-			idealPotential = currentPotential-1;
+		if(fh != gradHistFrame) makeThresTable(fh);
 
-//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-//				100*numHave/(float)(wG[0]*hG[0]),
-//				100*numWant/(float)(wG[0]*hG[0]),
-//				currentPotential,
-//				idealPotential);
-		currentPotential = idealPotential;
-		return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
-	}
-	else if(recursionsLeft>0 && quotia < 0.25)
-	{
-		// re-sample to get less points!
+		// select!
+		Eigen::Vector3i n = this->select(fh, map_out,currentPotential, thFactor);
 
-		if(idealPotential<=currentPotential)
-			idealPotential = currentPotential+1;
+		// sub-select!
+		numHave = n[0]+n[1]+n[2];
+		quotia = numWant / numHave;
 
-//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-//				100*numHave/(float)(wG[0]*hG[0]),
-//				100*numWant/(float)(wG[0]*hG[0]),
-//				currentPotential,
-//				idealPotential);
-		currentPotential = idealPotential;
-		return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
+		// by default we want to over-sample by 40% just to be sure.
+		float K = numHave * (currentPotential+1) * (currentPotential+1);
+		idealPotential = sqrtf(K/numWant)-1;	// round down.
+		if(idealPotential<1) idealPotential=1;
 
+		if( recursionsLeft>0 && quotia > 1.25 && currentPotential>1)
+		{
+			//re-sample to get more points!
+			// potential needs to be smaller
+			if(idealPotential>=currentPotential)
+				idealPotential = currentPotential-1;
+
+	//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+	//				100*numHave/(float)(wG[0]*hG[0]),
+	//				100*numWant/(float)(wG[0]*hG[0]),
+	//				currentPotential,
+	//				idealPotential);
+			currentPotential = idealPotential;
+			return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
+		}
+		else if(recursionsLeft>0 && quotia < 0.25)
+		{
+			// re-sample to get less points!
+
+			if(idealPotential<=currentPotential)
+				idealPotential = currentPotential+1;
+
+	//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+	//				100*numHave/(float)(wG[0]*hG[0]),
+	//				100*numWant/(float)(wG[0]*hG[0]),
+	//				currentPotential,
+	//				idealPotential);
+			currentPotential = idealPotential;
+			return makeMaps(fh,map_out, density, recursionsLeft-1, plot,thFactor);
+
+		}
 	}
 
 	int numHaveSub = numHave;
