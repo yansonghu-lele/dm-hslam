@@ -36,6 +36,11 @@ enum PixelSelectorStatus {PIXSEL_VOID=0, PIXSEL_1, PIXSEL_2, PIXSEL_3};
 
 class FrameHessian;
 
+struct histogram{
+  std::vector<int> bins;
+  int num_values;
+};
+
 class PixelSelector
 {
 public:
@@ -70,6 +75,8 @@ private:
 	int bW, bH;
 	// number of blocks in x and y dimension.
 	int nbW, nbH;
+	// number of bins in histogram
+	int num_bins;
 };
 
 

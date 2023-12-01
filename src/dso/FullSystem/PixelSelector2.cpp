@@ -48,7 +48,7 @@ PixelSelector::PixelSelector(int w, int h)
 
 	currentPotential=3;
 
-	// We create 32 blocks in width dimension, and adjust the number of blocks for the height accordingly.
+	// We create n blocks in width dimension, and adjust the number of blocks for the height accordingly.
     // Always use block size of 16.
     bW = 16;
     bH = 16;
@@ -62,9 +62,14 @@ PixelSelector::PixelSelector(int w, int h)
 
     std::cout << "PixelSelector: Using block sizes: " << bW << ", " << bH << '\n';
 
-	gradHist = new int[100*(1+nbW)*(1+nbH)];
-	ths = new float[(nbW)*(nbH)+100];
-	thsSmoothed = new float[(nbW)*(nbH)+100];
+	// Because histogram is only used to calculate quartiles
+	// Number of bins only affects quartile resolution
+	// Fixed to 50 to get a resolution of 2%
+	num_bins = 50;
+
+	gradHist = new int[num_bins+1];
+	ths = new float[(nbW)*(nbH)];
+	thsSmoothed = new float[(nbW)*(nbH)];
 
 
 	allowFast=false;
@@ -79,15 +84,15 @@ PixelSelector::~PixelSelector()
 	delete[] thsSmoothed;
 }
 
-int computeHistQuantil(int* hist, float below)
+float computeHistQuantil(int* hist, float below, int num)
 {
 	int th = hist[0]*below+0.5f;
-	for(int i=0;i<90;i++)
+	for(int i=0;i<num;i++)
 	{
 		th -= hist[i+1];
-		if(th<0) return i;
+		if(th<0) return (i)/50.0f;
 	}
-	return 90;
+	return (num)/50.0f;
 }
 
 /**
@@ -110,35 +115,29 @@ void PixelSelector::makeHists(const FrameHessian* const fh)
 	int h32 = nbH;
 	thsStep = w32;
 
-	// Each bin is 1024 float intensity values between 0 and ~181.019
-	// Square-root choice is used to determine the number of bins (sqrt(32*32)=32)
 	for(int y=0;y<h32;y++)
 		for(int x=0;x<w32;x++)
 		{
 			float* map0 = mapmax0+bW*x+bH*y*w;
-			int* hist0 = gradHist;// + 50*(x+y*w32);
-			memset(hist0,0,sizeof(int)*33);
+			int* hist0 = gradHist;
+			memset(hist0,0,sizeof(int)*(num_bins+1));
 
+			// Each bin has bH*bW float intensity values between 0 and 1
 			for(int j=0;j<bH;j++) for(int i=0;i<bW;i++)
 			{
 				int it = i+bW*x;
 				int jt = j+bH*y;
 
+				// Ignore border
 				if(it>w-2 || jt>h-2 || it<1 || jt<1) continue;
 
-				// g is equal to sqrt(dx^2+dy^2)
-				// Absolute max value of g is around 181.019
-				int g = sqrtf(map0[i+j*w]);
-				// Map 181.019 to 0 to 32
-				g = g/5-2;
-				if(g < 0) g = 0;
-				if(g > 31) g = 31;
+				int g = map0[i+j*w]*num_bins + 0.5f;
 
 				hist0[g+1]++;
 				hist0[0]++;
 			}
 
-			ths[x+y*w32] = computeHistQuantil(hist0,setting_minGradHistCut) + setting_minGradHistAdd;
+			ths[x+y*w32] = computeHistQuantil(hist0,setting_minGradHistCut,num_bins) + setting_minGradHistAdd;
 		}
 
 	// Smooth out the quantiles using a box kernel
@@ -328,6 +327,7 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 
 	Eigen::Vector3f const * const map0 = fh->dI;
 
+	// Normalized gradient values between 0 and 1
 	float * mapmax0 = fh->absSquaredGrad[0];
 	float * mapmax1 = fh->absSquaredGrad[1];
 	float * mapmax2 = fh->absSquaredGrad[2];

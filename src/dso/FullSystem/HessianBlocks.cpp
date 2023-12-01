@@ -155,6 +155,8 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 			int wlm1 = wG[lvlm1];
 			Eigen::Vector3f* dI_lm = dIp[lvlm1];
 
+			// Take every other pixel from the last pyramid level
+			// Smoothed by taking the average of the four pixels
 			for(int y=0;y<hl;y++)
 				for(int x=0;x<wl;x++)
 				{
@@ -197,6 +199,9 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 			}
 
 			if (dabs_l[idx] > 32768) dabs_l[idx] = 32768;
+
+			// Normalize to 0-1
+			dabs_l[idx] = dabs_l[idx]/32768;
 		}
 	}
 }
