@@ -338,7 +338,7 @@ int PixelSelector::makeMaps(
  * 
  * @param fh 				Input frame
  * @param map_out 			Output points
- * @param pot 				Number of points to chose
+ * @param pot 				Potential is relative to number of points to chose
  * @param thFactor 			Minimum gradient threshold multiplier
  * @return Eigen::Vector3i 	Number of chosen points in each pyramid level
  */
