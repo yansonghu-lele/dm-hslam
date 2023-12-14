@@ -30,8 +30,8 @@
 
 // Because histogram is only used to calculate quartiles
 // Number of bins only affects quartile resolution
-// Fixed to 50 to get a resolution of 2%
-#define NUM_BINS 50
+// Fixed to 100 to get a resolution of 1%
+#define NUM_BINS 100
 
 namespace dso
 {

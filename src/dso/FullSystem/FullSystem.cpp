@@ -475,10 +475,10 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		// take over achieved res (always).
 		if(haveOneGood)
 		{
-			for(int i=0;i<5;i++)
+			for(int j=0;j<5;j++)
 			{
-				if(!std::isfinite((float)achievedRes[i]) || achievedRes[i] > coarseTracker->lastResiduals[i])	// take over if achievedRes is either bigger or NAN.
-					achievedRes[i] = coarseTracker->lastResiduals[i];
+				if(!std::isfinite((float)achievedRes[j]) || achievedRes[j] > coarseTracker->lastResiduals[j])	// take over if achievedRes is either bigger or NAN.
+					achievedRes[j] = coarseTracker->lastResiduals[j];
 			}
 		}
 
@@ -1002,7 +1002,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 		}
 
         SE3 *referenceToFramePassed = 0;
-        SE3 referenceToFrame;
+
         if(dso::setting_useIMU)
         {
 			SE3 referenceToFrame = imuIntegration.addIMUData(*imuData, fh->shell->id,
@@ -1270,15 +1270,15 @@ void FullSystem::mappingLoop()
 
 			if(needToKetchupMapping && unmappedTrackedFrames.size() > 0)
 			{
-				FrameHessian* fh = unmappedTrackedFrames.front();
+				FrameHessian* fh_catch = unmappedTrackedFrames.front();
 				unmappedTrackedFrames.pop_front();
 				{
 					boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-					assert(fh->shell->trackingRef != 0);
-					fh->shell->camToWorld = fh->shell->trackingRef->camToWorld * fh->shell->camToTrackingRef;
-					fh->setEvalPT_scaled(fh->shell->camToWorld.inverse(),fh->shell->aff_g2l);
+					assert(fh_catch->shell->trackingRef != 0);
+					fh_catch->shell->camToWorld = fh_catch->shell->trackingRef->camToWorld * fh_catch->shell->camToTrackingRef;
+					fh_catch->setEvalPT_scaled(fh_catch->shell->camToWorld.inverse(),fh_catch->shell->aff_g2l);
 				}
-				delete fh;
+				delete fh_catch;
 			}
 
 		}
@@ -1446,7 +1446,7 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 
     bool imuReady = false;
 	{
-        dmvio::TimeMeasurement timeMeasurement("makeKeyframeChangeTrackingRef");
+        dmvio::TimeMeasurement timeMeasurement2("makeKeyframeChangeTrackingRef");
 		boost::unique_lock<boost::mutex> crlock(coarseTrackerSwapMutex);
 
         if(setting_useIMU)

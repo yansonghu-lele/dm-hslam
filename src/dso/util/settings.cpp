@@ -164,8 +164,8 @@ float setting_coarseCutoffTH = 20;
 
 
 // parameters controlling pixel selection
-float setting_minGradHistCut = 0.32;
-float setting_minGradHistAdd = 0.016;
+float setting_minGradHistCut = 0.64;
+float setting_minGradHistAdd = 0.005;
 float setting_gradDownweightPerLevel = 0.75;
 bool  setting_selectDirectionDistribution = true;
 

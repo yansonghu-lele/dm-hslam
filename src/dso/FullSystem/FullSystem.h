@@ -111,7 +111,7 @@ template<typename T> inline void deleteOutOrder(std::vector<T*> &v, const T* ele
 }
 
 
-inline bool eigenTestNan(const MatXX &m, std::string msg)
+inline bool eigenTestNan(const MatXX &m, const std::string& msg)
 {
 	bool foundNan = false;
 	for(int y=0;y<m.rows();y++)

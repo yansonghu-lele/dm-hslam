@@ -148,7 +148,7 @@ void MainSettings::parseArgument(char* arg, SettingsUtil& settingsUtil)
             setting_photometricCalibration = 0;
             setting_affineOptModeA = -1; //-1: fix. >=0: optimize (with prior, if > 0).
             setting_affineOptModeB = -1; //-1: fix. >=0: optimize (with prior, if > 0).
-            setting_minGradHistAdd = 0.016;
+            setting_minGradHistAdd = 0.005;
         }
         if(option == 3)
         {

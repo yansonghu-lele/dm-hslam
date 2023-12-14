@@ -124,7 +124,9 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
 
 	for (int level = 0; level < pyrLevelsUsed; ++ level)
 	{
-		K[level]  << fx[level], 0.0, cx[level], 0.0, fy[level], cy[level], 0.0, 0.0, 1.0;
+		K[level]  << fx[level], 0.0, cx[level], 
+					0.0, fy[level], cy[level], 
+					0.0, 0.0, 1.0;
 		Ki[level] = K[level].inverse();
 		fxi[level] = Ki[level](0,0);
 		fyi[level] = Ki[level](1,1);
@@ -1105,7 +1107,9 @@ void CoarseDistanceMap::makeK(CalibHessian* HCalib)
 
 	for (int level = 0; level < pyrLevelsUsed; ++ level)
 	{
-		K[level]  << fx[level], 0.0, cx[level], 0.0, fy[level], cy[level], 0.0, 0.0, 1.0;
+		K[level]  << fx[level], 0.0, cx[level], 
+					0.0, fy[level], cy[level], 
+					0.0, 0.0, 1.0;
 		Ki[level] = K[level].inverse();
 		fxi[level] = Ki[level](0,0);
 		fyi[level] = Ki[level](1,1);

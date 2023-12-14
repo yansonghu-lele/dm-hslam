@@ -131,7 +131,9 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 	for(int i=0;i<pyrLevelsUsed;i++)
 	{
 		dIp[i] = new Eigen::Vector3f[wG[i]*hG[i]];
+		std::fill(dIp[i], dIp[i]+wG[i]*hG[i], Eigen::Vector3f(0,0,0));
 		absSquaredGrad[i] = new float[wG[i]*hG[i]];
+		std::fill(absSquaredGrad[i], absSquaredGrad[i]+wG[i]*hG[i],0);
 	}
 	dI = dIp[0];
 
@@ -170,7 +172,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 		for(int idx=0;idx < wl*hl;idx++)
 		{
 			// Derivative is appying a [1/2 0 -1/2] kernel in the x or y directions
-			// Abosolute max value for derivative is 128
+			// Abosolute max value for derivative is 127.5
 			// Derivative is calculated at the sides using extend 
 			float dx = 0;
 			if((idx%wl!=0) && (idx%wl!=(wl-1))) dx = 0.5f*(dI_l[idx+1][0] - dI_l[idx-1][0]);
@@ -188,7 +190,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 			dI_l[idx][1] = dx;
 			dI_l[idx][2] = dy;
 
-			// Absolute max value for gradient is 32768
+			// Absolute max value for gradient is 32512.5
 			dabs_l[idx] = dx*dx+dy*dy;
 
 			if(setting_gammaWeightsPixelSelect==1 && HCalib!=0)
@@ -198,10 +200,8 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 				dabs_l[idx] *= gw*gw;
 			}
 
-			if (dabs_l[idx] > 32768) dabs_l[idx] = 32768;
-
 			// Normalize to 0-1
-			dabs_l[idx] = dabs_l[idx]/32768;
+			dabs_l[idx] = dabs_l[idx]/32512.5;
 		}
 	}
 }

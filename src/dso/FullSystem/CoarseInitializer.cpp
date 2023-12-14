@@ -241,8 +241,6 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 			if(!(incNorm > eps) || iteration >= maxIterations[lvl] || fails >= 2)
 			{
-				Mat88f H,Hsc; Vec8f b,bsc;
-
 				quitOpt = true;
 			}
 
@@ -481,25 +479,26 @@ Vec3f CoarseInitializer::calcResAndGS(
             point->energy_new[0] = energy;
 
             // update Hessian matrix.
-            for(int i = 0; i + 3 < patternNum; i += 4)
+            for(int j = 0; j + 3 < patternNum; j += 4){
                 acc9.updateSSE(
-                        _mm_load_ps(((float*) (&dp0)) + i),
-                        _mm_load_ps(((float*) (&dp1)) + i),
-                        _mm_load_ps(((float*) (&dp2)) + i),
-                        _mm_load_ps(((float*) (&dp3)) + i),
-                        _mm_load_ps(((float*) (&dp4)) + i),
-                        _mm_load_ps(((float*) (&dp5)) + i),
-                        _mm_load_ps(((float*) (&dp6)) + i),
-                        _mm_load_ps(((float*) (&dp7)) + i),
-                        _mm_load_ps(((float*) (&r)) + i));
+                        _mm_load_ps(((float*) (&dp0)) + j),
+                        _mm_load_ps(((float*) (&dp1)) + j),
+                        _mm_load_ps(((float*) (&dp2)) + j),
+                        _mm_load_ps(((float*) (&dp3)) + j),
+                        _mm_load_ps(((float*) (&dp4)) + j),
+                        _mm_load_ps(((float*) (&dp5)) + j),
+                        _mm_load_ps(((float*) (&dp6)) + j),
+                        _mm_load_ps(((float*) (&dp7)) + j),
+                        _mm_load_ps(((float*) (&r)) + j));
+			}
 
 
-            for(int i = ((patternNum >> 2) << 2); i < patternNum; i++)
+            for(int j = ((patternNum >> 2) << 2); j < patternNum; j++){
                 acc9.updateSingle(
-                        (float) dp0[i], (float) dp1[i], (float) dp2[i], (float) dp3[i],
-                        (float) dp4[i], (float) dp5[i], (float) dp6[i], (float) dp7[i],
-                        (float) r[i]);
-
+                        (float) dp0[j], (float) dp1[j], (float) dp2[j], (float) dp3[j],
+                        (float) dp4[j], (float) dp5[j], (float) dp6[j], (float) dp7[j],
+                        (float) r[j]);
+			}
 
         }
     };
@@ -986,7 +985,9 @@ void CoarseInitializer::makeK(CalibHessian* HCalib)
 
 	for (int level = 0; level < pyrLevelsUsed; ++ level)
 	{
-		K[level]  << fx[level], 0.0, cx[level], 0.0, fy[level], cy[level], 0.0, 0.0, 1.0;
+		K[level] << fx[level], 0.0, cx[level], 
+					0.0, fy[level], cy[level], 
+					0.0, 0.0, 1.0;
 		Ki[level] = K[level].inverse();
 		fxi[level] = Ki[level](0,0);
 		fyi[level] = Ki[level](1,1);

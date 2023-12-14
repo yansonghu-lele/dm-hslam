@@ -153,7 +153,9 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 				// Ignore border because gradients can't be calculated at the border properly
 				if(it>w-2 || jt>h-2 || it<1 || jt<1) continue;
 
-				int g = map0[i+j*w]*NUM_BINS + 0.5f;
+				int g = map0[i+j*w]*2.5f;
+				if (g > 1) g = 1;
+				g = g*NUM_BINS + 0.5f;
 
 				gradHist[g] = gradHist[g]+1;
 				num_hist_values++;
@@ -187,7 +189,7 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 			if(y<h32-1) {num++; 	sum+=ths[x+(y+1)*w32];}
 			num++; sum+=ths[x+y*w32];
 
-			thsSmoothed[x+y*w32] = (sum/num) * (sum/num);
+			thsSmoothed[x+y*w32] = (sum/num);
 		}
 }
 
@@ -400,7 +402,8 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					float pixelTH2 = pixelTH1*dw2;
 
 
-					float ag0 = mapmax0[idx];
+					float ag0 = mapmax0[idx]*2.5;
+					if(ag0 > 1) ag0 = 1;
 					if(ag0 > pixelTH0*thFactor)
 					{
 						Vec2f ag0d = map0[idx].tail<2>();
@@ -412,7 +415,8 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					}
 					if(bestIdx3==-2) continue;
 
-					float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1];
+					float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1]*2.5;
+					if(ag1 > 1) ag1 = 1;
 					if(ag1 > pixelTH1*thFactor)
 					{
 						Vec2f ag0d = map0[idx].tail<2>();
@@ -424,7 +428,8 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					}
 					if(bestIdx4==-2) continue;
 
-					float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2];
+					float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2]*2.5;
+					if(ag2 > 1) ag2 = 1;
 					if(ag2 > pixelTH2*thFactor)
 					{
 						Vec2f ag0d = map0[idx].tail<2>();
