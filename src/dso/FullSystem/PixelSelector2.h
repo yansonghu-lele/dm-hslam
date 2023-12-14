@@ -1,6 +1,7 @@
 /**
 * This file is part of DSO, written by Jakob Engel.
 * It has been modified by Lukas von Stumberg for the inclusion in DM-VIO (http://vision.in.tum.de/dm-vio).
+* It has been modified by Yan Song Hu
 *
 * Copyright 2022 Lukas von Stumberg <lukas dot stumberg at tum dot de>
 * Copyright 2016 Technical University of Munich and Intel.
@@ -23,7 +24,6 @@
 * along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #pragma once
  
 #include "util/NumType.h"
@@ -33,11 +33,13 @@
 // Fixed to 100 to get a resolution of 1%
 #define NUM_BINS 100
 
+#define DEBUG_MESSAGE_PIXELSELECTOR2 0
+#define DEBUG_PLOT_PIXELSELECTOR2 0
+
 namespace dso
 {
 
 enum PixelSelectorStatus {PIXSEL_VOID=0, PIXSEL_1, PIXSEL_2, PIXSEL_3};
-
 
 class FrameHessian;
 
@@ -45,27 +47,23 @@ class PixelSelector
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	int makeMaps(
-			const FrameHessian* const fh,
-			float* map_out, float density, int recursionsLeft=1, bool plot=false, float thFactor=1);
+	int makeMaps( const FrameHessian* const fh, float* map_out, float density, int recursionsLeft=1, float thFactor=1);
 
 	PixelSelector(int w, int h);
 	~PixelSelector();
-	int currentPotential;
 
-
-	bool allowFast;
 	void makeThresTable(const FrameHessian* const fh);
-private:
 
+private:
 	Eigen::Vector3i select(const FrameHessian* const fh,
 			float* map_out, int pot, float thFactor=1);
 
-
 	unsigned char* randomPattern;
 
+	// Table of minimum gradient threshold
 	float* ths;
 	float* thsSmoothed;
+
 	int thsStep;
 	const FrameHessian* gradHistFrame;
 
@@ -73,6 +71,8 @@ private:
 	int bW, bH;
 	// number of blocks in x and y dimension.
 	int nbW, nbH;
+
+	int currentPotential;
 };
 
 

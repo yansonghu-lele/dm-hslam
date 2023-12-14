@@ -158,11 +158,7 @@ typedef Eigen::Matrix<double,14,14> Mat1414;
 typedef Eigen::Matrix<double,14,1> Vec14;
 
 
-
-
-
-
-// transforms points from one frame to another.
+// Transforms points from one frame to another
 struct AffLight
 {
 	AffLight(double a_, double b_) : a(a_), b(b_) {};
