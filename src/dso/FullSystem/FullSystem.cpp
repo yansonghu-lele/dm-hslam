@@ -1640,7 +1640,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
 {
     dmvio::TimeMeasurement timeMeasurement("makeNewTraces");
-	pixelSelector->allowFast = true;
+
 	//int numPointsTotal = makePixelStatus(newFrame->dI, selectionMap, wG[0], hG[0], setting_desiredDensity);
 	int numPointsTotal = pixelSelector->makeMaps(newFrame, selectionMap,setting_desiredImmatureDensity);
 

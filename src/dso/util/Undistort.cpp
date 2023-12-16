@@ -22,6 +22,7 @@
 */
 
 
+
 #include <sstream>
 #include <fstream>
 #include <iostream>
@@ -33,6 +34,8 @@
 #include "IOWrapper/ImageDisplay.h"
 #include "IOWrapper/ImageRW.h"
 #include "util/Undistort.h"
+
+
 
 namespace dso
 {
@@ -471,7 +474,7 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 			float xx = remapX[idx];
 			float yy = remapY[idx];
 
-			if(benchmark_varNoise>0) // Add remapping noise to the images for testing
+			if(benchmark_varNoise>0) // Add remapping noise to the images for experiments
 			{
 				float deltax = getInterpolatedElement11BiCub(noiseMapX, 4+(xx/(float)wOrg)*benchmark_noiseGridsize, 4+(yy/(float)hOrg)*benchmark_noiseGridsize, benchmark_noiseGridsize+8 );
 				float deltay = getInterpolatedElement11BiCub(noiseMapY, 4+(xx/(float)wOrg)*benchmark_noiseGridsize, 4+(yy/(float)hOrg)*benchmark_noiseGridsize, benchmark_noiseGridsize+8 );
@@ -527,7 +530,7 @@ template ImageAndExposure* Undistort::undistort<unsigned char>(const MinimalImag
 template ImageAndExposure* Undistort::undistort<unsigned short>(const MinimalImage<unsigned short>* image_raw, float exposure, double timestamp, float factor) const;
 
 /**
- * @brief Applies gaussian blur noise for testing
+ * @brief Applies gaussian blur noise for experiments
  * 
  * @param img 
  */
@@ -632,13 +635,16 @@ void Undistort::applyBlurNoise(float* img) const
 /**
  * @brief Finds optimal crop for image
  * 
+ * Sets crop to max size and the shrinks it till there are no more invalid pixels
+ * 
  */
 void Undistort::makeOptimalK_crop()
 {
 	printf("finding CROP optimal new model!\n");
 	K.setIdentity();
 
-	// 1. stretch the center lines as far as possible, to get initial coarse quess.
+	// 1. Stretch the center lines as far as possible, to get initial coarse crop
+	// This is done by running the undistortion on a horizontal and vertical line of length -0.5 to 0.5
 	float* tgX = new float[100000];
 	float* tgY = new float[100000];
 	float minX = 0;
@@ -646,9 +652,8 @@ void Undistort::makeOptimalK_crop()
 	float minY = 0;
 	float maxY = 0;
 
-	for(int x=0; x<100000;x++)
-	{tgX[x] = (x-50000.0f) / 10000.0f; tgY[x] = 0;}
-	distortCoordinates(tgX, tgY,tgX, tgY,100000);
+	for(int x=0; x<100000;x++) {tgX[x] = (x-50000.0f) / 10000.0f; tgY[x] = 0;}
+	distortCoordinates(tgX, tgY, tgX, tgY, 100000);
 	for(int x=0; x<100000;x++)
 	{
 		if(tgX[x] > 0 && tgX[x] < wOrg-1)
@@ -657,9 +662,9 @@ void Undistort::makeOptimalK_crop()
 			maxX = (x-50000.0f) / 10000.0f;
 		}
 	}
-	for(int y=0; y<100000;y++)
-	{tgY[y] = (y-50000.0f) / 10000.0f; tgX[y] = 0;}
-	distortCoordinates(tgX, tgY,tgX, tgY,100000);
+
+	for(int y=0; y<100000;y++) {tgY[y] = (y-50000.0f) / 10000.0f; tgX[y] = 0;}
+	distortCoordinates(tgX, tgY, tgX, tgY, 100000);
 	for(int y=0; y<100000;y++)
 	{
 		if(tgY[y] > 0 && tgY[y] < hOrg-1)
@@ -668,6 +673,7 @@ void Undistort::makeOptimalK_crop()
 			maxY = (y-50000.0f) / 10000.0f;
 		}
 	}
+
 	delete[] tgX;
 	delete[] tgY;
 
@@ -676,14 +682,11 @@ void Undistort::makeOptimalK_crop()
 	minY *= 1.01;
 	maxY *= 1.01;
 
-
-
 	printf("initial range: x: %.4f - %.4f; y: %.4f - %.4f!\n", minX, maxX, minY, maxY);
 
 
-
-	// 2. while there are invalid pixels at the border: shrink square at the side that has invalid pixels,
-	// if several to choose from, shrink the wider dimension.
+	// 2. While there are invalid pixels at the border: shrink square at the side that has invalid pixels,
+	// If several to choose from, shrink the wider dimension.
 	bool oobLeft=true, oobRight=true, oobTop=true, oobBottom=true;
 	int iteration=0;
 	while(oobLeft || oobRight || oobTop || oobBottom)
@@ -704,8 +707,6 @@ void Undistort::makeOptimalK_crop()
 				oobRight = true;
 		}
 
-
-
 		for(int x=0;x<w;x++)
 		{
 			remapY[x*2] = minY;
@@ -713,8 +714,6 @@ void Undistort::makeOptimalK_crop()
 			remapX[x*2] = remapX[x*2+1] = minX + (maxX-minX) * (float)x / ((float)w-1.0f);
 		}
 		distortCoordinates(remapX, remapY,remapX, remapY,2*w);
-
-
 		for(int x=0;x<w;x++)
 		{
 			if(!(remapY[2*x] > 0 && remapY[2*x] < hOrg-1))
@@ -739,7 +738,6 @@ void Undistort::makeOptimalK_crop()
 
 		iteration++;
 
-
 		printf("iteration %05d: range: x: %.4f - %.4f; y: %.4f - %.4f!\n", iteration,  minX, maxX, minY, maxY);
 		if(iteration > 500)
 		{
@@ -752,7 +750,6 @@ void Undistort::makeOptimalK_crop()
 	K(1,1) = ((float)h-1.0f)/(maxY-minY);
 	K(0,2) = -minX*K(0,0);
 	K(1,2) = -minY*K(1,1);
-
 }
 
 void Undistort::makeOptimalK_full()
@@ -897,16 +894,16 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
 	}
 
 
-	// l4
+	// line 4
 	if(std::sscanf(l4.c_str(), "%d %d", &w, &h) == 2)
 	{
-		if(benchmarkSetting_width != 0) // For testing fixed sizes
+		if(benchmarkSetting_width != 0) // Experimental
         {
 			w = benchmarkSetting_width;
             if(outputCalibration[0] == -3)
                 outputCalibration[0] = -1;  // crop instead of none, since probably resolution changed.
         }
-        if(benchmarkSetting_height != 0) // For testing fixed sizes
+        if(benchmarkSetting_height != 0) // Experimental
         {
 			h = benchmarkSetting_height;
             if(outputCalibration[0] == -3)
@@ -924,17 +921,20 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
     remapX = new float[w*h];
     remapY = new float[w*h];
 
-	if(outputCalibration[0] == -1)
+	// Cropping sets the output camera K matrix
+	if(outputCalibration[0] == -1) // Crop
 		makeOptimalK_crop();
-	else if(outputCalibration[0] == -2)
+	else if(outputCalibration[0] == -2) // Crop full
 		makeOptimalK_full();
-	else if(outputCalibration[0] == -3)
+	else if(outputCalibration[0] == -3) // None
 	{
 		if(w != wOrg || h != hOrg)
 		{
 			printf("ERROR: rectification mode none requires input and output dimenstions to match!\n\n");
 			exit(1);
 		}
+
+		// Set K to be the same as input
 		K.setIdentity();
         K(0,0) = parsOrg[0];
         K(1,1) = parsOrg[1];
@@ -942,7 +942,7 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
         K(1,2) = parsOrg[3];
 		passthrough = true;
 	}
-	else
+	else // Inputted value
 	{
         if(outputCalibration[2] > 1 || outputCalibration[3] > 1)
         {
@@ -950,6 +950,7 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
                    outputCalibration[0],outputCalibration[1],outputCalibration[2],outputCalibration[3]);
         }
 
+		// Set K to be given parameters
 		K.setIdentity();
         K(0,0) = outputCalibration[0] * w;
         K(1,1) = outputCalibration[1] * h;
@@ -957,14 +958,14 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
         K(1,2) = outputCalibration[3] * h - 0.5;
 	}
 
-	if(benchmarkSetting_fxfyfac != 0)
+	if(benchmarkSetting_fxfyfac != 0) // Experimental
 	{
 		K(0,0) = fmax(benchmarkSetting_fxfyfac, (float)K(0,0));
 		K(1,1) = fmax(benchmarkSetting_fxfyfac, (float)K(1,1));
         passthrough = false; // cannot pass through when fx / fy have been overwritten.
 	}
 
-
+	// Set remapping arrays
 	for(int y=0;y<h;y++)
 		for(int x=0;x<w;x++)
 		{
@@ -972,12 +973,13 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
 			remapY[x+y*w] = y;
 		}
 
+	// Create remapping matrix
 	distortCoordinates(remapX, remapY, remapX, remapY, h*w);
 
+	// Make rounding resistant.
 	for(int y=0;y<h;y++)
 		for(int x=0;x<w;x++)
 		{
-			// make rounding resistant.
 			float ix = remapX[x+y*w];
 			float iy = remapY[x+y*w];
 
@@ -1001,13 +1003,12 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
 	valid = true;
 
 
-
-
-	printf("\nRectified Kamera Matrix:\n");
+	printf("\nRectified Camera Matrix:\n");
 	std::cout << K << "\n\n";
-
 }
 
+
+// The functions below implement the distortCoordinates for the respective camera types
 
 UndistortFOV::UndistortFOV(const char* configFileName, bool noprefix)
 {
@@ -1018,7 +1019,6 @@ UndistortFOV::UndistortFOV(const char* configFileName, bool noprefix)
     else
         readFromFile(configFileName, 5, "FOV ");
 }
-
 UndistortFOV::~UndistortFOV()
 {
 }
@@ -1028,15 +1028,11 @@ void UndistortFOV::distortCoordinates(float* in_x, float* in_y, float* out_x, fl
 	float dist = parsOrg[4];
 	float d2t = 2.0f * tan(dist / 2.0f);
 
-
-
 	// current camera parameters
     float fx = parsOrg[0];
     float fy = parsOrg[1];
     float cx = parsOrg[2];
     float cy = parsOrg[3];
-
-
 
 	float ofx = K(0,0);
 	float ofy = K(1,1);
@@ -1060,10 +1056,6 @@ void UndistortFOV::distortCoordinates(float* in_x, float* in_y, float* out_x, fl
 		out_y[i] = iy;
 	}
 }
-
-
-
-
 
 
 UndistortRadTan::UndistortRadTan(const char* configFileName, bool noprefix)
@@ -1096,8 +1088,6 @@ void UndistortRadTan::distortCoordinates(float* in_x, float* in_y, float* out_x,
     float ocx = K(0,2);
     float ocy = K(1,2);
 
-
-
     for(int i=0;i<n;i++)
     {
         float x = in_x[i];
@@ -1116,12 +1106,9 @@ void UndistortRadTan::distortCoordinates(float* in_x, float* in_y, float* out_x,
         float ox = fx*x_dist+cx;
         float oy = fy*y_dist+cy;
 
-
         out_x[i] = ox;
         out_y[i] = oy;
     }
-
-
 }
 
 
@@ -1151,13 +1138,10 @@ void UndistortEquidistant::distortCoordinates(float* in_x, float* in_y, float* o
     float k3 = parsOrg[6];
     float k4 = parsOrg[7];
 
-
     float ofx = K(0,0);
     float ofy = K(1,1);
     float ocx = K(0,2);
     float ocy = K(1,2);
-
-
 
     for(int i=0;i<n;i++)
     {
@@ -1182,7 +1166,6 @@ void UndistortEquidistant::distortCoordinates(float* in_x, float* in_y, float* o
         out_y[i] = oy;
     }
 }
-
 
 
 UndistortKB::UndistortKB(const char* configFileName, bool noprefix)
@@ -1213,7 +1196,6 @@ void UndistortKB::distortCoordinates(float* in_x, float* in_y, float* out_x, flo
     const float ofy = K(1,1);
     const float ocx = K(0,2);
     const float ocy = K(1,2);
-
 
 	for(int i=0;i<n;i++)
 	{
@@ -1288,6 +1270,5 @@ void UndistortPinhole::distortCoordinates(float* in_x, float* in_y, float* out_x
 		out_y[i] = iy;
 	}
 }
-
 
 }

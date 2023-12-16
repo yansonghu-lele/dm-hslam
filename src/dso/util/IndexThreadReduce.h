@@ -35,6 +35,7 @@
 
 namespace dso
 {
+
 using namespace boost::placeholders;
 template<typename Running>
 class IndexThreadReduce
@@ -86,11 +87,8 @@ public:
 //			return;
 //		}
 
-
-
 		if(stepSize == 0)
 			stepSize = ((end-first)+NUM_THREADS-1)/NUM_THREADS;
-
 
 		//printf("reduce called\n");
 
@@ -139,6 +137,7 @@ public:
 	}
 
 	Running stats;
+
 
 private:
 	boost::thread workerThreads[NUM_THREADS];
@@ -215,4 +214,5 @@ private:
 		}
 	}
 };
+
 }

@@ -24,6 +24,7 @@
 */
 
 
+
 #pragma once
 #include "util/settings.h"
 #include "util/globalFuncs.h"
@@ -49,7 +50,13 @@
 using namespace dso;
 
 
-
+/**
+ * @brief Gets the files from the given directory in alphabetical order
+ * 
+ * @param dir 		Input directory
+ * @param files 	Vector of file paths
+ * @return int 		-1 if funaction failed. Otherwise, return number of files
+ */
 inline int getdir (std::string dir, std::vector<std::string> &files)
 {
     DIR *dp;
@@ -67,7 +74,7 @@ inline int getdir (std::string dir, std::vector<std::string> &files)
     }
     closedir(dp);
 
-
+	// files are sorted alphabetically
     std::sort(files.begin(), files.end());
 
     if(dir.at( dir.length() - 1 ) != '/') dir = dir+"/";
@@ -79,7 +86,6 @@ inline int getdir (std::string dir, std::vector<std::string> &files)
 
     return files.size();
 }
-
 
 struct PrepImageItem
 {
@@ -102,11 +108,24 @@ struct PrepImageItem
 };
 
 
-
-
+/**
+ * @brief Handles the inputting of images into the full system
+ * 
+ */
 class ImageFolderReader
 {
+
 public:
+
+	/**
+	 * @brief Construct a new Image Folder Reader object
+	 * 
+	 * @param path 				Path to video files
+	 * @param calibFile 		Path to calibration file
+	 * @param gammaFile 		Path to photometric gamma correction file
+	 * @param vignetteFile 		Path to photometric vignette correction file
+	 * @param use16BitPassed 	16 or 8 bit images
+	 */
 	ImageFolderReader(std::string path, std::string calibFile, std::string gammaFile, std::string vignetteFile, bool use16BitPassed)
 	{
 		this->path = path;
@@ -119,10 +138,6 @@ public:
 #endif
 
 		isZipped = (path.length()>4 && path.substr(path.length()-4) == ".zip");
-
-
-
-
 
 		if(isZipped)
 		{
@@ -155,21 +170,22 @@ public:
 		else
 			getdir (path, files);
 
-
 		undistort = Undistort::getUndistorterForFile(calibFile, gammaFile, vignetteFile);
-
 
 		widthOrg = undistort->getOriginalSize()[0];
 		heightOrg = undistort->getOriginalSize()[1];
 		width=undistort->getSize()[0];
 		height=undistort->getSize()[1];
 
-
-		// load timestamps if possible.
+		// Load timestamps if possible.
 		loadTimestamps();
 		printf("ImageFolderReader: got %d files in %s!\n", (int)files.size(), path.c_str());
-
 	}
+
+	/**
+	 * @brief Destroy the Image Folder Reader object
+	 * 
+	 */
 	~ImageFolderReader()
 	{
 #if HAS_ZIPLIB
@@ -177,19 +193,36 @@ public:
 		if(databuffer!=0) delete databuffer;
 #endif
 
-
 		delete undistort;
 	};
 
+	/**
+	 * @brief Get the Original Calib object
+	 * 
+	 * @return Eigen::VectorXf 
+	 */
 	Eigen::VectorXf getOriginalCalib()
 	{
 		return undistort->getOriginalParameter().cast<float>();
 	}
+
+	/**
+	 * @brief Get the Original Dimensions object
+	 * 
+	 * @return Eigen::Vector2i 
+	 */
 	Eigen::Vector2i getOriginalDimensions()
 	{
 		return  undistort->getOriginalSize();
 	}
 
+	/**
+	 * @brief Get the Calib Mono object
+	 * 
+	 * @param K 	K matrix of camera
+	 * @param w 	width
+	 * @param h 	height
+	 */
 	void getCalibMono(Eigen::Matrix3f &K, int &w, int &h)
 	{
 		K = undistort->getK().cast<float>();
@@ -197,6 +230,12 @@ public:
 		h = undistort->getSize()[1];
 	}
 
+	/**
+	 * @brief Set the Global Calibration object
+	 * 
+	 * Wrapper for getCalibMono and setGlobalCalib
+	 * 
+	 */
 	void setGlobalCalibration()
 	{
 		int w_out, h_out;
@@ -205,11 +244,22 @@ public:
 		setGlobalCalib(w_out, h_out, K);
 	}
 
+	/**
+	 * @brief Get the number of images
+	 * 
+	 * @return int 
+	 */
 	int getNumImages()
 	{
 		return files.size();
 	}
 
+	/**
+	 * @brief Get the timestamp of the frame with the id
+	 * 
+	 * @param id 
+	 * @return double 
+	 */
 	double getTimestamp(int id)
 	{
 		if(timestamps.size()==0) return id*0.1f;
@@ -218,6 +268,12 @@ public:
 		return timestamps[id];
 	}
 
+	/**
+	 * @brief Get the Filename object
+	 * 
+	 * @param id 
+	 * @return std::string 
+	 */
     std::string getFilename(int id)
     {
         return files[id];
@@ -225,60 +281,96 @@ public:
 
 	void prepImage(int id, bool as8U=false)
 	{
-
 	}
 
-
+	/**
+	 * @brief Wrapper function for getImageRaw_internal
+	 * 
+	 * Returns as MinimalImage<unsigned char> pointer
+	 * 
+	 * @param id 
+	 * @return MinimalImageB* 
+	 */
 	MinimalImageB* getImageRaw(int id)
 	{
-			return getImageRaw_internal(id,0);
+		return getImageRaw_internal(id,0);
 	}
 
+	/**
+	 * @brief Wrapper function for getImageRaw_internal
+	 * 
+	 * Returns as ImageAndExposure pointer
+	 * 
+	 * @param id 
+	 * @param forceLoadDirectly 
+	 * @return ImageAndExposure* 
+	 */
 	ImageAndExposure* getImage(int id, bool forceLoadDirectly=false)
 	{
 		return getImage_internal(id, 0);
 	}
 
-
+	/**
+	 * @brief Get the photometric gamma array
+	 * 
+	 * @return float* 
+	 */
 	inline float* getPhotometricGamma()
 	{
 		if(undistort==0 || undistort->photometricUndist==0) return 0;
 		return undistort->photometricUndist->getG();
 	}
 
+	/**
+	 * @brief Get all IMU data between frame i-1 and frame i
+	 * 
+	 * @param i 
+	 * @return dmvio::IMUData 
+	 */
     dmvio::IMUData getIMUData(int i)
     {
-	    // returning IMU data between frame i-1 and frame i!
 	    return imuDataAllFrames[i - 1];
     }
     
+	/**
+	 * @brief Gets the ground truth data of the frame with the id
+	 * 
+	 * Ground truth data and frame data timestamps are not guaranteed to match perfectly
+	 * Prints out the approximate difference in seconds between the frame and groudn truth data
+	 * 
+	 * @param id 
+	 * @param foundOut 
+	 * @return dmvio::GTData 
+	 */
     dmvio::GTData getGTData(int id, bool &foundOut)
     {
         long long idReal = ids[id];
-		auto it = gtData.lower_bound(idReal);
-		long long firstDist, secondDist;
+		auto it = gtData.lower_bound(idReal); // Get GT value closest to idReal
+		long long firstDist;
 		long long dist = std::abs(idReal - it->first);
 		firstDist = dist;
+
+		// Case for last frame
 		if(it == gtData.end())
 		{
 			foundOut = false;
 			return dmvio::GTData();
 		}
 
+		// Case for all other frames but the first and last
+		// Choses between the current or previous frame depending on timestamp distance
 		if(it != gtData.begin())
         {
-		    it--;
+			long long secondDist;
+		    it--; // it points to previous frame
 		    secondDist = std::abs(idReal - it->first);
-		    if(secondDist >= firstDist)
-            {
-		        it++;
-            }else
-            {
-		        dist = secondDist;
-            }
+		    if(secondDist >= firstDist) it++; // Use current frame
+            else dist = secondDist; // Use previous frame
         }
+
 		double distSeconds = (double) dist * 1e-9;
         std::cout << "GTData distance (seconds): " << distSeconds << std::endl;
+
         if(distSeconds > 0.01)
         {
             return dmvio::GTData{};
@@ -288,6 +380,13 @@ public:
         return it->second;
     }
     
+	/**
+	 * @brief Loads ground truth data
+	 * 
+	 * @param gtFile 
+	 * @return true 
+	 * @return false 
+	 */
     bool loadGTData(std::string gtFile)
     {
         std::string defaultFile = path.substr(0, path.find_last_of('/')) + "/../state_groundtruth_estimate0/data.csv";
@@ -305,9 +404,10 @@ public:
         {
             return false;
         }
+
+		// Reads file
         while(!tr.eof() && tr.good())
         {
-            std::string line;
             char buf[1000];
             tr.getline(buf, 1000);
             
@@ -315,7 +415,7 @@ public:
             double p1, p2, p3, qw, qx, qy, qz, v1, v2, v3, br1, br2, br3, bp1, bp2, bp3;
             if(17 == sscanf(buf, "%lld,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf", &id, &p1, &p2, &p3, &qw, &qx, &qy, &qz, &v1, &v2, &v3, &br1, &br2, &br3, &bp1, &bp2, &bp3))
             {
-                // EuRoC format with bias GT.
+                // EuRoC format with bias GT
                 Eigen::Vector3d translation(p1, p2, p3);
                 Eigen::Quaterniond quat(qw, qx, qy, qz);
                 Sophus::SE3d pose(quat, translation);
@@ -342,27 +442,36 @@ public:
         return true;
     }
 
-
+	/**
+	 * @brief Loads the IMU data
+	 * 
+	 * Format of IMU file must be imuStamp, wx, wy, wz, ax, ay, az
+	 * 
+	 * @param imuFile 
+	 */
     void loadIMUData(std::string imuFile = "")
     {
         // Important: This IMU loading method expects that for each image there is an IMU 'measurement' with exactly the same timestamp (the VI-sensor does this).
         // If the sensor does not output this, a fake measurement with this timestamp has to be interpolated in advance.
-        // The DM-VIO Python tools have a script to do this.
+        // The DM-VIO Python tools have a script to do this
         if(imuFile == "")
         {
             imuFile = path.substr(0,path.find_last_of('/')) + "/imu.txt";
         }
+
         std::ifstream imuStream(imuFile);
         if(imuStream.good())
         {
             std::string line;
             std::getline(imuStream, line);
-            // At the moment only comments at the beginning of the file are supported.
+            // At the moment only comments at the beginning of the file are supported
             while(line[0] == '#')
             {
                 std::cout << "Skipping comment line in IMU data.\n";
                 std::getline(imuStream, line);
             }
+
+			// Reads IMU data
             std::stringstream lineStream(line);
             long long imuStamp;
             double wx, wy, wz, ax, ay, az;
@@ -428,7 +537,7 @@ public:
                     accMeas << ax, ay, az;
                     gyrMeas << wx, wy, wz;
                     // For each measurement GTSAM wants the time between it, and the previous measurement.
-                    // The timestamps are in nanoseconds -> convert!
+                    // The timestamps are in nanoseconds -> convert
                     double integrationTime = (double) (imuStamp - previousIMUTime) * 1e-9;
                     imuData.push_back(dmvio::IMUMeasurement(accMeas, gyrMeas, integrationTime));
 
@@ -442,22 +551,31 @@ public:
             std::cout << "Found no IMU-data." << std::endl;
         }
 
-
         imuStream.close();
 
     }
 
 	// undistorter. [0] always exists, [1-2] only when MT is enabled.
 	Undistort* undistort;
+
+
 private:
 
-
+	/**
+	 * @brief Reads image
+	 * 
+	 * Either uses the provided image reader from the IOWrapper or extracts a zip file
+	 * No timestamp or exposure is provided
+	 * 
+	 * @param id 
+	 * @param unused 
+	 * @return MinimalImageB* 
+	 */
 	MinimalImageB* getImageRaw_internal(int id, int unused)
 	{
 	    assert(!use16Bit);
 		if(!isZipped)
 		{
-			// CHANGE FOR ZIP FILE
 			return IOWrap::readImageBW_8U(files[id]);
 		}
 		else
@@ -490,7 +608,16 @@ private:
 		}
 	}
 
-
+	/**
+	 * @brief Reads image with exposure
+	 * 
+	 * Uses the provided 16 or b bit image reader from the IOWrapper
+	 * Also gives the exposure and timestamp of the image to the ImageAndExposure object
+	 * 
+	 * @param id 
+	 * @param unused 
+	 * @return ImageAndExposure* 
+	 */
 	ImageAndExposure* getImage_internal(int id, int unused)
 	{
 	    if(use16Bit)
@@ -516,14 +643,20 @@ private:
         }
 	}
 
+	/**
+	 * @brief Loads the timestamps
+	 * 
+	 * Will also load exposures if provided
+	 * 
+	 */
 	inline void loadTimestamps()
 	{
 		std::ifstream tr;
 		std::string timesFile = path.substr(0,path.find_last_of('/')) + "/times.txt";
 		tr.open(timesFile.c_str());
+
 		while(!tr.eof() && tr.good())
 		{
-			std::string line;
 			char buf[1000];
 			tr.getline(buf, 1000);
 
@@ -546,7 +679,7 @@ private:
 		}
 		tr.close();
 
-		// check if exposures are correct, (possibly skip)
+		// Check if exposures are correct, (possibly skip)
 		bool exposuresGood = ((int)exposures.size()==(int)getNumImages()) ;
 		for(int i=0;i<(int)exposures.size();i++)
 		{
@@ -563,7 +696,6 @@ private:
 
 			if(exposures[i] == 0) exposuresGood=false;
 		}
-
 
 		if((int)getNumImages() != (int)timestamps.size())
 		{

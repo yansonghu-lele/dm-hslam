@@ -43,7 +43,8 @@
 
 using namespace dmvio;
 using gtsam::Symbol;
-using gtsam::symbol_shorthand::S, gtsam::symbol_shorthand::G;
+using gtsam::symbol_shorthand::S;
+using gtsam::symbol_shorthand::G;
 
 constexpr char end = '\n';
 // Version for flushing always (slower, but useful for crashes).

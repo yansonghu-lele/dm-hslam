@@ -40,7 +40,9 @@
 
 
 using namespace dmvio;
-using dso::VecX, dso::MatXX, dso::EFFrame;
+using dso::VecX;
+using dso::MatXX;
+using dso::EFFrame;
 using std::vector;
 using gtsam::Symbol;
 

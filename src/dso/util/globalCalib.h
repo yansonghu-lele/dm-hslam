@@ -27,8 +27,11 @@
 #include "util/settings.h"
 #include "util/NumType.h"
 
+
+
 namespace dso
 {
+
 	extern int wG[PYR_LEVELS], hG[PYR_LEVELS];
 	extern float fxG[PYR_LEVELS], fyG[PYR_LEVELS],
 		  cxG[PYR_LEVELS], cyG[PYR_LEVELS];
@@ -42,4 +45,5 @@ namespace dso
 	extern float hM3G;
 
 	void setGlobalCalib(int w, int h, const Eigen::Matrix3f &K );
+
 }

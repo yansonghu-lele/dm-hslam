@@ -25,6 +25,8 @@
 
 
 
+#define BOOST_BIND_NO_PLACEHOLDERS
+
 #include "util/settings.h"
 #include <boost/bind.hpp>
 
@@ -164,7 +166,7 @@ float setting_coarseCutoffTH = 20;
 
 
 // parameters controlling pixel selection
-float setting_minGradHistCut = 0.64;
+float setting_minGradHistCut = 0.5;
 float setting_minGradHistAdd = 0.005;
 float setting_gradDownweightPerLevel = 0.75;
 bool  setting_selectDirectionDistribution = true;

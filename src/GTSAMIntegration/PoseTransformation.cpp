@@ -28,7 +28,8 @@
 
 using namespace dmvio;
 using dso::Vec8;
-using gtsam::Matrix, gtsam::Vector;
+using gtsam::Matrix;
+using gtsam::Vector;
 using gtsam::Symbol;
 
 // Default implementation for child classes uses numeric Jacobians and should work out of the box.

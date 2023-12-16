@@ -22,14 +22,15 @@
 */
 
 
+
 #pragma once
 #include <cstring>
 #include <iostream>
 
 
+
 namespace dso
 {
-
 
 class ImageAndExposure
 {
@@ -39,6 +40,7 @@ public:
 	int w,h;				// width and height;
 	double timestamp;
 	float exposure_time;	// exposure time in ms.
+
 	inline ImageAndExposure(int w_, int h_, double timestamp_=0) : w(w_), h(h_), timestamp(timestamp_)
 	{
 		image = new float[w*h];
@@ -62,6 +64,5 @@ public:
 		return img;
 	}
 };
-
 
 }

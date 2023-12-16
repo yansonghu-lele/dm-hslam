@@ -24,37 +24,39 @@
 */
 
 
+
 #pragma once
 
 #include "util/NumType.h"
 #include "algorithm"
 #include <boost/thread/mutex.hpp>
 
+
+
 namespace dso
 {
-
 
 class FrameShell
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	int id; 			// INTERNAL ID, starting at zero.
-	int incoming_id;	// ID passed into DSO
-	double timestamp;		// timestamp passed into DSO.
+	int id; 					// INTERNAL ID, starting at zero.
+	int incoming_id;			// ID passed into DSO
+	double timestamp;			// timestamp passed into DSO.
 
-	// set once after tracking
+	// Set once after tracking
 	SE3 camToTrackingRef;
 	FrameShell* trackingRef;
 
-	// constantly adapted.
+	// Constantly adapted
 	SE3 camToWorld;				// Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].
 	AffLight aff_g2l;
 	bool poseValid;
 	bool trackingWasGood;
 
-	int keyframeId = -1; // Id of the KF or -1 for non-KFs.
+	int keyframeId = -1; 		// Id of the KF or -1 for non-KFs.
 
-	// statisitcs
+	// Statisitcs
 	int statistics_outlierResOnThis;
 	int statistics_goodResOnThis;
 	int marginalizedAt;
@@ -62,21 +64,21 @@ public:
 
     static boost::mutex shellPoseMutex;
 
-	inline FrameShell()
-	{
-		id=0;
-		poseValid=true;
-		trackingWasGood = true;
-		camToWorld = SE3();
-		timestamp=0;
-		marginalizedAt=-1;
-		movedByOpt=0;
-		statistics_outlierResOnThis=statistics_goodResOnThis=0;
-		trackingRef=0;
-		camToTrackingRef = SE3();
-	}
+	inline FrameShell() :
+		id(0),
+		incoming_id(0),
+		poseValid(true),
+		trackingWasGood(true),
+		camToWorld(SE3()),
+		timestamp(0),
+		marginalizedAt(-1),
+		movedByOpt(0),
+		statistics_outlierResOnThis(0),
+		statistics_goodResOnThis(0),
+		trackingRef(0),
+		camToTrackingRef(SE3())
+	{}
 };
-
 
 }
 

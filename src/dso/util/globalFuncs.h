@@ -36,9 +36,10 @@
 #include <boost/stacktrace.hpp>
 #endif
 
+
+
 namespace dso
 {
-
 
 // Check bounds (assuming that the elements (ix, iy); (ix+1, iy); (ix, iy+1); (ix+1, iy+1) are accessed.
 inline void checkBoundsPlus1(int ix, int iy, const int width)
@@ -136,6 +137,7 @@ EIGEN_ALWAYS_INLINE Eigen::Vector3f getInterpolatedElement33OverAnd(const Eigen:
 	        + (dx-dxdy) * *(const Eigen::Vector3f*)(bp+1)
 			+ (1-dx-dy+dxdy) * *(const Eigen::Vector3f*)(bp);
 }
+
 EIGEN_ALWAYS_INLINE Eigen::Vector3f getInterpolatedElement33OverOr(const Eigen::Vector3f* const mat, const bool* overMat, const float x, const float y, const int width, bool& over_out)
 {
 	int ix = (int)x;
@@ -155,7 +157,6 @@ EIGEN_ALWAYS_INLINE Eigen::Vector3f getInterpolatedElement33OverOr(const Eigen::
 	        + (dx-dxdy) * *(const Eigen::Vector3f*)(bp+1)
 			+ (1-dx-dy+dxdy) * *(const Eigen::Vector3f*)(bp);
 }
-
 
 EIGEN_ALWAYS_INLINE float getInterpolatedElement31(const Eigen::Vector3f* const mat, const float x, const float y, const int width)
 {
@@ -225,6 +226,7 @@ EIGEN_ALWAYS_INLINE Eigen::Vector3f getInterpolatedElement33BiLin(const Eigen::V
 			rightInt-leftInt,
 			botInt-topInt);
 }
+
 EIGEN_ALWAYS_INLINE float getInterpolatedElement11Cub(const float* const p, const float x)	// for x=0, this returns p[1].
 {
 	return p[1] + 0.5f * x*(p[2] - p[0] + x*(2.0f*p[0] - 5.0f*p[1] + 4.0f*p[2] - p[3] + x*(3.0f*(p[1] - p[2]) + p[3] - p[0])));
@@ -239,6 +241,7 @@ EIGEN_ALWAYS_INLINE Eigen::Vector2f getInterpolatedElement12Cub(const float* con
 	float xxx = xx*x;
 	return Eigen::Vector2f(p[1] + x*c1 + xx*c2 + xxx*c3, c1 + x*2.0f*c2 + xx*3.0f*c3);
 }
+
 EIGEN_ALWAYS_INLINE Eigen::Vector2f getInterpolatedElement32Cub(const Eigen::Vector3f* const p, const float x)	// for x=0, this returns p[1].
 {
 	float c1 = 0.5f * (p[2][0] - p[0][0]);
@@ -265,6 +268,7 @@ EIGEN_ALWAYS_INLINE float getInterpolatedElement11BiCub(const float* const mat, 
 	float dy = y - iy;
 	return getInterpolatedElement11Cub(val, dy);
 }
+
 EIGEN_ALWAYS_INLINE Eigen::Vector3f getInterpolatedElement13BiCub(const float* const mat, const float x, const float y, const int width)
 {
 	int ix = (int)x;
@@ -352,7 +356,6 @@ EIGEN_ALWAYS_INLINE Eigen::Vector2f getInterpolatedElement42(const Eigen::Vector
 }
 
 
-
 inline Vec3f makeRainbowf3F(float id)
 {
 	id *= freeDebugParam3;
@@ -413,9 +416,5 @@ inline Vec3b makeRedGreen3B(float val)	// 0 = red, 1=green, 0.5=yellow.
 	else return Vec3b(0,255,0);
 
 }
-
-
-
-
 
 }

@@ -24,6 +24,8 @@
 * along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+
 #pragma once
  
 #include "util/NumType.h"
@@ -35,6 +37,8 @@
 
 #define DEBUG_MESSAGE_PIXELSELECTOR2 0
 #define DEBUG_PLOT_PIXELSELECTOR2 0
+
+
 
 namespace dso
 {
@@ -54,6 +58,9 @@ public:
 
 	void makeThresTable(const FrameHessian* const fh);
 
+	int currentPotential;
+
+	
 private:
 	Eigen::Vector3i select(const FrameHessian* const fh,
 			float* map_out, int pot, float thFactor=1);
@@ -71,12 +78,7 @@ private:
 	int bW, bH;
 	// number of blocks in x and y dimension.
 	int nbW, nbH;
-
-	int currentPotential;
 };
-
-
-
 
 }
 
