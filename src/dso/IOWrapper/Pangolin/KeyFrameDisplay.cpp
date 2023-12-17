@@ -117,7 +117,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	numSparsePoints=0;
 	for(ImmaturePoint* p : fh->immaturePoints)
 	{
-		for(int i=0;i<patternNum;i++)
+		for(int i=0;i<PATTERNNUM;i++)
 			pc[numSparsePoints].color[i] = p->color[i];
 
 		pc[numSparsePoints].u = p->u;
@@ -133,7 +133,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessians)
 	{
-		for(int i=0;i<patternNum;i++)
+		for(int i=0;i<PATTERNNUM;i++)
 			pc[numSparsePoints].color[i] = p->color[i];
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
@@ -148,7 +148,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansMarginalized)
 	{
-		for(int i=0;i<patternNum;i++)
+		for(int i=0;i<PATTERNNUM;i++)
 			pc[numSparsePoints].color[i] = p->color[i];
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
@@ -163,7 +163,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansOut)
 	{
-		for(int i=0;i<patternNum;i++)
+		for(int i=0;i<PATTERNNUM;i++)
 			pc[numSparsePoints].color[i] = p->color[i];
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
@@ -215,8 +215,8 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 		return false;
 
 	// make data
-	Vec3f* tmpVertexBuffer = new Vec3f[numSparsePoints*patternNum];
-	Vec3b* tmpColorBuffer = new Vec3b[numSparsePoints*patternNum];
+	Vec3f* tmpVertexBuffer = new Vec3f[numSparsePoints*PATTERNNUM];
+	Vec3b* tmpColorBuffer = new Vec3b[numSparsePoints*PATTERNNUM];
 	int vertexBufferNumPoints=0;
 
 	for(int i=0;i<numSparsePoints;i++)
@@ -244,12 +244,12 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 		// All imature points have a placeholder relObsBaseline of 0, so they are excluded from this check
 		if((originalInputSparse[i].relObsBaseline < my_minRelBS) && (originalInputSparse[i].status != 0)) continue;
 
-		for(int pnt=0;pnt<patternNum;pnt++)
+		for(int pnt=0;pnt<PATTERNNUM;pnt++)
 		{
 
 			if(my_sparsifyFactor > 1 && rand()%my_sparsifyFactor != 0) continue;
-			int dx = patternP[pnt][0];
-			int dy = patternP[pnt][1];
+			int dx = PATTERNP[pnt][0];
+			int dy = PATTERNP[pnt][1];
 
 			tmpVertexBuffer[vertexBufferNumPoints][0] = ((originalInputSparse[i].u+dx)*fxi + cxi) * depth;
 			tmpVertexBuffer[vertexBufferNumPoints][1] = ((originalInputSparse[i].v+dy)*fyi + cyi) * depth;
@@ -313,7 +313,7 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			vertexBufferNumPoints++;
 
 
-			assert(vertexBufferNumPoints <= numSparsePoints*patternNum);
+			assert(vertexBufferNumPoints <= numSparsePoints*PATTERNNUM);
 		}
 	}
 

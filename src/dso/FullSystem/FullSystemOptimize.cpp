@@ -110,7 +110,7 @@ void FullSystem::setNewFrameEnergyTH()
 
 	if(allResVec.size()==0)
 	{
-		newFrame->frameEnergyTH = 12*12*patternNum;
+		newFrame->frameEnergyTH = 12*12*PATTERNNUM;
 		return;		// should never happen, but lets make sure.
 	}
 
@@ -404,7 +404,7 @@ void FullSystem::printOptRes(const Vec3 &res, double resL, double resM, double r
 {
 	printf("A(%f)=(AV %.3f). Num: A(%'d) + M(%'d); ab %f %f!\n",
 			res[0],
-			sqrtf((float)(res[0] / (patternNum*ef->resInA))),
+			sqrtf((float)(res[0] / (PATTERNNUM*ef->resInA))),
 			ef->resInA,
 			ef->resInM,
 			a,
@@ -493,7 +493,7 @@ float FullSystem::optimize(int mnumOptIts)
         {
             // Update dynamic weight before solving (where the active DSO factor will be scaled accordingly).
             dynamicGTSAMWeight = baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float) (lastEnergy[0] /
-                                                                                                  (patternNum *
+                                                                                                  (PATTERNNUM *
                                                                                                    ef->resInA))),
                                                                     frameHessians.back()->shell->trackingWasGood);
             if(!setting_debugout_runquiet)
@@ -534,7 +534,7 @@ float FullSystem::optimize(int mnumOptIts)
 		if(imuIntegration.getImuSettings().updateDynamicWeightDuringOptimization)
         {
 		    // Update dynamic weight before deciding whether to accept the step.
-            dynamicGTSAMWeight = baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float)(lastEnergy[0] / (patternNum*ef->resInA))), frameHessians.back()->shell->trackingWasGood);
+            dynamicGTSAMWeight = baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float)(lastEnergy[0] / (PATTERNNUM*ef->resInA))), frameHessians.back()->shell->trackingWasGood);
         }
 
 
@@ -591,7 +591,7 @@ float FullSystem::optimize(int mnumOptIts)
     }
 
     // Update again!
-    baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float)(lastEnergy[0] / (patternNum*ef->resInA))), frameHessians.back()->shell->trackingWasGood);
+    baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float)(lastEnergy[0] / (PATTERNNUM*ef->resInA))), frameHessians.back()->shell->trackingWasGood);
 
     Vec10 newStateZero = Vec10::Zero();
 	newStateZero.segment<2>(6) = frameHessians.back()->get_state().segment<2>(6);
@@ -617,13 +617,13 @@ float FullSystem::optimize(int mnumOptIts)
 	}
 
 
-	statistics_lastFineTrackRMSE = sqrtf((float)(lastEnergy[0] / (patternNum*ef->resInA)));
+	statistics_lastFineTrackRMSE = sqrtf((float)(lastEnergy[0] / (PATTERNNUM*ef->resInA)));
 
 	if(calibLog != 0)
 	{
 		(*calibLog) << Hcalib.value_scaled.transpose() <<
 				" " << frameHessians.back()->get_state_scaled().transpose() <<
-				" " << sqrtf((float)(lastEnergy[0] / (patternNum*ef->resInA))) <<
+				" " << sqrtf((float)(lastEnergy[0] / (PATTERNNUM*ef->resInA))) <<
 				" " << ef->resInM << "\n";
 		calibLog->flush();
 	}

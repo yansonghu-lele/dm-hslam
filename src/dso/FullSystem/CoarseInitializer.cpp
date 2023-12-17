@@ -23,13 +23,14 @@
 * along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 /*
  * KFBuffer.cpp
  *
  *  Created on: Jan 7, 2014
  *      Author: engelj
  */
+
+
 
 #include "FullSystem/CoarseInitializer.h"
 #include "FullSystem/FullSystem.h"
@@ -44,6 +45,8 @@
 #if !defined(__SSE3__) && !defined(__SSE2__) && !defined(__SSE1__)
 #include "SSE2NEON.h"
 #endif
+
+
 
 namespace dso
 {
@@ -70,6 +73,7 @@ CoarseInitializer::CoarseInitializer(int ww, int hh)
 	wM.diagonal()[6] = SCALE_A;
 	wM.diagonal()[7] = SCALE_B;
 }
+
 CoarseInitializer::~CoarseInitializer()
 {
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
@@ -80,7 +84,6 @@ CoarseInitializer::~CoarseInitializer()
 	delete[] JbBuffer;
 	delete[] JbBuffer_new;
 }
-
 
 bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IOWrap::Output3DWrapper*> &wraps)
 {
@@ -394,10 +397,10 @@ Vec3f CoarseInitializer::calcResAndGS(
             // sum over all residuals.
             bool isGood = true;
             float energy = 0;
-            for(int idx = 0; idx < patternNum; idx++)
+            for(int idx = 0; idx < PATTERNNUM; idx++)
             {
-                int dx = patternP[idx][0];
-                int dy = patternP[idx][1];
+                int dx = PATTERNP[idx][0];
+                int dy = PATTERNP[idx][1];
 
 
                 Vec3f pt = RKi * Vec3f(point->u + dx, point->v + dy, 1) + t * point->idepth_new;
@@ -479,7 +482,7 @@ Vec3f CoarseInitializer::calcResAndGS(
             point->energy_new[0] = energy;
 
             // update Hessian matrix.
-            for(int j = 0; j + 3 < patternNum; j += 4){
+            for(int j = 0; j + 3 < PATTERNNUM; j += 4){
                 acc9.updateSSE(
                         _mm_load_ps(((float*) (&dp0)) + j),
                         _mm_load_ps(((float*) (&dp1)) + j),
@@ -493,7 +496,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 			}
 
 
-            for(int j = ((patternNum >> 2) << 2); j < patternNum; j++){
+            for(int j = ((PATTERNNUM >> 2) << 2); j < PATTERNNUM; j++){
                 acc9.updateSingle(
                         (float) dp0[j], (float) dp1[j], (float) dp2[j], (float) dp3[j],
                         (float) dp4[j], (float) dp5[j], (float) dp6[j], (float) dp7[j],
@@ -830,13 +833,13 @@ void CoarseInitializer::setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHe
 		int wl = w[lvl], hl = h[lvl];
 		Pnt* pl = points[lvl];
 		int nl = 0;
-		for(int y=patternPadding+1;y<hl-patternPadding-2;y++)
-		for(int x=patternPadding+1;x<wl-patternPadding-2;x++)
+		for(int y=PATTERNPADDING+1;y<hl-PATTERNPADDING-2;y++)
+		for(int x=PATTERNPADDING+1;x<wl-PATTERNPADDING-2;x++)
 		{
 			//if(x==2) printf("y=%d!\n",y);
 			if((lvl!=0 && statusMapB[x+y*wl]) || (lvl==0 && statusMap[x+y*wl] != 0))
 			{
-				//assert(patternNum==9);
+				//assert(PATTERNNUM==9);
 				pl[nl].u = x+0.1;
 				pl[nl].v = y+0.1;
 				pl[nl].idepth = 1;
@@ -849,19 +852,19 @@ void CoarseInitializer::setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHe
 
 				Eigen::Vector3f* cpt = firstFrame->dIp[lvl] + x + y*w[lvl];
 				float sumGrad2=0;
-				for(int idx=0;idx<patternNum;idx++)
+				for(int idx=0;idx<PATTERNNUM;idx++)
 				{
-					int dx = patternP[idx][0];
-					int dy = patternP[idx][1];
+					int dx = PATTERNP[idx][0];
+					int dy = PATTERNP[idx][1];
 					float absgrad = cpt[dx + dy*w[lvl]].tail<2>().squaredNorm();
 					sumGrad2 += absgrad;
 				}
 
 //				float gth = setting_outlierTH * (sqrtf(sumGrad2)+setting_outlierTHSumComponent);
-//				pl[nl].outlierTH = patternNum*gth*gth;
+//				pl[nl].outlierTH = PATTERNNUM*gth*gth;
 //
 
-				pl[nl].outlierTH = patternNum*setting_outlierTH;
+				pl[nl].outlierTH = PATTERNNUM*setting_outlierTH;
 
 
 

@@ -31,6 +31,8 @@
  *      Author: engelj
  */
 
+
+
 #include "FullSystem/CoarseTracker.h"
 #include "FullSystem/FullSystem.h"
 #include "FullSystem/HessianBlocks.h"
@@ -44,49 +46,69 @@
 #include "SSE2NEON.h"
 #endif
 
+
+
 namespace dso
 {
 
-
+/**
+ * @brief Allocates memory aligned to a specific number of bits
+ * 
+ * Allows for the usage of instructions that need aligned memory
+ * All allocated pointers are stored in a vector
+ * 
+ * @tparam b 
+ * @tparam T 
+ * @param size 
+ * @param rawPtrVec 
+ * @return T* 
+ */
 template<int b, typename T>
 T* allocAligned(int size, std::vector<T*> &rawPtrVec)
 {
-    const int padT = 1 + ((1 << b)/sizeof(T));
-    T* ptr = new T[size + padT];
-    rawPtrVec.push_back(ptr);
-    T* alignedPtr = (T*)(( ((uintptr_t)(ptr+padT)) >> b) << b);
-    return alignedPtr;
+	const int padT = 1 + ((1 << b)/sizeof(T));
+	T* ptr = new T[size + padT];
+	rawPtrVec.push_back(ptr);
+	T* alignedPtr = (T*)((((uintptr_t)(ptr+padT)) >> b) << b);
+	return alignedPtr;
 }
 
-
+/**
+ * @brief Construct a new Coarse Tracker:: Coarse Tracker object
+ * 
+ * @param ww 
+ * @param hh 
+ * @param imuIntegration 
+ */
 CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegration) : lastRef_aff_g2l(0, 0), imuIntegration(imuIntegration)
 {
-	// make coarse tracking templates.
+	// Make coarse tracking templates.
+	// All arrays are aligned to allow for the use of high performance instructions
+	// All pointers are stored in ptrToDelete for the destructor
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
 		int wl = ww>>lvl;
-        int hl = hh>>lvl;
+		int hl = hh>>lvl;
 
-        idepth[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
-        weightSums[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
-        weightSums_bak[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
+		idepth[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
+		weightSums[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
+		weightSums_bak[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
 
-        pc_u[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
-        pc_v[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
-        pc_idepth[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
-        pc_color[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
-
+		pc_u[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
+		pc_v[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
+		pc_idepth[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
+		pc_color[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
 	}
 
-	// warped buffers
-    buf_warped_idepth = allocAligned<4,float>(ww*hh, ptrToDelete);
-    buf_warped_u = allocAligned<4,float>(ww*hh, ptrToDelete);
-    buf_warped_v = allocAligned<4,float>(ww*hh, ptrToDelete);
-    buf_warped_dx = allocAligned<4,float>(ww*hh, ptrToDelete);
-    buf_warped_dy = allocAligned<4,float>(ww*hh, ptrToDelete);
-    buf_warped_residual = allocAligned<4,float>(ww*hh, ptrToDelete);
-    buf_warped_weight = allocAligned<4,float>(ww*hh, ptrToDelete);
-    buf_warped_refColor = allocAligned<4,float>(ww*hh, ptrToDelete);
+	// Warped buffers
+	buf_warped_idepth = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_u = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_v = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_dx = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_dy = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_residual = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_weight = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_refColor = allocAligned<4,float>(ww*hh, ptrToDelete);
 
 
 	newFrame = 0;
@@ -95,13 +117,23 @@ CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegrati
 	w[0]=h[0]=0;
 	refFrameID=-1;
 }
+
+/**
+ * @brief Destroy the Coarse Tracker:: Coarse Tracker object
+ * 
+ */
 CoarseTracker::~CoarseTracker()
 {
-    for(float* ptr : ptrToDelete)
-        delete[] ptr;
-    ptrToDelete.clear();
+	for(float* ptr : ptrToDelete)
+		delete[] ptr;
+	ptrToDelete.clear();
 }
 
+/**
+ * @brief Set width, height, and camera parameters for all pyramid levels
+ * 
+ * @param HCalib 
+ */
 void CoarseTracker::makeK(CalibHessian* HCalib)
 {
 	w[0] = wG[0];
@@ -116,6 +148,7 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
 	{
 		w[level] = w[0] >> level;
 		h[level] = h[0] >> level;
+
 		fx[level] = fx[level-1] * 0.5;
 		fy[level] = fy[level-1] * 0.5;
 		cx[level] = (cx[0] + 0.5) / ((int)1<<level) - 0.5;
@@ -135,11 +168,14 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
 	}
 }
 
-
-
+/**
+ * @brief 
+ * 
+ * @param frameHessians 
+ */
 void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 {
-	// make coarse tracking templates for latstRef.
+	// Make coarse tracking templates for latstRef.
 	memset(idepth[0], 0, sizeof(float)*w[0]*h[0]);
 	memset(weightSums[0], 0, sizeof(float)*w[0]*h[0]);
 
@@ -191,7 +227,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	}
 
 
-    // dilate idepth by 1.
+	// dilate idepth by 1.
 	for(int lvl=0; lvl<2; lvl++)
 	{
 		int numIts = 1;
@@ -388,7 +424,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 	float maxEnergy = 2*setting_huberTH*cutoffTH-setting_huberTH*setting_huberTH;	// energy for r=setting_coarseCutoffTH.
 
 
-    MinimalImageB3* resImage = 0;
+	MinimalImageB3* resImage = 0;
 	if(debugPlot)
 	{
 		resImage = new MinimalImageB3(wl,hl);
@@ -453,10 +489,10 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 
 
 		float refColor = lpc_color[i];
-        Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
-        if(!std::isfinite((float)hitColor[0])) continue;
-        float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
-        float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+		Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
+		if(!std::isfinite((float)hitColor[0])) continue;
+		float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
+		float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
 
 
 		if(fabs(residual) > cutoffTH)
@@ -519,10 +555,11 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 }
 
 
-
-
-
-
+/**
+ * @brief 
+ * 
+ * @param frameHessians 
+ */
 void CoarseTracker::setCoarseTrackingRef(
 		std::vector<FrameHessian*> frameHessians)
 {
@@ -538,6 +575,19 @@ void CoarseTracker::setCoarseTrackingRef(
 	firstCoarseRMSE=-1;
 
 }
+
+/**
+ * @brief Main coarse tracking function
+ * 
+ * @param newFrameHessian 
+ * @param lastToNew_out 
+ * @param aff_g2l_out 
+ * @param coarsestLvl 
+ * @param minResForAbort 
+ * @param wrap 
+ * @return true 
+ * @return false 
+ */
 bool CoarseTracker::trackNewestCoarse(
 		FrameHessian* newFrameHessian,
 		SE3 &lastToNew_out, AffLight &aff_g2l_out,
@@ -553,7 +603,6 @@ bool CoarseTracker::trackNewestCoarse(
 	lastResiduals.setConstant(NAN);
 	lastFlowIndicators.setConstant(1000);
 
-
 	newFrame = newFrameHessian;
 	int maxIterations[] = {10,20,50,50,50};
 	float lambdaExtrapolationLimit = 0.001;
@@ -564,8 +613,8 @@ bool CoarseTracker::trackNewestCoarse(
 	bool haveRepeated = false;
 
 
-    Mat88 H; Vec8 b;
-    int lastLvl = -1;
+	Mat88 H; Vec8 b;
+	int lastLvl = -1;
 	for(int lvl=coarsestLvl; lvl>=0; lvl--)
 	{
 		float levelCutoffRepeat=1;
@@ -575,8 +624,8 @@ bool CoarseTracker::trackNewestCoarse(
 			levelCutoffRepeat*=2;
 			resOld = calcRes(lvl, refToNew_current, aff_g2l_current, setting_coarseCutoffTH*levelCutoffRepeat);
 
-            if(!setting_debugout_runquiet)
-                printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH*levelCutoffRepeat, resOld[5]);
+			if(!setting_debugout_runquiet)
+				printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH*levelCutoffRepeat, resOld[5]);
 		}
 
 		calcGSSSE(lvl, H, b, refToNew_current, aff_g2l_current);
@@ -599,27 +648,27 @@ bool CoarseTracker::trackNewestCoarse(
 
 		for(int iteration=0; iteration < maxIterations[lvl]; iteration++)
 		{
-		    dmvio::TimeMeasurement timeMeasurement("coarseTrackingIteration");
+			dmvio::TimeMeasurement timeMeasurement("coarseTrackingIteration");
 			Mat88 Hl = H;
 			for(int i=0;i<8;i++) Hl(i,i) *= (1+lambda);
 
 
-            float extrapFac = 1;
-            if(lambda < lambdaExtrapolationLimit) extrapFac = sqrt(sqrt(lambdaExtrapolationLimit / lambda));
+			float extrapFac = 1;
+			if(lambda < lambdaExtrapolationLimit) extrapFac = sqrt(sqrt(lambdaExtrapolationLimit / lambda));
 
 
-            SE3 refToNew_new;
-            AffLight aff_g2l_new = aff_g2l_current;
-            double incNorm;
-            if(dso::setting_useIMU && imuIntegration.isCoarseInitialized())
-            {
-                // The idea of the integration of the IMU (and GTSAM) into the coarse tracking is to replace the line
-                // Vec8 inc = Hl.ldlt().solve(-b);
-                // with a call to computeCoarseUpdate, which will add GTSAM factors before calculating the update.
+			SE3 refToNew_new;
+			AffLight aff_g2l_new = aff_g2l_current;
+			double incNorm;
+			if(dso::setting_useIMU && imuIntegration.isCoarseInitialized())
+			{
+				// The idea of the integration of the IMU (and GTSAM) into the coarse tracking is to replace the line
+				// Vec8 inc = Hl.ldlt().solve(-b);
+				// with a call to computeCoarseUpdate, which will add GTSAM factors before calculating the update.
 
-                double incA, incB;
-                // Note that we pass H instead of Hl as the lambda multiplication is done inside...
-                refToNew_new = imuIntegration.computeCoarseUpdate(H, b, extrapFac, lambda, incA, incB, incNorm);
+				double incA, incB;
+				// Note that we pass H instead of Hl as the lambda multiplication is done inside...
+				refToNew_new = imuIntegration.computeCoarseUpdate(H, b, extrapFac, lambda, incA, incB, incNorm);
 
 				SE3 oldVal = refToNew_current;
 				SE3 newVal = refToNew_new;
@@ -628,61 +677,61 @@ bool CoarseTracker::trackNewestCoarse(
 				dso::Vec8 totalIncrement;
 				totalIncrement.segment(0, 6) = increment;
 
-                totalIncrement(6) = incA;
-                totalIncrement(7) = incB;
+				totalIncrement(6) = incA;
+				totalIncrement(7) = incB;
 
-                incA *= SCALE_A;
-                incB *= SCALE_B;
+				incA *= SCALE_A;
+				incB *= SCALE_B;
 
 				aff_g2l_new.a += incA;
-                aff_g2l_new.b += incB;
-            }else
-            {
-                Vec8 inc = Hl.ldlt().solve(-b);
+				aff_g2l_new.b += incB;
+			}else
+			{
+				Vec8 inc = Hl.ldlt().solve(-b);
 
-                if(setting_affineOptModeA < 0 && setting_affineOptModeB < 0)	// fix a, b
-                {
-                    inc.head<6>() = Hl.topLeftCorner<6,6>().ldlt().solve(-b.head<6>());
-                    inc.tail<2>().setZero();
-                }
-                if(!(setting_affineOptModeA < 0) && setting_affineOptModeB < 0)	// fix b
-                {
-                    inc.head<7>() = Hl.topLeftCorner<7,7>().ldlt().solve(-b.head<7>());
-                    inc.tail<1>().setZero();
-                }
-                if(setting_affineOptModeA < 0 && !(setting_affineOptModeB < 0))	// fix a
-                {
-                    Mat88 HlStitch = Hl;
-                    Vec8 bStitch = b;
-                    HlStitch.col(6) = HlStitch.col(7);
-                    HlStitch.row(6) = HlStitch.row(7);
-                    bStitch[6] = bStitch[7];
-                    Vec7 incStitch = HlStitch.topLeftCorner<7,7>().ldlt().solve(-bStitch.head<7>());
-                    inc.setZero();
-                    inc.head<6>() = incStitch.head<6>();
-                    inc[6] = 0;
-                    inc[7] = incStitch[6];
-                }
+				if(setting_affineOptModeA < 0 && setting_affineOptModeB < 0)	// fix a, b
+				{
+					inc.head<6>() = Hl.topLeftCorner<6,6>().ldlt().solve(-b.head<6>());
+					inc.tail<2>().setZero();
+				}
+				if(!(setting_affineOptModeA < 0) && setting_affineOptModeB < 0)	// fix b
+				{
+					inc.head<7>() = Hl.topLeftCorner<7,7>().ldlt().solve(-b.head<7>());
+					inc.tail<1>().setZero();
+				}
+				if(setting_affineOptModeA < 0 && !(setting_affineOptModeB < 0))	// fix a
+				{
+					Mat88 HlStitch = Hl;
+					Vec8 bStitch = b;
+					HlStitch.col(6) = HlStitch.col(7);
+					HlStitch.row(6) = HlStitch.row(7);
+					bStitch[6] = bStitch[7];
+					Vec7 incStitch = HlStitch.topLeftCorner<7,7>().ldlt().solve(-bStitch.head<7>());
+					inc.setZero();
+					inc.head<6>() = incStitch.head<6>();
+					inc[6] = 0;
+					inc[7] = incStitch[6];
+				}
 
-                inc *= extrapFac;
+				inc *= extrapFac;
 
-                Vec8 incScaled = inc;
-                incScaled.segment<3>(0) *= SCALE_XI_ROT;
-                incScaled.segment<3>(3) *= SCALE_XI_TRANS;
-                incScaled.segment<1>(6) *= SCALE_A;
-                incScaled.segment<1>(7) *= SCALE_B;
+				Vec8 incScaled = inc;
+				incScaled.segment<3>(0) *= SCALE_XI_ROT;
+				incScaled.segment<3>(3) *= SCALE_XI_TRANS;
+				incScaled.segment<1>(6) *= SCALE_A;
+				incScaled.segment<1>(7) *= SCALE_B;
 
-                if(!std::isfinite(incScaled.sum())) incScaled.setZero();
+				if(!std::isfinite(incScaled.sum())) incScaled.setZero();
 
-                // exp: first three: translational part, last three: rotational part.
-                // Note: gtsam::Pose3 contains first rotational and then translational part!
-                refToNew_new = SE3::exp((Vec6) (incScaled.head<6>())) * refToNew_current;
-                aff_g2l_new = aff_g2l_current;
-                aff_g2l_new.a += incScaled[6];
-                aff_g2l_new.b += incScaled[7];
+				// exp: first three: translational part, last three: rotational part.
+				// Note: gtsam::Pose3 contains first rotational and then translational part!
+				refToNew_new = SE3::exp((Vec6) (incScaled.head<6>())) * refToNew_current;
+				aff_g2l_new = aff_g2l_current;
+				aff_g2l_new.a += incScaled[6];
+				aff_g2l_new.b += incScaled[7];
 
-                incNorm = inc.norm();
-            }
+				incNorm = inc.norm();
+			}
 
 			Vec6 resNew = calcRes(lvl, refToNew_new, aff_g2l_new, setting_coarseCutoffTH*levelCutoffRepeat);
 
@@ -707,8 +756,8 @@ bool CoarseTracker::trackNewestCoarse(
 				resOld = resNew;
 				aff_g2l_current = aff_g2l_new;
 				refToNew_current = refToNew_new;
-                if(dso::setting_useIMU)
-                    imuIntegration.acceptCoarseUpdate();
+				if(dso::setting_useIMU)
+					imuIntegration.acceptCoarseUpdate();
 				lambda *= 0.5;
 			}
 			else
@@ -759,33 +808,32 @@ bool CoarseTracker::trackNewestCoarse(
 	|| (setting_affineOptModeB == 0 && (fabsf((float)relAff[1]) > 200)))
 		trackingGood = false;
 
-    if(setting_affineOptModeA < 0) aff_g2l_out.a=0;
+	if(setting_affineOptModeA < 0) aff_g2l_out.a=0;
 	if(setting_affineOptModeB < 0) aff_g2l_out.b=0;
 
-    if(lastLvl == 0)
-    {
-        if(dso::setting_useIMU)
-            imuIntegration.addVisualToCoarseGraph(H, b, trackingGood);
-    }
+	if(lastLvl == 0)
+	{
+		if(dso::setting_useIMU)
+			imuIntegration.addVisualToCoarseGraph(H, b, trackingGood);
+	}
 
-    return trackingGood;
+	return trackingGood;
 }
 
 
 
 void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::vector<IOWrap::Output3DWrapper*> &wraps) const
 {
-    dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMap");
-    if(wraps.empty() && !debugSaveImages)
-    {
-        return;
-    }
-    if(w[1] == 0) return;
-
-
-	int lvl = 0;
+	dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMap");
+	if(wraps.empty() && !debugSaveImages)
+	{
+		return;
+	}
+	if(w[1] == 0) return;
 
 	{
+		int lvl = 0;
+
 		std::vector<float> allID;
 		for(int i=0;i<h[lvl]*w[lvl];i++)
 		{
@@ -795,9 +843,9 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 		std::sort(allID.begin(), allID.end());
 		int n = allID.size()-1;
 		if(n <= 0)
-        {
-		    return;
-        }
+		{
+			return;
+		}
 
 		float minID_new = allID[(int)(n*0.05)];
 		float maxID_new = allID[(int)(n*0.95)];
@@ -864,11 +912,11 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 					//mf.at(idx) = makeJet3B(id);
 				}
 			}
-        //IOWrap::displayImage("coarseDepth LVL0", &mf, false);
+		//IOWrap::displayImage("coarseDepth LVL0", &mf, false);
 
 
-        for(IOWrap::Output3DWrapper* ow : wraps)
-            ow->pushDepthImage(&mf);
+		for(IOWrap::Output3DWrapper* ow : wraps)
+			ow->pushDepthImage(&mf);
 
 		if(debugSaveImages)
 		{
@@ -884,12 +932,12 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 
 void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*> &wraps)
 {
-    dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMapFloat");
-    if(w[1] == 0) return;
-    int lvl = 0;
-    MinimalImageF mim(w[lvl], h[lvl], idepth[lvl]);
-    for(IOWrap::Output3DWrapper* ow : wraps)
-        ow->pushDepthImageFloat(&mim, lastRef);
+	dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMapFloat");
+	if(w[1] == 0) return;
+	int lvl = 0;
+	MinimalImageF mim(w[lvl], h[lvl], idepth[lvl]);
+	for(IOWrap::Output3DWrapper* ow : wraps)
+		ow->pushDepthImageFloat(&mim, lastRef);
 }
 
 
@@ -1084,7 +1132,11 @@ void CoarseDistanceMap::addIntoDistFinal(int u, int v)
 }
 
 
-
+/**
+ * @brief Set width, height, and camera parameters for all pyramid levels
+ * 
+ * @param HCalib 
+ */
 void CoarseDistanceMap::makeK(CalibHessian* HCalib)
 {
 	w[0] = wG[0];

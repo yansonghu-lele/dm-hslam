@@ -28,7 +28,8 @@
 
 using namespace dmvio;
 using dso::Vec8;
-using gtsam::Matrix, gtsam::Vector;
+using gtsam::Matrix;
+using gtsam::Vector;
 using gtsam::Symbol;
 
 TransformDSOToIMU::TransformDSOToIMU(const gtsam::Pose3& T_cam_imu, std::shared_ptr<bool> optScale,

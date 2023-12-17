@@ -24,9 +24,9 @@
 */
 
 
+
 #pragma once
 #define MAX_ACTIVE_FRAMES 100
-
  
 #include "util/globalCalib.h"
 #include "vector"
@@ -38,9 +38,9 @@
 #include "util/ImageAndExposure.h"
 
 
+
 namespace dso
 {
-
 
 inline Vec2 affFromTo(const Vec2 &from, const Vec2 &to)	// contains affine parameters as XtoWorld.
 {
@@ -82,8 +82,8 @@ struct FrameFramePrecalc
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	// static values
 	static int instanceCounter;
-	FrameHessian* host;	// defines row
-	FrameHessian* target;	// defines column
+	FrameHessian* host;			// defines row
+	FrameHessian* target;		// defines column
 
 	// precalc values
 	Mat33f PRE_RTll;
@@ -102,12 +102,9 @@ struct FrameFramePrecalc
 
 
     inline ~FrameFramePrecalc() {}
-    inline FrameFramePrecalc() {host=target=0;}
+    inline FrameFramePrecalc() : host(0), target(0), PRE_b0_mode(0.0), distanceLL(0.0) {}
 	void set(FrameHessian* host, FrameHessian* target, CalibHessian* HCalib);
 };
-
-
-
 
 
 struct FrameHessian
@@ -249,9 +246,7 @@ struct FrameHessian
 		flaggedForMarginalization=false;
 		frameID = -1;
 		efFrame = 0;
-		frameEnergyTH = 8*8*patternNum;
-
-
+		frameEnergyTH = 8*8*PATTERNNUM;
 
 		debugImage=0;
 

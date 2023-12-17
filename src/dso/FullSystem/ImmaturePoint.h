@@ -22,15 +22,17 @@
 */
 
 
+
 #pragma once
 
- 
 #include "util/NumType.h"
  
 #include "FullSystem/HessianBlocks.h"
+
+
+
 namespace dso
 {
-
 
 struct ImmaturePointTemporaryResidual
 {
@@ -59,9 +61,6 @@ public:
 	// static values
 	float color[MAX_RES_PER_POINT];
 	float weights[MAX_RES_PER_POINT];
-
-
-
 
 
 	Mat22f gradH;
@@ -94,6 +93,7 @@ public:
 			ImmaturePointTemporaryResidual* tmpRes,
 			float &Hdd, float &bd,
 			float idepth);
+			
 	float getdPixdd(
 			CalibHessian *  HCalib,
 			ImmaturePointTemporaryResidual* tmpRes,
@@ -105,6 +105,7 @@ public:
 			float idepth);
 
 private:
+
 };
 
 }

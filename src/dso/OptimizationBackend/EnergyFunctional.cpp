@@ -381,25 +381,25 @@ void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10* stats, int tid)
 			__m128 delta_a = _mm_set1_ps((float)(dp[6]));
 			__m128 delta_b = _mm_set1_ps((float)(dp[7]));
 
-			for(int i=0;i+3<patternNum;i+=4)
+			for(int j=0;j+3<PATTERNNUM;j+=4)
 			{
 				// PATTERN: E = (2*res_toZeroF + J*delta) * J*delta.
-				__m128 Jdelta =            _mm_mul_ps(_mm_load_ps(((float*)(rJ->JIdx))+i),Jp_delta_x);
-				Jdelta = _mm_add_ps(Jdelta,_mm_mul_ps(_mm_load_ps(((float*)(rJ->JIdx+1))+i),Jp_delta_y));
-				Jdelta = _mm_add_ps(Jdelta,_mm_mul_ps(_mm_load_ps(((float*)(rJ->JabF))+i),delta_a));
-				Jdelta = _mm_add_ps(Jdelta,_mm_mul_ps(_mm_load_ps(((float*)(rJ->JabF+1))+i),delta_b));
+				__m128 Jdelta =            _mm_mul_ps(_mm_load_ps(((float*)(rJ->JIdx))+j),Jp_delta_x);
+				Jdelta = _mm_add_ps(Jdelta,_mm_mul_ps(_mm_load_ps(((float*)(rJ->JIdx+1))+j),Jp_delta_y));
+				Jdelta = _mm_add_ps(Jdelta,_mm_mul_ps(_mm_load_ps(((float*)(rJ->JabF))+j),delta_a));
+				Jdelta = _mm_add_ps(Jdelta,_mm_mul_ps(_mm_load_ps(((float*)(rJ->JabF+1))+j),delta_b));
 
-				__m128 r0 = _mm_load_ps(((float*)&r->res_toZeroF)+i);
+				__m128 r0 = _mm_load_ps(((float*)&r->res_toZeroF)+j);
 				r0 = _mm_add_ps(r0,r0);
 				r0 = _mm_add_ps(r0,Jdelta);
 				Jdelta = _mm_mul_ps(Jdelta,r0);
 				E.updateSSENoShift(Jdelta);
 			}
-			for(int i=((patternNum>>2)<<2); i < patternNum; i++)
+			for(int j=((PATTERNNUM>>2)<<2); j < PATTERNNUM; j++)
 			{
-				float Jdelta = rJ->JIdx[0][i]*Jp_delta_x_1 + rJ->JIdx[1][i]*Jp_delta_y_1 +
-								rJ->JabF[0][i]*dp[6] + rJ->JabF[1][i]*dp[7];
-				E.updateSingleNoShift((float)(Jdelta * (Jdelta + 2*r->res_toZeroF[i])));
+				float Jdelta = rJ->JIdx[0][j]*Jp_delta_x_1 + rJ->JIdx[1][j]*Jp_delta_y_1 +
+								rJ->JabF[0][j]*dp[6] + rJ->JabF[1][j]*dp[7];
+				E.updateSingleNoShift((float)(Jdelta * (Jdelta + 2*r->res_toZeroF[j])));
 			}
 		}
 		E.updateSingle(p->deltaF*p->deltaF*p->priorF);
@@ -721,6 +721,7 @@ void EnergyFunctional::marginalizePointsF()
     {
         // have a look if prior is there.
         bool haveFirstFrame = false;
+        
         for(EFFrame* f : frames) if(f->frameID==0) haveFirstFrame=true;
 
         if(!haveFirstFrame)

@@ -1650,8 +1650,8 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
 	newFrame->pointHessiansOut.reserve(numPointsTotal*1.2f);
 
 
-	for(int y=patternPadding+1;y<hG[0]-patternPadding-2;y++)
-	for(int x=patternPadding+1;x<wG[0]-patternPadding-2;x++)
+	for(int y=PATTERNPADDING+1;y<hG[0]-PATTERNPADDING-2;y++)
+	for(int x=PATTERNPADDING+1;x<wG[0]-PATTERNPADDING-2;x++)
 	{
 		int i = x+y*wG[0];
 		if(selectionMap[i]==0) continue;

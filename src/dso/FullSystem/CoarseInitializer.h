@@ -24,6 +24,7 @@
 */
 
 
+
 #pragma once
 
 #include "util/NumType.h"
@@ -35,6 +36,7 @@
 #include "IMU/IMUIntegration.hpp"
 
 
+
 namespace dso
 {
 struct CalibHessian;
@@ -43,6 +45,7 @@ struct FrameHessian;
 
 struct Pnt
 {
+
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	// index in jacobian. never changes (actually, there is no reason why).
@@ -77,7 +80,9 @@ public:
 	float outlierTH;
 };
 
+
 class CoarseInitializer {
+
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     CoarseInitializer(int ww, int hh);
@@ -99,6 +104,8 @@ public:
 
 	FrameHessian* firstFrame;
 	FrameHessian* newFrame;
+
+
 private:
 
 	Mat33 K[PYR_LEVELS];
@@ -163,8 +170,6 @@ private:
     void debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*> &wraps);
 	void makeNN();
 };
-
-
 
 
 struct FLANNPointcloud

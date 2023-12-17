@@ -24,9 +24,9 @@
 */
 
 
+
 #pragma once
 
- 
 #include "util/NumType.h"
 #include "vector"
 #include <math.h>
@@ -37,8 +37,10 @@
 #include "IMU/IMUIntegration.hpp"
 
 
+
 namespace dso
 {
+
 struct CalibHessian;
 struct FrameHessian;
 struct PointFrameResidual;
@@ -89,6 +91,8 @@ public:
 	Vec5 lastResiduals;
 	Vec3 lastFlowIndicators;
 	double firstCoarseRMSE;
+
+
 private:
 
 
@@ -125,11 +129,11 @@ private:
 	Accumulator9 acc;
 
     dmvio::IMUIntegration &imuIntegration;
-
 };
 
 
 class CoarseDistanceMap {
+
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
