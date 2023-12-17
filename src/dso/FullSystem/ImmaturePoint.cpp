@@ -33,28 +33,35 @@
 
 namespace dso
 {
-	
+
+/**
+ * @brief Construct a new immature point object
+ * 
+ * @param u_ 		x position of point
+ * @param v_ 		y position of point
+ * @param host_ 	Frame containing point
+ * @param type 		Pyramid level point is detected in
+ * @param HCalib 
+ */
 ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib)
 : u(u_), v(v_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
 {
-
 	gradH.setZero();
 
+	// Add all pixels in the pattern to the point
 	for(int idx=0;idx<PATTERNNUM;idx++)
 	{
 		int dx = PATTERNP[idx][0];
 		int dy = PATTERNP[idx][1];
 
-        Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u+dx, v+dy,wG[0]);
+		// ptc is (pixel intensity, dx, dy)
+        Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u+dx, v+dy, wG[0]);
 
-
-
-		color[idx] = ptc[0];
+		color[idx] = ptc[0]; // Set pixel internsity
 		if(!std::isfinite(color[idx])) {energyTH=NAN; return;}
 
 
-		gradH += ptc.tail<2>()  * ptc.tail<2>().transpose();
-
+		gradH += ptc.tail<2>() * ptc.tail<2>().transpose(); // dx^2 + dy^2
 		weights[idx] = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + ptc.tail<2>().squaredNorm()));
 	}
 
@@ -65,17 +72,29 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, Ca
 	quality=10000;
 }
 
+/**
+ * @brief Destroy the Immature object
+ * 
+ */
 ImmaturePoint::~ImmaturePoint()
 {
 }
 
-
-
-/*
+/**
+ * @brief Traces the points as the frames progress
+ * 
  * returns
- * * OOB -> point is optimized and marginalized
- * * UPDATED -> point has been updated.
- * * SKIP -> point has not been updated.
+ * OOB -> point is optimized and marginalized
+ * PDATED -> point has been updated.
+ * SKIP -> point has not been updated.
+ * 
+ * @param frame 
+ * @param hostToFrame_KRKi 
+ * @param hostToFrame_Kt 
+ * @param hostToFrame_affine 
+ * @param HCalib 
+ * @param debugPrint 
+ * @return ImmaturePointStatus 
  */
 ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hostToFrame_KRKi, const Vec3f &hostToFrame_Kt, const Vec2f& hostToFrame_affine, CalibHessian* HCalib, bool debugPrint)
 {
@@ -92,8 +111,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 				idepth_min, idepth_max,
 				hostToFrame_Kt[0],hostToFrame_Kt[1],hostToFrame_Kt[2]);
 
-//	const float stepsize = 1.0;				// stepsize for initial discrete search.
-//	const int GNIterations = 3;				// max # GN iterations
+//	const float stepsize = 1.0;					// stepsize for initial discrete search.
+//	const int GNIterations = 3;					// max # GN iterations
 //	const float GNThreshold = 0.1;				// GN stop after this stepsize.
 //	const float extraSlackOnTH = 1.2;			// for energy-based outlier check, be slightly more relaxed by this factor.
 //	const float slackInterval = 0.8;			// if pixel-interval is smaller than this, leave it be.
@@ -566,7 +585,5 @@ double ImmaturePoint::linearizeResidual(
 	tmpRes->state_NewEnergy = energyLeft;
 	return energyLeft;
 }
-
-
 
 }

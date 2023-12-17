@@ -80,12 +80,12 @@ class EFPoint;
 struct FrameFramePrecalc
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	// static values
+	// Static values
 	static int instanceCounter;
 	FrameHessian* host;			// defines row
 	FrameHessian* target;		// defines column
 
-	// precalc values
+	// Precalc values
 	Mat33f PRE_RTll;
 	Mat33f PRE_KRKiTll;
 	Mat33f PRE_RKiTll;
@@ -112,37 +112,37 @@ struct FrameHessian
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	EFFrame* efFrame;
 
-	// constant info & pre-calculated values
-	//DepthImageWrap* frame;
+	// Constant info & pre-calculated values
+	// DepthImageWrap* frame;
 	FrameShell* shell;
 
-	Eigen::Vector3f* dI;				 // trace, fine tracking. Used for direction select (not for gradient histograms etc.)
-	Eigen::Vector3f* dIp[PYR_LEVELS];	 // coarse tracking / coarse initializer. NAN in [0] only.
-	float* absSquaredGrad[PYR_LEVELS];  // only used for pixel select (histograms etc.). no NAN.
+	Eigen::Vector3f* dI;				 	// trace, fine tracking. Used for direction select (not for gradient histograms etc.)
+	Eigen::Vector3f* dIp[PYR_LEVELS];	 	// coarse tracking / coarse initializer. NAN in [0] only.
+	float* absSquaredGrad[PYR_LEVELS];  	// only used for pixel select (histograms etc.). no NAN.
 
     bool addCamPrior;
 
-	int frameID;						// incremental ID for keyframes only!
+	int frameID;							// incremental ID for keyframes only!
 	static int instanceCounter;
 	int idx;
 
 	// Photometric Calibration Stuff
-	float frameEnergyTH;	// set dynamically depending on tracking residual
+	float frameEnergyTH;					// set dynamically depending on tracking residual
 	float ab_exposure;
 
 	bool flaggedForMarginalization;
 
-	std::vector<PointHessian*> pointHessians;				// contains all ACTIVE points.
-	std::vector<PointHessian*> pointHessiansMarginalized;	// contains all MARGINALIZED points (= fully marginalized, usually because point went OOB.)
-	std::vector<PointHessian*> pointHessiansOut;		// contains all OUTLIER points (= discarded.).
-	std::vector<ImmaturePoint*> immaturePoints;		// contains all OUTLIER points (= discarded.).
+	std::vector<PointHessian*> pointHessians;					// contains all ACTIVE points.
+	std::vector<PointHessian*> pointHessiansMarginalized;		// contains all MARGINALIZED points (= fully marginalized, usually because point went OOB.)
+	std::vector<PointHessian*> pointHessiansOut;				// contains all OUTLIER points (= discarded.).
+	std::vector<ImmaturePoint*> immaturePoints;					// contains all OUTLIER points (= discarded.).
 
 
 	Mat66 nullspaces_pose;
 	Mat42 nullspaces_affine;
 	Vec6 nullspaces_scale;
 
-	// variable info.
+	// Variable info.
 	SE3 worldToCam_evalPT;
 	Vec10 state_zero;
 	Vec10 state_scaled;
@@ -404,7 +404,7 @@ struct CalibHessian
 };
 
 
-// hessian component associated with one point.
+// Hessian component associated with one point.
 struct PointHessian
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -414,7 +414,6 @@ struct PointHessian
 	// static values
 	float color[MAX_RES_PER_POINT];			// colors in host frame
 	float weights[MAX_RES_PER_POINT];		// host-weights for respective residuals.
-
 
 
 	float u,v;
@@ -441,17 +440,30 @@ struct PointHessian
 	enum PtStatus {ACTIVE=0, INACTIVE, OUTLIER, OOB, MARGINALIZED};
 	PtStatus status;
 
+	/**
+	 * @brief Set the status of the point
+	 * 
+	 * Possible values are ACTIVE, INACTIVE, OUTLIER, OOB (out of bounds), MARGINALIZED
+	 * 
+	 * @param s 
+	 */
     inline void setPointStatus(PtStatus s) {status=s;}
-
 
 	inline void setIdepth(float idepth) {
 		this->idepth = idepth;
 		this->idepth_scaled = SCALE_IDEPTH * idepth;
     }
+
+	/**
+	 * @brief Set the inverse depth value
+	 * 
+	 * @param idepth_scaled 
+	 */
 	inline void setIdepthScaled(float idepth_scaled) {
 		this->idepth = SCALE_IDEPTH_INVERSE * idepth_scaled;
 		this->idepth_scaled = idepth_scaled;
     }
+
 	inline void setIdepthZero(float idepth) {
 		idepth_zero = idepth;
 		idepth_zero_scaled = SCALE_IDEPTH * idepth;
@@ -501,10 +513,6 @@ struct PointHessian
 	}
 
 };
-
-
-
-
 
 }
 

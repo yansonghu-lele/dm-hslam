@@ -31,23 +31,31 @@
 namespace dso
 {
 
-
+/**
+ * @brief Construct a new Point Hessian:: Point Hessian object
+ * 
+ * Hessian component associated with one point
+ * 
+ * @param rawPoint 
+ * @param Hcalib 
+ */
 PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib)
 {
 	instanceCounter++;
-	host = rawPoint->host;
+	host = rawPoint->host; // host frame
 	hasDepthPrior=false;
 
 	idepth_hessian=0;
 	maxRelBaseline=0;
 	numGoodResiduals=0;
 
-	// set static values & initialization.
+	// Set static values & initialization.
 	u = rawPoint->u;
 	v = rawPoint->v;
 	assert(std::isfinite(rawPoint->idepth_max));
-	//idepth_init = rawPoint->idepth_GT;
+	// idepth_init = rawPoint->idepth_GT;
 
+	// my_type is pyramid level where point was selected
 	my_type = rawPoint->my_type;
 
 	setIdepthScaled((rawPoint->idepth_max + rawPoint->idepth_min)*0.5);
@@ -59,8 +67,6 @@ PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hc
 	energyTH = rawPoint->energyTH;
 
 	efPoint=0;
-
-
 }
 
 
