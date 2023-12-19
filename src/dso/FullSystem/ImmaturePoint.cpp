@@ -61,7 +61,7 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, Ca
 		if(!std::isfinite(color[idx])) {energyTH=NAN; return;}
 
 
-		gradH += ptc.tail<2>() * ptc.tail<2>().transpose(); // dx^2 + dy^2
+		gradH += ptc.tail<2>() * ptc.tail<2>().transpose(); // 2 by 2 matrix of summed dx^2 + dy^2 values
 		weights[idx] = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + ptc.tail<2>().squaredNorm()));
 	}
 
@@ -83,25 +83,27 @@ ImmaturePoint::~ImmaturePoint()
 /**
  * @brief Traces the points as the frames progress
  * 
- * returns
- * OOB -> point is optimized and marginalized
- * PDATED -> point has been updated.
- * SKIP -> point has not been updated.
+ * Steps:
+ * 1. Project (u,v) point assuming min and max depth
+ * 2. Search along line between the max and min depth points uniformly for lowest energy
+ * 3. Do Gauss Newton optimization with found point to get a more precise point
  * 
- * @param frame 
- * @param hostToFrame_KRKi 
- * @param hostToFrame_Kt 
+ * @param frame 				// Frame that point in contained in
+ * @param hostToFrame_KRKi		// Rotation matrix from frame movement
+ * @param hostToFrame_Kt 		// Translation matrix from frame movement
  * @param hostToFrame_affine 
  * @param HCalib 
  * @param debugPrint 
- * @return ImmaturePointStatus 
+ * @return ImmaturePointStatus: 
+ * OOB -> point is optimized and marginalized.
+ * UPDATED -> point has been updated.
+ * SKIP -> point has not been updated.
  */
 ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hostToFrame_KRKi, const Vec3f &hostToFrame_Kt, const Vec2f& hostToFrame_affine, CalibHessian* HCalib, bool debugPrint)
 {
 	if(lastTraceStatus == ImmaturePointStatus::IPS_OOB) return lastTraceStatus;
 
-
-	debugPrint = false;//rand()%100==0;
+	debugPrint = false;
 	float maxPixSearch = (wG[0]+hG[0])*setting_maxPixSearch;
 
 	if(debugPrint)
@@ -111,18 +113,15 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 				idepth_min, idepth_max,
 				hostToFrame_Kt[0],hostToFrame_Kt[1],hostToFrame_Kt[2]);
 
-//	const float stepsize = 1.0;					// stepsize for initial discrete search.
-//	const int GNIterations = 3;					// max # GN iterations
-//	const float GNThreshold = 0.1;				// GN stop after this stepsize.
-//	const float extraSlackOnTH = 1.2;			// for energy-based outlier check, be slightly more relaxed by this factor.
-//	const float slackInterval = 0.8;			// if pixel-interval is smaller than this, leave it be.
-//	const float minImprovementFactor = 2;		// if pixel-interval is smaller than this, leave it be.
-	// ============== project min and max. return if one of them is OOB ===================
-	Vec3f pr = hostToFrame_KRKi * Vec3f(u,v, 1);
-	Vec3f ptpMin = pr + hostToFrame_Kt*idepth_min;
+	// ============== Project assumming min and max depth. Return if one of them is OOB ===================
+	Vec3f pr = hostToFrame_KRKi * Vec3f(u,v,1); // Unproject (u,v) (depth does not matter for rotation), rotate, and the re-project
+	
+	// Translation is dependent on depth, which is unknown, so depth must be estimated
+	Vec3f ptpMin = pr + hostToFrame_Kt*idepth_min;	// Translate rotated (u,v) point assuming depth is idepth_min
 	float uMin = ptpMin[0] / ptpMin[2];
 	float vMin = ptpMin[1] / ptpMin[2];
 
+	// Find the maximum size of the pattern
     Mat22f Rplane = hostToFrame_KRKi.topLeftCorner<2,2>();
     int maxRotPatX = 0;
     int maxRotPatY = 0;
@@ -142,7 +141,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
     boundU = std::max(boundU, realBoundU);
     boundV = std::max(boundV, realBoundV);
 
-	if(!(uMin > boundU && vMin > boundV && uMin < wG[0]-boundU-1 && vMin < hG[0]-boundV-1))
+	if(!(uMin > boundU && vMin > boundV && uMin < wG[0]-boundU-1 && vMin < hG[0]-boundV-1)) // Pattern is OOB
 	{
 		if(debugPrint) printf("OOB uMin %f %f - %f %f %f (id %f-%f)!\n",
 				u,v,uMin, vMin,  ptpMin[2], idepth_min, idepth_max);
@@ -157,12 +156,11 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	Vec3f ptpMax;
 	if(std::isfinite(idepth_max))
 	{
-		ptpMax = pr + hostToFrame_Kt*idepth_max;
+		ptpMax = pr + hostToFrame_Kt*idepth_max; // Repeat, but assuming the depth is idepth_max
 		uMax = ptpMax[0] / ptpMax[2];
 		vMax = ptpMax[1] / ptpMax[2];
 
-
-		if(!(uMax > boundU && vMax > boundV && uMax < wG[0]-boundU-1 && vMax < hG[0]-boundV-1))
+		if(!(uMax > boundU && vMax > boundV && uMax < wG[0]-boundU-1 && vMax < hG[0]-boundV-1)) // Pattern is OOB
 		{
 			if(debugPrint) printf("OOB uMax  %f %f - %f %f!\n",u,v, uMax, vMax);
 			lastTraceUV = Vec2f(-1,-1);
@@ -170,42 +168,37 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
 		}
 
-
-
 		// ============== check their distance. everything below 2px is OK (-> skip). ===================
 		dist = (uMin-uMax)*(uMin-uMax) + (vMin-vMax)*(vMin-vMax);
 		dist = sqrtf(dist);
-		if(dist < setting_trace_slackInterval)
+		if(dist < setting_trace_slackInterval) // Tracing is not needed if the distance between max and min is low
 		{
 			if(debugPrint)
 				printf("TOO CERTAIN ALREADY (dist %f)!\n", dist);
 
-			lastTraceUV = Vec2f(uMax+uMin, vMax+vMin)*0.5;
+			lastTraceUV = Vec2f(uMax+uMin, vMax+vMin)*0.5; // Take average
 			lastTracePixelInterval=dist;
 			return lastTraceStatus = ImmaturePointStatus::IPS_SKIPPED;
 		}
 		assert(dist>0);
 	}
-	else
+	else // Intial search will start off with max depth at infinite
 	{
-		dist = maxPixSearch;
+		dist = maxPixSearch; // Set length of search line to maxPixSearch
 
-		// project to arbitrary depth to get direction.
+		// Project to arbitrary depth to get direction
 		ptpMax = pr + hostToFrame_Kt*0.01;
 		uMax = ptpMax[0] / ptpMax[2];
 		vMax = ptpMax[1] / ptpMax[2];
-
-		// direction.
 		float dx = uMax-uMin;
 		float dy = vMax-vMin;
 		float d = 1.0f / sqrtf(dx*dx+dy*dy);
 
-		// set to [setting_maxPixSearch].
+		// Set to [setting_maxPixSearch].
 		uMax = uMin + dist*dx*d;
 		vMax = vMin + dist*dy*d;
 
-		// may still be out!
-		if(!(uMax > boundU && vMax > boundV && uMax < wG[0]-boundU-1 && vMax < hG[0]-boundV-1))
+		if(!(uMax > boundU && vMax > boundV && uMax < wG[0]-boundU-1 && vMax < hG[0]-boundV-1)) // Pattern may still be OOB
 		{
 			if(debugPrint) printf("OOB uMax-coarse %f %f %f!\n", uMax, vMax,  ptpMax[2]);
 			lastTraceUV = Vec2f(-1,-1);
@@ -215,9 +208,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		assert(dist>0);
 	}
 
-
-	// set OOB if scale change too big.
-	if(!(idepth_min<0 || (ptpMin[2]>0.75 && ptpMin[2]<1.5)))
+	if(!(idepth_min<0 || (ptpMin[2]>0.75 && ptpMin[2]<1.5))) // set OOB if scale is too big
 	{
 		if(debugPrint) printf("OOB SCALE %f %f %f!\n", uMax, vMax,  ptpMin[2]);
 		lastTraceUV = Vec2f(-1,-1);
@@ -230,9 +221,9 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	float dx = setting_trace_stepsize*(uMax-uMin);
 	float dy = setting_trace_stepsize*(vMax-vMin);
 
-	float a = (Vec2f(dx,dy).transpose() * gradH * Vec2f(dx,dy));
-	float b = (Vec2f(dy,-dx).transpose() * gradH * Vec2f(dy,-dx));
-	float errorInPixel = 0.2f + 0.2f * (a+b) / a;
+	float a_err = (Vec2f(dx,dy).transpose() * gradH * Vec2f(dx,dy));
+	float b_err = (Vec2f(dy,-dx).transpose() * gradH * Vec2f(dy,-dx)); // Perpendicular to a going clockwise
+	float errorInPixel = 0.2f + 0.2f * (a_err+b_err) / a_err;
 
 	if(errorInPixel*setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max))
 	{
@@ -259,7 +250,6 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 				errorInPixel
 				);
 
-
 	if(dist>maxPixSearch)
 	{
 		uMax = uMin + maxPixSearch*dx;
@@ -269,32 +259,31 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	int numSteps = 1.9999f + dist / setting_trace_stepsize;
 
+	// Add some randomness
 	float randShift = uMin*1000-floorf(uMin*1000);
 	float ptx = uMin-randShift*dx;
 	float pty = vMin-randShift*dy;
 
-
-
-
-    if(!std::isfinite(dx) || !std::isfinite(dy))
+    if(!std::isfinite(dx) || !std::isfinite(dy)) // OOD if dx or dy is infinite
 	{
-		//printf("COUGHT INF / NAN dxdy (%f %f)!\n", dx, dx);
+		printf("CAUGHT INF / NAN dxdy!\n");
 
 		lastTracePixelInterval=0;
 		lastTraceUV = Vec2f(-1,-1);
 		return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
 	}
 
-
-
+	// Start searching starting from the uMin,vMin values
+	// Get point between the min and max depth points with the lowest energy
 	float errors[100];
 	float bestU=0, bestV=0, bestEnergy=1e10;
 	int bestIdx=-1;
 	if(numSteps >= 100) numSteps = 99;
-
 	for(int i=0;i<numSteps;i++)
 	{
 		float energy=0;
+
+		// Calculate residual of pattern at each searched point
 		for(int idx=0;idx<PATTERNNUM;idx++)
 		{
 			float hitColor = getInterpolatedElement31(frame->dI,
@@ -312,7 +301,6 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			printf("step %.1f %.1f (id %f): energy = %f!\n",
 					ptx, pty, 0.0f, energy);
 
-
 		errors[i] = energy;
 		if(energy < bestEnergy)
 		{
@@ -323,8 +311,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		pty+=dy;
 	}
 
-
-	// find best score outside a +-2px radius.
+	// Find best score outside a +-2px radius.
 	float secondBest=1e10;
 	for(int i=0;i<numSteps;i++)
 	{
@@ -335,18 +322,19 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	if(newQuality < quality || numSteps > 10) quality = newQuality;
 
 
-	// ============== do GN optimization ===================
+	// ============== do Gauss Newton optimization ===================
 	float uBak=bestU, vBak=bestV, gnstepsize=1, stepBack=0;
 	if(setting_trace_GNIterations>0) bestEnergy = 1e5;
 	int gnStepsGood=0, gnStepsBad=0;
 	for(int it=0;it<setting_trace_GNIterations;it++)
 	{
-		float H = 1, b=0, energy=0;
+		float H=1, b=0, energy=0;
 		for(int idx=0;idx<PATTERNNUM;idx++)
 		{
             float posU = (float)(bestU + rotatetPattern[idx][0]);
             float posV = (float)(bestV + rotatetPattern[idx][1]);
-            if(posU < 0 || posV < 0 || posU >= wG[0] - 1 || posV >= hG[0] - 1)
+
+            if(posU < 0 || posV < 0 || posU >= wG[0] - 1 || posV >= hG[0] - 1) // Check if pattern is OOB
             {
                 if(debugPrint) printf("OOB uMax  %f %f - %f %f!\n", posU, posV, uMax, vMax);
                 lastTraceUV = Vec2f(-1,-1);
@@ -358,20 +346,20 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 			if(!std::isfinite((float)hitColor[0])) {energy+=1e5; continue;}
 			float residual = hitColor[0] - (hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
-			float dResdDist = dx*hitColor[1] + dy*hitColor[2];
+			float dResdDist = dx*hitColor[1] + dy*hitColor[2]; // Calculate derivative for GN
 			float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
 
-			H += hw*dResdDist*dResdDist;
+			H += hw*dResdDist*dResdDist; 
 			b += hw*residual*dResdDist;
-			energy += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
-		}
 
+			energy += weights[idx]*weights[idx]*hw*residual*residual*(2-hw);
+		}
 
 		if(energy > bestEnergy)
 		{
 			gnStepsBad++;
 
-			// do a smaller step from old point.
+			// Do a smaller step from old point.
 			stepBack*=0.5;
 			bestU = uBak + stepBack*dx;
 			bestV = vBak + stepBack*dy;
@@ -382,11 +370,12 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		}
 		else
 		{
+			// Step towards to optimal point
 			gnStepsGood++;
 
 			float step = -gnstepsize*b/H;
 			if(step < -0.5) step = -0.5;
-			else if(step > 0.5) step=0.5;
+			else if(step > 0.5) step = 0.5;
 
 			if(!std::isfinite(step)) step=0;
 
@@ -409,13 +398,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 
 	// ============== detect energy-based outlier. ===================
-//	float absGrad0 = getInterpolatedElement(frame->absSquaredGrad[0],bestU, bestV, wG[0]);
-//	float absGrad1 = getInterpolatedElement(frame->absSquaredGrad[1],bestU*0.5-0.25, bestV*0.5-0.25, wG[1]);
-//	float absGrad2 = getInterpolatedElement(frame->absSquaredGrad[2],bestU*0.25-0.375, bestV*0.25-0.375, wG[2]);
 	if(!(bestEnergy < energyTH*setting_trace_extraSlackOnTH))
-//			|| (absGrad0*areaGradientSlackFactor < host->frameGradTH
-//		     && absGrad1*areaGradientSlackFactor < host->frameGradTH*0.75f
-//			 && absGrad2*areaGradientSlackFactor < host->frameGradTH*0.50f))
 	{
 		if(debugPrint)
 			printf("OUTLIER!\n");
@@ -429,7 +412,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	}
 
 
-	// ============== set new interval ===================
+	// ============== set new interval for idepth_min and idepth_max===================
 	if(dx*dx>dy*dy)
 	{
 		idepth_min = (pr[2]*(bestU-errorInPixel*dx) - pr[0]) / (hostToFrame_Kt[0] - hostToFrame_Kt[2]*(bestU-errorInPixel*dx));
@@ -445,7 +428,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	if(!std::isfinite(idepth_min) || !std::isfinite(idepth_max) || (idepth_max<0))
 	{
-		//printf("COUGHT INF / NAN minmax depth (%f %f)!\n", idepth_min, idepth_max);
+		printf("COUGHT INF / NAN minmax depth!\n");
 
 		lastTracePixelInterval=0;
 		lastTraceUV = Vec2f(-1,-1);
@@ -499,7 +482,6 @@ float ImmaturePoint::calcResidual(
 
 		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG[0]));
 		if(!std::isfinite((float)hitColor[0])) {return 1e10;}
-		//if(benchmarkSpecialOption==5) hitColor = (getInterpolatedElement13BiCub(tmpRes->target->I, Ku, Kv, wG[0]));
 
 		float residual = hitColor[0] - (affLL[0] * color[idx] + affLL[1]);
 
@@ -527,8 +509,6 @@ double ImmaturePoint::linearizeResidual(
 		{ tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy; }
 
 	FrameFramePrecalc* precalc = &(host->targetPrecalc[tmpRes->target->idx]);
-
-	// check OOB due to scale angle change.
 
 	float energyLeft=0;
 	const Eigen::Vector3f* dIl = tmpRes->target->dI;

@@ -551,9 +551,9 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
 	K(0,2) = Hcalib.cxl();
 	K(1,2) = Hcalib.cyl();
 
-	for(FrameHessian* host : frameHessians)		// go through all active frames
+	for(FrameHessian* host : frameHessians)	// go through all active frames
 	{
-
+		// Get SE(3) matrix from old to new position
 		SE3 hostToNew = fh->PRE_worldToCam * host->PRE_camToWorld;
 		Mat33f KRKi = K * hostToNew.rotationMatrix().cast<float>() * K.inverse();
 		Vec3f Kt = K * hostToNew.translation().cast<float>();
