@@ -29,6 +29,8 @@
  *      Author: engelj
  */
 
+
+
 #include "FullSystem/FullSystem.h"
 
 #include "stdio.h"
@@ -45,6 +47,8 @@
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 
 #include "FullSystem/HessianBlocks.h"
+
+
 
 namespace dso
 {

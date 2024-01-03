@@ -91,7 +91,7 @@ ImmaturePoint::~ImmaturePoint()
  * @param frame 				// Frame that point in contained in
  * @param hostToFrame_KRKi		// Rotation matrix from frame movement
  * @param hostToFrame_Kt 		// Translation matrix from frame movement
- * @param hostToFrame_affine 
+ * @param hostToFrame_affine	// Constants for photogrammetric conversion
  * @param HCalib 
  * @param debugPrint 
  * @return ImmaturePointStatus: 
@@ -495,9 +495,6 @@ float ImmaturePoint::calcResidual(
 	}
 	return energyLeft;
 }
-
-
-
 
 double ImmaturePoint::linearizeResidual(
 		CalibHessian *  HCalib, const float outlierTHSlack,
