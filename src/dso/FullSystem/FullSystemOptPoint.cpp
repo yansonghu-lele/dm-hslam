@@ -21,13 +21,14 @@
 * along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 /*
  * KFBuffer.cpp
  *
  *  Created on: Jan 7, 2014
  *      Author: engelj
  */
+
+
 
 #include "FullSystem/FullSystem.h"
 
@@ -43,11 +44,10 @@
 #include "FullSystem/ImmaturePoint.h"
 #include "math.h"
 
+
+
 namespace dso
 {
-
-
-
 PointHessian* FullSystem::optimizeImmaturePoint(
 		ImmaturePoint* point, int minObs,
 		ImmaturePointTemporaryResidual* residuals)

@@ -452,8 +452,8 @@ float ImmaturePoint::getdPixdd(
 	float Ku, Kv;
 	Vec3f KliP;
 
-	projectPoint(this->u,this->v, idepth, 0, 0,HCalib,
-			precalc->PRE_RTll,PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth);
+	projectPoint(this->u,this->v, idepth, 0, 0, HCalib,
+			precalc->PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth);
 
 	float dxdd = (PRE_tTll[0]-PRE_tTll[2]*u)*HCalib->fxl();
 	float dydd = (PRE_tTll[1]-PRE_tTll[2]*v)*HCalib->fyl();
@@ -524,8 +524,8 @@ double ImmaturePoint::linearizeResidual(
 		float Ku, Kv;
 		Vec3f KliP;
 
-		if(!projectPoint(this->u,this->v, idepth, dx, dy,HCalib,
-				PRE_RTll,PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth))
+		if(!projectPoint(this->u,this->v, idepth, dx, dy, HCalib,
+				PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth))
 			{tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}
 
 

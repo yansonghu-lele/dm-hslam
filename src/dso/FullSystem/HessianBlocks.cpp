@@ -28,6 +28,8 @@
 #include "FullSystem/ImmaturePoint.h"
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 
+
+
 namespace dso
 {
 
@@ -246,6 +248,5 @@ void FrameFramePrecalc::set(FrameHessian* host, FrameHessian* target, CalibHessi
 	PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(), target->aff_g2l()).cast<float>();
 	PRE_b0_mode = host->aff_g2l_0().b;
 }
-
 }
 

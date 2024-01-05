@@ -22,9 +22,9 @@
 */
 
 
+
 #pragma once
 
- 
 #include "util/globalCalib.h"
 #include "vector"
  
@@ -33,6 +33,8 @@
 #include <fstream>
 #include "util/globalFuncs.h"
 #include "OptimizationBackend/RawResidualJacobian.h"
+
+
 
 namespace dso
 {

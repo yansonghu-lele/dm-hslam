@@ -42,10 +42,8 @@ namespace dso
 struct CalibHessian;
 struct FrameHessian;
 
-
 struct Pnt
 {
-
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	// index in jacobian. never changes (actually, there is no reason why).
@@ -82,14 +80,13 @@ public:
 
 
 class CoarseInitializer {
-
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     CoarseInitializer(int ww, int hh);
 	~CoarseInitializer();
 
 
-	void setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHessian);
+	void setFirst(CalibHessian* HCalib, FrameHessian* newFrameHessian);
 	bool trackFrame(FrameHessian* newFrameHessian, std::vector<IOWrap::Output3DWrapper*> &wraps);
 
 	int frameID;
@@ -101,13 +98,11 @@ public:
 	AffLight thisToNext_aff;
 	SE3 thisToNext;
 
-
 	FrameHessian* firstFrame;
 	FrameHessian* newFrame;
 
 
 private:
-
 	Mat33 K[PYR_LEVELS];
 	Mat33 Ki[PYR_LEVELS];
 	double fx[PYR_LEVELS];
@@ -194,7 +189,6 @@ struct FLANNPointcloud
 	template <class BBOX>
 		bool kdtree_get_bbox(BBOX& /* bb */) const { return false; }
 };
-
 }
 
 

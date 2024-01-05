@@ -24,6 +24,7 @@
 */
 
 
+
 #pragma once
 #define MAX_ACTIVE_FRAMES 100
 
@@ -47,13 +48,14 @@
 #include <math.h>
 #include "IMUInitialization/GravityInitializer.h"
 
+
+
 namespace dso
 {
 namespace IOWrap
 {
 class Output3DWrapper;
 }
-
 class PixelSelector;
 class PCSyntheticPoint;
 class CoarseTracker;
@@ -72,6 +74,7 @@ template<typename T> inline void deleteOut(std::vector<T*> &v, const int i)
 	v[i] = v.back();
 	v.pop_back();
 }
+
 template<typename T> inline void deleteOutPt(std::vector<T*> &v, const T* i)
 {
 	delete i;
@@ -83,6 +86,7 @@ template<typename T> inline void deleteOutPt(std::vector<T*> &v, const T* i)
 			v.pop_back();
 		}
 }
+
 template<typename T> inline void deleteOutOrder(std::vector<T*> &v, const int i)
 {
 	delete v[i];
@@ -90,6 +94,7 @@ template<typename T> inline void deleteOutOrder(std::vector<T*> &v, const int i)
 		v[k-1] = v[k];
 	v.pop_back();
 }
+
 template<typename T> inline void deleteOutOrder(std::vector<T*> &v, const T* element)
 {
 	int i=-1;
@@ -110,7 +115,6 @@ template<typename T> inline void deleteOutOrder(std::vector<T*> &v, const T* ele
 	delete element;
 }
 
-
 inline bool eigenTestNan(const MatXX &m, const std::string& msg)
 {
 	bool foundNan = false;
@@ -129,9 +133,6 @@ inline bool eigenTestNan(const MatXX &m, const std::string& msg)
 
 	return foundNan;
 }
-
-
-
 
 
 class FullSystem {
@@ -164,15 +165,14 @@ public:
 	bool initialized;
 	bool linearizeOperation;
 
-
 	void setGammaFunction(float* BInv);
     void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
 
 private:
-
     dmvio::IMUIntegration imuIntegration;
     bool imuUsedBefore = false;
     dmvio::BAGTSAMIntegration* baIntegration = nullptr;
+
 public:
 	dmvio::IMUIntegration &getImuIntegration();
 
@@ -184,8 +184,6 @@ private:
     dmvio::GravityInitializer gravityInit;
 
     double framesBetweenKFsRest = 0.0;
-
-
 
     // opt single point
 	int optimizePoint(PointHessian* point, int minObs, bool flagOOB);
@@ -204,13 +202,10 @@ private:
 	void initializeFromInitializer(FrameHessian* newFrame);
 	void flagFramesForMarginalization(FrameHessian* newFH);
 
-
 	void removeOutliers();
-
 
 	// set precalc values.
 	void setPrecalcValues();
-
 
 	// solce. eventually migrate to ef.
 	void solveSystem(int iteration, double lambda);
@@ -235,7 +230,6 @@ private:
 			std::vector<VecX> &nullspaces_affB);
 
 	void setNewFrameEnergyTH();
-
 
 	void printLogLine();
 	void printEvalLine();
@@ -264,11 +258,6 @@ private:
 	float statistics_lastFineTrackRMSE;
 
 
-
-
-
-
-
 	// =================== changed by tracker-thread. protected by trackMutex ============
 	boost::mutex trackMutex;
 	std::vector<FrameShell*> allFrameHistory;
@@ -292,10 +281,7 @@ private:
 	std::vector<PointFrameResidual*> activeResiduals;
 	float currentMinActDist;
 
-
 	std::vector<float> allResVec;
-
-
 
 	// mutex etc. for tracker exchange.
 	boost::mutex coarseTrackerSwapMutex;			// if tracker sees that there is a new reference, tracker locks [coarseTrackerSwapMutex] and swaps the two.
@@ -304,14 +290,8 @@ private:
 	float minIdJetVisTracker, maxIdJetVisTracker;
 	float minIdJetVisDebug, maxIdJetVisDebug;
 
-
-
-
-
 	// mutex for camToWorl's in shells (these are always in a good configuration).
 	boost::mutex& shellPoseMutex;
-
-
 
 /*
  * tracking always uses the newest KF as reference.
@@ -334,7 +314,6 @@ private:
 	bool needToKetchupMapping;
 
 	int lastRefStopID;
-
 
 	bool secondKeyframeDone;
 };

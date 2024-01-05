@@ -301,6 +301,12 @@ struct FrameHessian
 
 };
 
+/**
+ * @brief Stores the calibration matrix information
+ * 
+ * The values here are usually the same as the global K function
+ * 
+ */
 struct CalibHessian
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -311,6 +317,7 @@ struct CalibHessian
 	VecCf value_scaledf;
 	VecCf value_scaledi;
 	VecC value;
+	
 	VecC step;
 	VecC step_backup;
 	VecC value_backup;
@@ -321,18 +328,22 @@ struct CalibHessian
 	{
 
 		VecC initial_value = VecC::Zero();
+		// K matrix
 		initial_value[0] = fxG[0];
 		initial_value[1] = fyG[0];
 		initial_value[2] = cxG[0];
 		initial_value[3] = cyG[0];
 
+		// Set K matrix
 		setValueScaled(initial_value);
+
+		// Set zero point
 		value_zero = value;
 		value_minus_value_zero.setZero();
 
 		instanceCounter++;
 		for(int i=0;i<256;i++)
-			Binv[i] = B[i] = i;		// set gamma function to identity
+			Binv[i] = B[i] = i;	// set gamma function to identity
 	};
 
 
@@ -352,33 +363,39 @@ struct CalibHessian
 	{
 		// [0-3: Kl, 4-7: Kr, 8-12: l2r]
 		this->value = value;
+		// Scaled K matrix
 		value_scaled[0] = SCALE_F * value[0];
 		value_scaled[1] = SCALE_F * value[1];
 		value_scaled[2] = SCALE_C * value[2];
 		value_scaled[3] = SCALE_C * value[3];
 
+		// Scaled K matrix as float instead of double
 		this->value_scaledf = this->value_scaled.cast<float>();
-		this->value_scaledi[0] = 1.0f / this->value_scaledf[0];
-		this->value_scaledi[1] = 1.0f / this->value_scaledf[1];
-		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0];
-		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1];
+		//  Inverse scaled K matrix
+		this->value_scaledi[0] = 1.0f / this->value_scaledf[0]; // 1/f_x
+		this->value_scaledi[1] = 1.0f / this->value_scaledf[1]; // 1/f_y
+		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0]; // -c_x/f_x
+		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1]; // -c_y/f_y
 		this->value_minus_value_zero = this->value - this->value_zero;
 	};
 
 	inline void setValueScaled(const VecC &value_scaled)
 	{
 		this->value_scaled = value_scaled;
+		// Scaled K matrix as float instead of double
 		this->value_scaledf = this->value_scaled.cast<float>();
+		// K matrix with no scaling
 		value[0] = SCALE_F_INVERSE * value_scaled[0];
 		value[1] = SCALE_F_INVERSE * value_scaled[1];
 		value[2] = SCALE_C_INVERSE * value_scaled[2];
 		value[3] = SCALE_C_INVERSE * value_scaled[3];
 
 		this->value_minus_value_zero = this->value - this->value_zero;
-		this->value_scaledi[0] = 1.0f / this->value_scaledf[0];
-		this->value_scaledi[1] = 1.0f / this->value_scaledf[1];
-		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0];
-		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1];
+		// Inverted scaled K matrix
+		this->value_scaledi[0] = 1.0f / this->value_scaledf[0]; // 1/f_x
+		this->value_scaledi[1] = 1.0f / this->value_scaledf[1]; // 1/f_y
+		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0]; // -c_x/f_x
+		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1]; // -c_y/f_y
 	};
 
 

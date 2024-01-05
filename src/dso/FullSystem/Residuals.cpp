@@ -21,7 +21,6 @@
 * along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 /*
  * KFBuffer.cpp
  *
@@ -53,8 +52,6 @@
 namespace dso
 {
 int PointFrameResidual::instanceCounter = 0;
-
-
 long runningResID=0;
 
 
@@ -62,6 +59,13 @@ PointFrameResidual::PointFrameResidual(){assert(false); instanceCounter++;}
 
 PointFrameResidual::~PointFrameResidual(){assert(efResidual==0); instanceCounter--; delete J;}
 
+/**
+ * @brief Construct a new Point Frame Residual
+ * 
+ * @param point_ 
+ * @param host_ 
+ * @param target_ 
+ */
 PointFrameResidual::PointFrameResidual(PointHessian* point_, FrameHessian* host_, FrameHessian* target_) :
 	point(point_),
 	host(host_),
@@ -76,9 +80,12 @@ PointFrameResidual::PointFrameResidual(PointHessian* point_, FrameHessian* host_
 	isNew=true;
 }
 
-
-
-
+/**
+ * @brief Linearize point
+ * 
+ * @param HCalib 
+ * @return double 
+ */
 double PointFrameResidual::linearize(CalibHessian* HCalib)
 {
 	state_NewEnergyWithOutlier=-1;
@@ -86,37 +93,45 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	if(state_state == ResState::OOB)
 		{ state_NewState = ResState::OOB; return state_energy; }
 
+
 	FrameFramePrecalc* precalc = &(host->targetPrecalc[target->idx]);
 	float energyLeft=0;
+	// Get image
 	const Eigen::Vector3f* dIl = target->dI;
 	//const float* const Il = target->I;
-	const Mat33f &PRE_KRKiTll = precalc->PRE_KRKiTll;
-	const Vec3f &PRE_KtTll = precalc->PRE_KtTll;
-	const Mat33f &PRE_RTll_0 = precalc->PRE_RTll_0;
-	const Vec3f &PRE_tTll_0 = precalc->PRE_tTll_0;
+	// Get K matrix and transforms from the pre-calculation
+	// K matrix and Transformation matrix are multiplied here for effciency
+	const Mat33f &PRE_KRKiTll = precalc->PRE_KRKiTll; 	// K * rotationMatrix * K^-1
+	const Vec3f &PRE_KtTll = precalc->PRE_KtTll; 		// K * translationMatrix
+	const Mat33f &PRE_RTll_0 = precalc->PRE_RTll_0; 	// rotationMatrix
+	const Vec3f &PRE_tTll_0 = precalc->PRE_tTll_0; 		// translationMatrix
+	// Get info about point
 	const float * const color = point->color;
 	const float * const weights = point->weights;
 
+	// Photogrammetric values
 	Vec2f affLL = precalc->PRE_aff_mode;
 	float b0 = precalc->PRE_b0_mode;
-
 
 	Vec6f d_xi_x, d_xi_y;
 	Vec4f d_C_x, d_C_y;
 	float d_d_x, d_d_y;
+	
 	{
 		float drescale, u, v, new_idepth;
 		float Ku, Kv;
 		Vec3f KliP;
 
-		if(!projectPoint(point->u, point->v, point->idepth_zero_scaled, 0, 0,HCalib,
-				PRE_RTll_0,PRE_tTll_0, drescale, u, v, Ku, Kv, KliP, new_idepth))
+		// Project point from 3D to 2D
+		// The calibration and transformation matrices are applied by the projection
+		if(!projectPoint(point->u, point->v, point->idepth_zero_scaled, 0, 0, HCalib,
+				PRE_RTll_0, PRE_tTll_0, drescale, u, v, Ku, Kv, KliP, new_idepth))
 			{ state_NewState = ResState::OOB; return state_energy; }
 
+		// Get the new 3D coordinates
 		centerProjectedTo = Vec3f(Ku, Kv, new_idepth);
 
-
-		// diff d_idepth
+		// Differential of d_idepth
 		d_d_x = drescale * (PRE_tTll_0[0]-PRE_tTll_0[2]*u)*SCALE_IDEPTH*HCalib->fxl();
 		d_d_y = drescale * (PRE_tTll_0[1]-PRE_tTll_0[2]*v)*SCALE_IDEPTH*HCalib->fyl();
 
@@ -277,8 +292,6 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	return energyLeft;
 }
 
-
-
 void PointFrameResidual::debugPlot()
 {
 	if(state_state==ResState::OOB) return;
@@ -304,8 +317,6 @@ void PointFrameResidual::debugPlot()
 			target->debugImage->setPixel1((float)projectedTo[i][0], (float)projectedTo[i][1],cT);
 	}
 }
-
-
 
 void PointFrameResidual::applyRes(bool copyJacobians)
 {

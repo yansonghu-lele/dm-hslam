@@ -51,6 +51,12 @@
 namespace dso
 {
 
+/**
+ * @brief Construct a new Coarse Initializer
+ * 
+ * @param ww 
+ * @param hh 
+ */
 CoarseInitializer::CoarseInitializer(int ww, int hh)
         : thisToNext_aff(0, 0), thisToNext(SE3())
 {
@@ -74,6 +80,10 @@ CoarseInitializer::CoarseInitializer(int ww, int hh)
 	wM.diagonal()[7] = SCALE_B;
 }
 
+/**
+ * @brief Destroy the Coarse Initializer
+ * 
+ */
 CoarseInitializer::~CoarseInitializer()
 {
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
@@ -85,6 +95,14 @@ CoarseInitializer::~CoarseInitializer()
 	delete[] JbBuffer_new;
 }
 
+/**
+ * @brief 
+ * 
+ * @param newFrameHessian 
+ * @param wraps 
+ * @return true 
+ * @return false 
+ */
 bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IOWrap::Output3DWrapper*> &wraps)
 {
 	newFrame = newFrameHessian;
@@ -803,7 +821,7 @@ void CoarseInitializer::makeGradients(Eigen::Vector3f** data)
 		}
 	}
 }
-void CoarseInitializer::setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHessian)
+void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHessian)
 {
 
 	makeK(HCalib);

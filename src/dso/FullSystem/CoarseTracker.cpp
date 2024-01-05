@@ -577,7 +577,7 @@ void CoarseTracker::setCoarseTrackingRef(
 }
 
 /**
- * @brief Main coarse tracking function
+ * @brief Coarse tracking function
  * 
  * @param newFrameHessian 
  * @param lastToNew_out 

@@ -23,13 +23,14 @@
 * along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 /*
  * KFBuffer.cpp
  *
  *  Created on: Jan 7, 2014
  *      Author: engelj
  */
+
+
 
 #include <util/TimeMeasurement.h>
 #include "FullSystem/FullSystem.h"
@@ -53,11 +54,10 @@
 
 #include "FullSystem/CoarseTracker.h"
 
+
+
 namespace dso
 {
-
-
-
 void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 {
     dmvio::TimeMeasurement timeMeasurement("flagFramesForMarginalization");
@@ -150,9 +150,6 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 //	printf("\n");
 }
 
-
-
-
 void FullSystem::marginalizeFrame(FrameHessian* frame)
 {
     dmvio::TimeMeasurement timeMeasurement("marginalizeFrame");
@@ -241,8 +238,4 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
     setPrecalcValues();
 	ef->setAdjointsF(&Hcalib);
 }
-
-
-
-
 }

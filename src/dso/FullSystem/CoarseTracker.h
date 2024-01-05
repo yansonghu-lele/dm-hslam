@@ -94,8 +94,6 @@ public:
 
 
 private:
-
-
 	void makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians);
 	float* idepth[PYR_LEVELS];
 	float* weightSums[PYR_LEVELS];
@@ -133,7 +131,6 @@ private:
 
 
 class CoarseDistanceMap {
-
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
