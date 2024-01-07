@@ -75,7 +75,7 @@ EIGEN_STRONG_INLINE bool projectPoint(
 		float &Ku, float &Kv)
 {
 	// Apply transformation matrix
-	Vec3f ptp = KRKi * Vec3f(u_pt,v_pt, 1) + Kt*idepth;
+	Vec3f ptp = KRKi * Vec3f(u_pt,v_pt,1) + Kt*idepth;
 	// Convert from projective coordinates to 2D coordinates 
 	Ku = ptp[0] / ptp[2];
 	Kv = ptp[1] / ptp[2];
@@ -119,7 +119,7 @@ EIGEN_STRONG_INLINE bool projectPoint(
 			1);
 
 	// Apply transformation matrix
-	Vec3f ptp = R * KliP + t*idepth;
+	Vec3f ptp = R*KliP + t*idepth;
 	drescale = 1.0f/ptp[2];
 	new_idepth = idepth*drescale;
 

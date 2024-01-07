@@ -108,7 +108,7 @@ EIGEN_ALWAYS_INLINE Eigen::Vector3f getInterpolatedElement33(const Eigen::Vector
 	float dx = x - ix;
 	float dy = y - iy;
 	float dxdy = dx*dy;
-	const Eigen::Vector3f* bp = mat +ix+iy*width;
+	const Eigen::Vector3f* bp = mat+ix+iy*width;
 
     checkBoundsPlus1(ix, iy, width);
 

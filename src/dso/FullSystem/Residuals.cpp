@@ -83,6 +83,8 @@ PointFrameResidual::PointFrameResidual(PointHessian* point_, FrameHessian* host_
 /**
  * @brief Linearize point
  * 
+ * Calculates the residual and Jacobians of the point
+ * 
  * @param HCalib 
  * @return double 
  */
@@ -117,37 +119,44 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	Vec4f d_C_x, d_C_y;
 	float d_d_x, d_d_y;
 	
+	// Calculate the geometric residual for the point
 	{
 		float drescale, u, v, new_idepth;
 		float Ku, Kv;
 		Vec3f KliP;
 
 		// Project point from 3D to 2D
+		// We only project the middle point because all the pixels
+		// in a pattern share the same geometric residual
+
 		// The calibration and transformation matrices are applied by the projection
 		if(!projectPoint(point->u, point->v, point->idepth_zero_scaled, 0, 0, HCalib,
 				PRE_RTll_0, PRE_tTll_0, drescale, u, v, Ku, Kv, KliP, new_idepth))
 			{ state_NewState = ResState::OOB; return state_energy; }
 
-		// Get the new 3D coordinates
+		// Get the new coordinates
 		centerProjectedTo = Vec3f(Ku, Kv, new_idepth);
 
-		// Differential of d_idepth
+		// Calculate the values of d_point'/d_J_geometric
+		// These are evaluated using First Estimate Jacobians
+		// therefore they are evaluated at x=0 instead of the point position
+
+		// Partial differential of d_Ku/d_idepth
 		d_d_x = drescale * (PRE_tTll_0[0]-PRE_tTll_0[2]*u)*SCALE_IDEPTH*HCalib->fxl();
+		// Partial differential of d_Kv/d_idepth
 		d_d_y = drescale * (PRE_tTll_0[1]-PRE_tTll_0[2]*v)*SCALE_IDEPTH*HCalib->fyl();
 
 
+		// Partial differential of calib matrix
+		d_C_x[2] = drescale*(PRE_RTll_0(2,0)*u-PRE_RTll_0(0,0)); //d_Ku/d_c_x
+		d_C_x[3] = HCalib->fxl() * drescale*(PRE_RTll_0(2,1)*u-PRE_RTll_0(0,1)) * HCalib->fyli(); //d_Ku/d_c_y
+		d_C_x[0] = KliP[0]*d_C_x[2]; //d_Ku/d_f_x
+		d_C_x[1] = KliP[1]*d_C_x[3]; //d_Ku/d_f_y
 
-
-		// diff calib
-		d_C_x[2] = drescale*(PRE_RTll_0(2,0)*u-PRE_RTll_0(0,0));
-		d_C_x[3] = HCalib->fxl() * drescale*(PRE_RTll_0(2,1)*u-PRE_RTll_0(0,1)) * HCalib->fyli();
-		d_C_x[0] = KliP[0]*d_C_x[2];
-		d_C_x[1] = KliP[1]*d_C_x[3];
-
-		d_C_y[2] = HCalib->fyl() * drescale*(PRE_RTll_0(2,0)*v-PRE_RTll_0(1,0)) * HCalib->fxli();
-		d_C_y[3] = drescale*(PRE_RTll_0(2,1)*v-PRE_RTll_0(1,1));
-		d_C_y[0] = KliP[0]*d_C_y[2];
-		d_C_y[1] = KliP[1]*d_C_y[3];
+		d_C_y[2] = HCalib->fyl() * drescale*(PRE_RTll_0(2,0)*v-PRE_RTll_0(1,0)) * HCalib->fxli(); //d_Kv/d_c_x
+		d_C_y[3] = drescale*(PRE_RTll_0(2,1)*v-PRE_RTll_0(1,1)); //d_Kv/d_c_y
+		d_C_y[0] = KliP[0]*d_C_y[2]; //d_Kv/d_f_x
+		d_C_y[1] = KliP[1]*d_C_y[3]; //d_Kv/d_f_y
 
 		d_C_x[0] = (d_C_x[0]+u)*SCALE_F;
 		d_C_x[1] *= SCALE_F;
@@ -160,23 +169,28 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 		d_C_y[3] = (d_C_y[3]+1)*SCALE_C;
 
 
-		d_xi_x[0] = new_idepth*HCalib->fxl();
-		d_xi_x[1] = 0;
-		d_xi_x[2] = -new_idepth*u*HCalib->fxl();
+		// Partial differential of transformations
+		// Translation
+		d_xi_x[0] = new_idepth*HCalib->fxl(); //d_Ku/d_d_x
+		d_xi_x[1] = 0; //d_Ku/d_d_y
+		d_xi_x[2] = -new_idepth*u*HCalib->fxl(); //d_Ku/d_d_z
+		// Rotation (three lie algebra variables)
 		d_xi_x[3] = -u*v*HCalib->fxl();
 		d_xi_x[4] = (1+u*u)*HCalib->fxl();
 		d_xi_x[5] = -v*HCalib->fxl();
 
-		d_xi_y[0] = 0;
-		d_xi_y[1] = new_idepth*HCalib->fyl();
-		d_xi_y[2] = -new_idepth*v*HCalib->fyl();
+		// Translation
+		d_xi_y[0] = 0; //d_Ku/d_d_x
+		d_xi_y[1] = new_idepth*HCalib->fyl(); //d_Ku/d_d_y
+		d_xi_y[2] = -new_idepth*v*HCalib->fyl(); //d_Ku/d_d_z
+		// Rotation (three lie algebra variables)
 		d_xi_y[3] = -(1+v*v)*HCalib->fyl();
 		d_xi_y[4] = u*v*HCalib->fyl();
 		d_xi_y[5] = u*HCalib->fyl();
 	}
 
-
 	{
+		// Set the values of the Jacobian matrix
 		J->Jpdxi[0] = d_xi_x;
 		J->Jpdxi[1] = d_xi_y;
 
@@ -185,14 +199,10 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
 		J->Jpdd[0] = d_d_x;
 		J->Jpdd[1] = d_d_y;
-
 	}
 
 
-
-
-
-
+	// Calculate the projective and image residual for the pattern
 	float JIdxJIdx_00=0, JIdxJIdx_11=0, JIdxJIdx_10=0;
 	float JabJIdx_00=0, JabJIdx_01=0, JabJIdx_10=0, JabJIdx_11=0;
 	float JabJab_00=0, JabJab_01=0, JabJab_11=0;
@@ -207,30 +217,31 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
 		projectedTo[idx][0] = Ku;
 		projectedTo[idx][1] = Kv;
-
-
         Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG[0]));
-        float residual = hitColor[0] - (float)(affLL[0] * color[idx] + affLL[1]);
 
+		// Calculate residual
+        float residual = hitColor[0] - (float)(affLL[0] * color[idx] + affLL[1]);
 
 
 		float drdA = (color[idx]-b0);
 		if(!std::isfinite((float)hitColor[0]))
-		{ state_NewState = ResState::OOB; return state_energy; }
+			{ state_NewState = ResState::OOB; return state_energy; }
 
-
+		// Adjust residual
+		// Apply gradient-dependent weighting
 		float w = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + hitColor.tail<2>().squaredNorm()));
         w = 0.5f*(w + weights[idx]);
-
-
-
+		// Use Huber Norm
 		float hw = fabsf(residual) < setting_huberTH ? 1 : setting_huberTH / fabsf(residual);
-		energyLeft += w*w*hw *residual*residual*(2-hw);
+		// hw*(2-hw)*residual*residual results in Huber loss for the residual
+		energyLeft += w*w*hw*residual*residual*(2-hw);
 
 		{
+			// Calculate Jacobian of image variables
 			if(hw < 1) hw = sqrtf(hw);
 			hw = hw*w;
 
+			// Pixel derivatives
 			hitColor[1]*=hw;
 			hitColor[2]*=hw;
 
@@ -238,9 +249,12 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
 			J->JIdx[0][idx] = hitColor[1];
 			J->JIdx[1][idx] = hitColor[2];
+
+			// Calculate Jacobian of photometric variables
 			J->JabF[0][idx] = drdA*hw;
 			J->JabF[1][idx] = hw;
 
+			// Pre-calculate values for effciency
 			JIdxJIdx_00+=hitColor[1]*hitColor[1];
 			JIdxJIdx_11+=hitColor[2]*hitColor[2];
 			JIdxJIdx_10+=hitColor[1]*hitColor[2];
@@ -254,15 +268,15 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 			JabJab_01+= drdA*hw*hw;
 			JabJab_11+= hw*hw;
 
-
 			wJI2_sum += hw*hw*(hitColor[1]*hitColor[1]+hitColor[2]*hitColor[2]);
+
 
 			if(setting_affineOptModeA < 0) J->JabF[0][idx]=0;
 			if(setting_affineOptModeB < 0) J->JabF[1][idx]=0;
-
 		}
 	}
 
+	// Set pre-calculated values
 	J->JIdx2(0,0) = JIdxJIdx_00;
 	J->JIdx2(0,1) = JIdxJIdx_10;
 	J->JIdx2(1,0) = JIdxJIdx_10;
@@ -276,8 +290,9 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	J->Jab2(1,0) = JabJab_01;
 	J->Jab2(1,1) = JabJab_11;
 
-	state_NewEnergyWithOutlier = energyLeft;
 
+	state_NewEnergyWithOutlier = energyLeft;
+	// Check if point is outlier
 	if(energyLeft > std::max<float>(host->frameEnergyTH, target->frameEnergyTH) || wJI2_sum < 2)
 	{
 		energyLeft = std::max<float>(host->frameEnergyTH, target->frameEnergyTH);
@@ -318,6 +333,11 @@ void PointFrameResidual::debugPlot()
 	}
 }
 
+/**
+ * @brief Set the state and energy to the new values
+ * 
+ * @param copyJacobians 
+ */
 void PointFrameResidual::applyRes(bool copyJacobians)
 {
 	if(copyJacobians)

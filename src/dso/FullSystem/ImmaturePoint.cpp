@@ -62,6 +62,7 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, Ca
 
 
 		gradH += ptc.tail<2>() * ptc.tail<2>().transpose(); // 2 by 2 matrix of summed dx^2 + dy^2 values
+		// Weights for gradient-dependent weighting
 		weights[idx] = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + ptc.tail<2>().squaredNorm()));
 	}
 
