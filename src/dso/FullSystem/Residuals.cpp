@@ -231,8 +231,9 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 		// Apply gradient-dependent weighting
 		float w = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + hitColor.tail<2>().squaredNorm()));
         w = 0.5f*(w + weights[idx]);
-		// Use Huber Norm
+		// Huber weight
 		float hw = fabsf(residual) < setting_huberTH ? 1 : setting_huberTH / fabsf(residual);
+		// Use Huber Norm
 		// hw*(2-hw)*residual*residual results in Huber loss for the residual
 		energyLeft += w*w*hw*residual*residual*(2-hw);
 

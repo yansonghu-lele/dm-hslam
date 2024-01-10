@@ -513,7 +513,6 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		// Stop testing other tracks if result is good enough
         if(haveOneGood &&  achievedRes[0] < lastCoarseRMSE[0]*setting_reTrackThreshold)
             break;
-
 	}
 
 	// Case if no good track is found
