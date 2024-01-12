@@ -169,7 +169,7 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
 }
 
 /**
- * @brief Create a depth map
+ * @brief Create a depth and weight map for the points in frames
  * 
  * @param frameHessians 
  */
@@ -179,9 +179,10 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	memset(idepth[0], 0, sizeof(float)*w[0]*h[0]);
 	memset(weightSums[0], 0, sizeof(float)*w[0]*h[0]);
 
-	for(FrameHessian* fh : frameHessians)
+	// Set the depth and weight for the points involved in coarse tracking
+	for(FrameHessian* fh : frameHessians) // for all active frames
 	{
-		for(PointHessian* ph : fh->pointHessians)
+		for(PointHessian* ph : fh->pointHessians) // for all points in frame
 		{
 			if(ph->lastResiduals[0].first != 0 && ph->lastResiduals[0].second == ResState::IN)
 			{
@@ -192,14 +193,16 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 				float new_idepth = r->centerProjectedTo[2];
 				float weight = sqrtf(1e-3 / (ph->efPoint->HdiF+1e-12));
 
-				idepth[0][u+w[0]*v] += new_idepth *weight;
+				idepth[0][u+w[0]*v] += new_idepth * weight;
 				weightSums[0][u+w[0]*v] += weight;
 			}
 		}
 	}
 
+	// Adjustments on depth values
 
-	for(int lvl=1; lvl<pyrLevelsUsed; lvl++)
+	// Do a 2 by 2 box kernal convolution on the depth and weight values
+	for(int lvl=1; lvl<pyrLevelsUsed; lvl++) // for all levels
 	{
 		int lvlm1 = lvl-1;
 		int wl = w[lvl], hl = h[lvl], wlm1 = w[lvlm1];
@@ -210,10 +213,11 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 		float* idepth_lm = idepth[lvlm1];
 		float* weightSums_lm = weightSums[lvlm1];
 
+		// For all pixels
 		for(int y=0;y<hl;y++)
 			for(int x=0;x<wl;x++)
 			{
-				int bidx = 2*x   + 2*y*wlm1;
+				int bidx = 2*x + 2*y*wlm1;
 				idepth_l[x + y*wl] = 		idepth_lm[bidx] +
 											idepth_lm[bidx+1] +
 											idepth_lm[bidx+wlm1] +
@@ -227,26 +231,28 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	}
 
 
-	// dilate idepth by 1.
+	// dilate depth and weight by 1
 	for(int lvl=0; lvl<2; lvl++)
 	{
 		int numIts = 1;
-
 
 		for(int it=0;it<numIts;it++)
 		{
 			int wh = w[lvl]*h[lvl]-w[lvl];
 			int wl = w[lvl];
+
 			float* weightSumsl = weightSums[lvl];
 			float* weightSumsl_bak = weightSums_bak[lvl];
 			memcpy(weightSumsl_bak, weightSumsl, w[lvl]*h[lvl]*sizeof(float));
-			float* idepthl = idepth[lvl];	// dotnt need to make a temp copy of depth, since I only
-											// read values with weightSumsl>0, and write ones with weightSumsl<=0.
-			for(int i=w[lvl]+1;i<wh-1;i++)
+			float* idepthl = idepth[lvl];	// don't need to make a temp copy of depth, since the code only
+											// reads values with weightSumsl>0, and write ones with weightSumsl<=0.
+			
+			for(int i=w[lvl]+1;i<wh-1;i++) // dilate on frame area excluding border
 			{
 				if(weightSumsl_bak[i] <= 0)
 				{
 					float sum=0, num=0, numn=0;
+					// Dilation matrix is a X shape
 					if(weightSumsl_bak[i+1+wl] > 0) { sum += idepthl[i+1+wl]; num+=weightSumsl_bak[i+1+wl]; numn++;}
 					if(weightSumsl_bak[i-1-wl] > 0) { sum += idepthl[i-1-wl]; num+=weightSumsl_bak[i-1-wl]; numn++;}
 					if(weightSumsl_bak[i+wl-1] > 0) { sum += idepthl[i+wl-1]; num+=weightSumsl_bak[i+wl-1]; numn++;}
@@ -263,16 +269,19 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	{
 		int wh = w[lvl]*h[lvl]-w[lvl];
 		int wl = w[lvl];
+
 		float* weightSumsl = weightSums[lvl];
 		float* weightSumsl_bak = weightSums_bak[lvl];
 		memcpy(weightSumsl_bak, weightSumsl, w[lvl]*h[lvl]*sizeof(float));
-		float* idepthl = idepth[lvl];	// dotnt need to make a temp copy of depth, since I only
-										// read values with weightSumsl>0, and write ones with weightSumsl<=0.
-		for(int i=w[lvl]+1;i<wh-1;i++)
+		float* idepthl = idepth[lvl];	// don't need to make a temp copy of depth, since the code only
+										// reads values with weightSumsl>0, and write ones with weightSumsl<=0.
+		
+		for(int i=w[lvl]+1;i<wh-1;i++) // dilate on frame area excluding border
 		{
 			if(weightSumsl_bak[i] <= 0)
 			{
 				float sum=0, num=0, numn=0;
+				// Dilation matrix is a + shape
 				if(weightSumsl_bak[i+1] > 0) { sum += idepthl[i+1]; num+=weightSumsl_bak[i+1]; numn++;}
 				if(weightSumsl_bak[i-1] > 0) { sum += idepthl[i-1]; num+=weightSumsl_bak[i-1]; numn++;}
 				if(weightSumsl_bak[i+wl] > 0) { sum += idepthl[i+wl]; num+=weightSumsl_bak[i+wl]; numn++;}
@@ -283,7 +292,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	}
 
 
-	// normalize idepths and weights.
+	// normalize idepths and weights
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
 		float* weightSumsl = weightSums[lvl];
@@ -298,7 +307,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 		float* lpc_idepth = pc_idepth[lvl];
 		float* lpc_color = pc_color[lvl];
 
-
+		// For all of the frame area excluding the border
 		for(int y=2;y<hl-2;y++)
 			for(int x=2;x<wl-2;x++)
 			{
@@ -312,8 +321,6 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 					lpc_idepth[lpc_n] = idepthl[i];
 					lpc_color[lpc_n] = dIRefl[i][0];
 
-
-
 					if(!std::isfinite(lpc_color[lpc_n]) || !(idepthl[i]>0))
 					{
 						idepthl[i] = -1;
@@ -326,10 +333,8 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 
 				weightSumsl[i] = 1;
 			}
-
 		pc_n[lvl] = lpc_n;
 	}
-
 }
 
 
@@ -601,7 +606,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 
 
 /**
- * @brief 
+ * @brief Setup
  * 
  * @param frameHessians 
  */
@@ -613,12 +618,10 @@ void CoarseTracker::setCoarseTrackingRef(
 	makeCoarseDepthL0(frameHessians);
 
 
-
 	refFrameID = lastRef->shell->id;
 	lastRef_aff_g2l = lastRef->aff_g2l();
 
 	firstCoarseRMSE=-1;
-
 }
 
 /**
@@ -884,6 +887,13 @@ bool CoarseTracker::trackNewestCoarse(
 }
 
 
+/**
+ * @brief Creates the depth map for the GUI
+ * 
+ * @param minID_pt 
+ * @param maxID_pt 
+ * @param wraps 
+ */
 void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::vector<IOWrap::Output3DWrapper*> &wraps) const
 {
 	dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMap");
@@ -986,7 +996,6 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 	}
 }
 
-
 void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*> &wraps)
 {
 	dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMapFloat");
@@ -1001,6 +1010,9 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*
 
 /**
  * @brief Construct a new Coarse Distance Map
+ * 
+ * The coarse distance map shows how far each pixel in a frame is from a valid point
+ * The coarse distance map is used to maintain immature point density
  * 
  * @param ww 
  * @param hh 
@@ -1054,20 +1066,23 @@ void CoarseDistanceMap::makeDistanceMap(
 	// make coarse tracking templates for latstRef.
 	int numItems = 0;
 
-	for(FrameHessian* fh : frameHessians)
+	for(FrameHessian* fh : frameHessians) // for all active frames
 	{
 		if(frame == fh) continue;
 
+		// Get transformation matrix
 		SE3 fhToNew = frame->PRE_worldToCam * fh->PRE_camToWorld;
 		Mat33f KRKi = (K[1] * fhToNew.rotationMatrix().cast<float>() * Ki[0]);
 		Vec3f Kt = (K[1] * fhToNew.translation().cast<float>());
 
-		for(PointHessian* ph : fh->pointHessians)
+		for(PointHessian* ph : fh->pointHessians) // for all points in frame
 		{
 			assert(ph->status == PointHessian::ACTIVE);
+			// Get transformed position of points
 			Vec3f ptp = KRKi * Vec3f(ph->u, ph->v, 1) + Kt*ph->idepth_scaled;
 			int u = ptp[0] / ptp[2] + 0.5f;
 			int v = ptp[1] / ptp[2] + 0.5f;
+
 			if(!(u > 0 && v > 0 && u < w[1] && v < h[1])) continue;
 			fwdWarpedIDDistFinal[u+w1*v]=0;
 			bfsList1[numItems] = Eigen::Vector2i(u,v);
@@ -1083,7 +1098,7 @@ void CoarseDistanceMap::makeInlierVotes(std::vector<FrameHessian*> frameHessians
 }
 
 /**
- * @brief Grows distances using breadth-first-search
+ * @brief Grows distance map
  * 
  * @param bfsNum 
  */
@@ -1091,18 +1106,20 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 {
 	assert(w[0] != 0);
 	int w1 = w[1], h1 = h[1];
-	for(int k=1;k<40;k++)
+
+	for(int k=1;k<40;k++) // Only update points 40 pixels away
 	{
 		int bfsNum2 = bfsNum;
 		std::swap<Eigen::Vector2i*>(bfsList1,bfsList2);
 		bfsNum=0;
 
-		if(k%2==0)
+		if(k%2==0) // Update only top, left, right and bottom pixels
 		{
 			for(int i=0;i<bfsNum2;i++)
 			{
 				int x = bfsList2[i][0];
 				int y = bfsList2[i][1];
+
 				if(x==0 || y== 0 || x==w1-1 || y==h1-1) continue;
 				int idx = x + y * w1;
 
@@ -1128,12 +1145,13 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 				}
 			}
 		}
-		else
+		else // Update all surrounding pixels
 		{
 			for(int i=0;i<bfsNum2;i++)
 			{
 				int x = bfsList2[i][0];
 				int y = bfsList2[i][1];
+
 				if(x==0 || y== 0 || x==w1-1 || y==h1-1) continue;
 				int idx = x + y * w1;
 
@@ -1184,7 +1202,7 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 }
 
 /**
- * @brief Add distance
+ * @brief Add new distance to map
  * 
  * @param u 
  * @param v 
