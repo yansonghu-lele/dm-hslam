@@ -47,10 +47,10 @@ struct Pnt
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	// index in jacobian. never changes (actually, there is no reason why).
-	float u,v;
+	float u,v;			// position
 
 	// idepth / isgood / energy during optimization.
-	float idepth;
+	float idepth;		// inverse depth
 	bool isGood;
 	Vec2f energy;		// (UenergyPhotometric, energyRegularizer)
 	bool isGood_new;
@@ -66,15 +66,15 @@ public:
 	// max stepsize for idepth (corresponding to max. movement in pixel-space).
 	float maxstep;
 
-	// idx (x+y*w) of closest point one pyramid level above.
+	// idx (x+y*w) of closest point one pyramid level above
 	int parent;
 	float parentDist;
 
-	// idx (x+y*w) of up to 10 nearest points in pixel space.
+	// idx (x+y*w) of up to 10 nearest points in pixel space
 	int neighbours[10];
 	float neighboursDist[10];
 
-	float my_type;
+	float my_type;		// my_type is pyramid level where point was selected
 	float outlierTH;
 };
 
@@ -174,6 +174,7 @@ struct FLANNPointcloud
 	int num;
 	Pnt* points;
 	inline size_t kdtree_get_point_count() const { return num; }
+
 	inline float kdtree_distance(const float *p1, const size_t idx_p2,size_t /*size*/) const
 	{
 		const float d0=p1[0]-points[idx_p2].u;
@@ -186,6 +187,7 @@ struct FLANNPointcloud
 		if (dim==0) return points[idx].u;
 		else return points[idx].v;
 	}
+
 	template <class BBOX>
 		bool kdtree_get_bbox(BBOX& /* bb */) const { return false; }
 };

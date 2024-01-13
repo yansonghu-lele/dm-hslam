@@ -1682,7 +1682,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     std::cout << "Scaling with rescaleFactor: " << rescaleFactor << std::endl;
     firstToNew.translation() /= rescaleFactor;
 
-	// randomly sub-select the points I need.
+	// randomly sub-select the points
 	float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
 
     if(!setting_debugout_runquiet)

@@ -95,8 +95,9 @@ CoarseInitializer::~CoarseInitializer()
 	delete[] JbBuffer_new;
 }
 
+
 /**
- * @brief 
+ * @brief Track frame without initialization
  * 
  * @param newFrameHessian 
  * @param wraps 
@@ -113,13 +114,14 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	int maxIterations[] = {5,5,10,30,50};
 
 
-	alphaK = 2.5*2.5;//*freeDebugParam1*freeDebugParam1;
-	alphaW = 150*150;//*freeDebugParam2*freeDebugParam2;
-	regWeight = 0.8;//*freeDebugParam4;
-	couplingWeight = 1;//*freeDebugParam5;
+	alphaK = 2.5*2.5;	//*freeDebugParam1*freeDebugParam1;
+	alphaW = 150*150;	//*freeDebugParam2*freeDebugParam2;
+	regWeight = 0.8;	//*freeDebugParam4;
+	couplingWeight = 1;	//*freeDebugParam5;
 
 	if(!snapped)
 	{
+		// Set all the points to default values
 		thisToNext.translation().setZero();
 		for(int lvl=0;lvl<pyrLevelsUsed;lvl++)
 		{
@@ -137,8 +139,8 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 	SE3 refToNew_current = thisToNext;
 
+	// Set photometric values
 	AffLight refToNew_aff_current = thisToNext_aff;
-
 	if(firstFrame->ab_exposure>0 && newFrame->ab_exposure>0)
 		refToNew_aff_current = AffLight(logf(newFrame->ab_exposure /  firstFrame->ab_exposure),0); // coarse approximation.
 
@@ -146,7 +148,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	Vec3f latestRes = Vec3f::Zero();
 	for(int lvl=pyrLevelsUsed-1; lvl>=0; lvl--)
 	{
-
+		// Applys the valid values calculated from the level above to the current level
 		if(lvl<pyrLevelsUsed-1)
 			propagateDown(lvl+1);
 
@@ -273,16 +275,11 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 	}
 
-
-
 	thisToNext = refToNew_current;
 	thisToNext_aff = refToNew_aff_current;
 
 	for(int i=0;i<pyrLevelsUsed-1;i++)
 		propagateUp(i);
-
-
-
 
 	frameID++;
 	if(!snapped) snappedAt=0;
@@ -290,11 +287,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	if(snapped && snappedAt==0)
 		snappedAt = frameID;
 
-
-
     debugPlot(0,wraps);
-
-
 
 	return snapped && frameID > snappedAt+5;
 }
@@ -348,7 +341,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
         ow->pushDepthImage(&iRImg);
 }
 
-// calculates residual, Hessian and Hessian-block neede for re-substituting depth.
+// calculates residual, Hessian and Hessian-block needed for re-substituting depth.
 Vec3f CoarseInitializer::calcResAndGS(
 		int lvl, Mat88f &H_out, Vec8f &b_out,
 		Mat88f &H_out_sc, Vec8f &b_out_sc,
@@ -647,21 +640,23 @@ Vec3f CoarseInitializer::calcResAndGS(
 float CoarseInitializer::rescale()
 {
 	float factor = 20*thisToNext.translation().norm();
-//	float factori = 1.0f/factor;
-//	float factori2 = factori*factori;
-//
-//	for(int lvl=0;lvl<pyrLevelsUsed;lvl++)
-//	{
-//		int npts = numPoints[lvl];
-//		Pnt* ptsl = points[lvl];
-//		for(int i=0;i<npts;i++)
-//		{
-//			ptsl[i].iR *= factor;
-//			ptsl[i].idepth_new *= factor;
-//			ptsl[i].lastHessian *= factori2;
-//		}
-//	}
-//	thisToNext.translation() *= factori;
+
+/* 	float factori = 1.0f/factor;
+	float factori2 = factori*factori;
+
+	for(int lvl=0;lvl<pyrLevelsUsed;lvl++)
+	{
+		int npts = numPoints[lvl];
+		Pnt* ptsl = points[lvl];
+		for(int i=0;i<npts;i++)
+		{
+			ptsl[i].iR *= factor;
+			ptsl[i].idepth_new *= factor;
+			ptsl[i].lastHessian *= factori2;
+		}
+	}
+	thisToNext.translation() *= factori; 
+*/
 
 	return factor;
 }
@@ -688,43 +683,62 @@ Vec3f CoarseInitializer::calcEC(int lvl)
 	//printf("ER: %f %f %f!\n", couplingWeight*E.A1m[0], couplingWeight*E.A1m[1], (float)E.num.numIn1m);
 	return Vec3f(couplingWeight*E.A1m[0], couplingWeight*E.A1m[1], E.num);
 }
+
+/**
+ * @brief Smooths out the iR values between point neighbours
+ * 
+ * @param lvl 
+ */
 void CoarseInitializer::optReg(int lvl)
 {
 	int npts = numPoints[lvl];
 	Pnt* ptsl = points[lvl];
+
 	if(!snapped)
 	{
 		return;
 	}
-
 
 	for(int i=0;i<npts;i++)
 	{
 		Pnt* point = ptsl+i;
 		if(!point->isGood) continue;
 
+		// Get all of the iR values for the good neighbours
 		float idnn[10];
 		int nnn=0;
-		for(int j=0;j<10;j++)
+		for(int j=0;j<10;j++) // for all point neighbours
 		{
 			if(point->neighbours[j] == -1) continue;
+
 			Pnt* other = ptsl+point->neighbours[j];
+
 			if(!other->isGood) continue;
+
 			idnn[nnn] = other->iR;
 			nnn++;
 		}
 
 		if(nnn > 2)
 		{
+			// Sort to get median value of iR for the good neighbours
+			// idnn[nnn/2] will be the median
 			std::nth_element(idnn,idnn+nnn/2,idnn+nnn);
+
+			// Set new iR to account for current inverse depth and median iR value of neighbours
 			point->iR = (1-regWeight)*point->idepth + regWeight*idnn[nnn/2];
 		}
 	}
-
 }
 
 
-
+/**
+ * @brief Apply information from children point to parent points for given level
+ * 
+ * This function smooths out the differences between the values between pyramid levels
+ * 
+ * @param srcLvl 
+ */
 void CoarseInitializer::propagateUp(int srcLvl)
 {
 	assert(srcLvl+1<pyrLevelsUsed);
@@ -766,6 +780,14 @@ void CoarseInitializer::propagateUp(int srcLvl)
 	optReg(srcLvl+1);
 }
 
+/**
+ * @brief Apply information from parent point to children points for given level
+ * 
+ * This function sets a better starting point for the optimization than the default values
+ * by using the valid values calculated in a pyramid level above
+ * 
+ * @param srcLvl 
+ */
 void CoarseInitializer::propagateDown(int srcLvl)
 {
 	assert(srcLvl>0);
@@ -778,21 +800,28 @@ void CoarseInitializer::propagateDown(int srcLvl)
 	for(int i=0;i<nptst;i++)
 	{
 		Pnt* point = ptst+i;
-		Pnt* parent = ptss+point->parent;
+		Pnt* parent = ptss+(point->parent);
 
 		if(!parent->isGood || parent->lastHessian < 0.1) continue;
+
 		if(!point->isGood)
 		{
+			// Set values between point and parent to be equal
 			point->iR = point->idepth = point->idepth_new = parent->iR;
+
 			point->isGood=true;
 			point->lastHessian=0;
 		}
 		else
 		{
-			float newiR = (point->iR*point->lastHessian*2 + parent->iR*parent->lastHessian) / (point->lastHessian*2+parent->lastHessian);
+			// Calculate new iR
+			float newiR = (point->iR * point->lastHessian * 2 + parent->iR * parent->lastHessian) 
+						/ (point->lastHessian * 2 + parent->lastHessian);
+			// Set new value
 			point->iR = point->idepth = point->idepth_new = newiR;
 		}
 	}
+
 	optReg(srcLvl-1);
 }
 
@@ -821,20 +850,30 @@ void CoarseInitializer::makeGradients(Eigen::Vector3f** data)
 		}
 	}
 }
+
+/**
+ * @brief Sets the first frame
+ * 
+ * Starting point of the CoarseInitializer
+ * 
+ * @param HCalib 
+ * @param newFrameHessian 
+ */
 void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHessian)
 {
-
 	makeK(HCalib);
 	firstFrame = newFrameHessian;
 
 	PixelSelector sel(w[0],h[0]);
 
+	// Stores positiions where points were selected to be
 	float* statusMap = new float[w[0]*h[0]];
 	bool* statusMapB = new bool[w[0]*h[0]];
-
 	float densities[] = {0.03,0.05,0.15,0.5,1};
+
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
+		// Select positions for points in first frame
 		sel.currentPotential = 3;
 		int npts;
 		if(lvl == 0)
@@ -843,14 +882,15 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 			npts = makePixelStatus(firstFrame->dIp[lvl], statusMapB, w[lvl], h[lvl], densities[lvl]*w[0]*h[0]);
 
 
-
 		if(points[lvl] != 0) delete[] points[lvl];
 		points[lvl] = new Pnt[npts];
 
-		// set idepth map to initially 1 everywhere.
+		// Create the points using the postions given by the pixel selector
+		// set idepth map to initially 1 everywhere
 		int wl = w[lvl], hl = h[lvl];
 		Pnt* pl = points[lvl];
 		int nl = 0;
+
 		for(int y=PATTERNPADDING+1;y<hl-PATTERNPADDING-2;y++)
 		for(int x=PATTERNPADDING+1;x<wl-PATTERNPADDING-2;x++)
 		{
@@ -868,8 +908,9 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 				pl[nl].lastHessian_new=0;
 				pl[nl].my_type= (lvl!=0) ? 1 : statusMap[x+y*wl];
 
-				Eigen::Vector3f* cpt = firstFrame->dIp[lvl] + x + y*w[lvl];
-				float sumGrad2=0;
+/* 				Eigen::Vector3f* cpt = firstFrame->dIp[lvl] + x + y*w[lvl];
+				float sumGrad2=0; // sum of gradients
+
 				for(int idx=0;idx<PATTERNNUM;idx++)
 				{
 					int dx = PATTERNP[idx][0];
@@ -878,25 +919,23 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 					sumGrad2 += absgrad;
 				}
 
-//				float gth = setting_outlierTH * (sqrtf(sumGrad2)+setting_outlierTHSumComponent);
-//				pl[nl].outlierTH = PATTERNNUM*gth*gth;
-//
+				float gth = setting_outlierTH * (sqrtf(sumGrad2)+setting_outlierTHSumComponent);
+				pl[nl].outlierTH = PATTERNNUM*gth*gth;
+*/
 
 				pl[nl].outlierTH = PATTERNNUM*setting_outlierTH;
-
-
 
 				nl++;
 				assert(nl <= npts);
 			}
 		}
-
-
 		numPoints[lvl]=nl;
 	}
 	delete[] statusMap;
 	delete[] statusMapB;
 
+	// For each point, find the ten nearest neighbours and their distance to the point
+	// Also find the closest point one pyramid level above and it's distance
 	makeNN();
 
 	thisToNext=SE3();
@@ -905,7 +944,6 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 
 	for(int i=0;i<pyrLevelsUsed;i++)
 		dGrads[i].setZero();
-
 }
 
 void CoarseInitializer::resetPoints(int lvl)
@@ -965,6 +1003,7 @@ void CoarseInitializer::doStep(int lvl, float lambda, Vec8f inc)
 	}
 
 }
+
 void CoarseInitializer::applyStep(int lvl)
 {
 	Pnt* pts = points[lvl];
@@ -984,6 +1023,11 @@ void CoarseInitializer::applyStep(int lvl)
 	std::swap<Vec10f*>(JbBuffer, JbBuffer_new);
 }
 
+/**
+ * @brief Set width, height, and camera parameters for all pyramid levels
+ * 
+ * @param HCalib 
+ */
 void CoarseInitializer::makeK(CalibHessian* HCalib)
 {
 	w[0] = wG[0];
@@ -1017,20 +1061,28 @@ void CoarseInitializer::makeK(CalibHessian* HCalib)
 	}
 }
 
-
-
-
+/**
+ * @brief For performing fast approximate nearest neighbor searches
+ * 
+ * Finds the values for:
+ * - parent (idx (x+y*w) of closest point one pyramid level above)
+ * - parent distance
+ * - neighbours (idx (x+y*w) of up to 10 nearest points in pixel space)
+ * - neighbours distances
+ * 
+ */
 void CoarseInitializer::makeNN()
 {
 	const float NNDistFactor=0.05;
 
-	typedef nanoflann::KDTreeSingleIndexAdaptor<
-			nanoflann::L2_Simple_Adaptor<float, FLANNPointcloud> ,
-			FLANNPointcloud,2> KDTree;
+	typedef nanoflann::KDTreeSingleIndexAdaptor
+			<nanoflann::L2_Simple_Adaptor<float, FLANNPointcloud>,FLANNPointcloud,2>
+			KDTree;
 
 	// build indices
 	FLANNPointcloud pcs[PYR_LEVELS];
 	KDTree* indexes[PYR_LEVELS];
+
 	for(int i=0;i<pyrLevelsUsed;i++)
 	{
 		pcs[i] = FLANNPointcloud(numPoints[i], points[i]);
@@ -1055,23 +1107,30 @@ void CoarseInitializer::makeNN()
 		{
 			//resultSet.init(pts[i].neighbours, pts[i].neighboursDist );
 			resultSet.init(ret_index, ret_dist);
+
 			Vec2f pt = Vec2f(pts[i].u,pts[i].v);
 			indexes[lvl]->findNeighbors(resultSet, (float*)&pt, nanoflann::SearchParams());
+
+			// Find neighbours and neighbour distances
 			int myidx=0;
 			float sumDF = 0;
 			for(int k=0;k<nn;k++)
 			{
 				pts[i].neighbours[myidx]=ret_index[k];
+
 				float df = expf(-ret_dist[k]*NNDistFactor);
 				sumDF += df;
+
 				pts[i].neighboursDist[myidx]=df;
 				assert(ret_index[k]>=0 && ret_index[k] < npts);
+
 				myidx++;
 			}
+
 			for(int k=0;k<nn;k++)
 				pts[i].neighboursDist[k] *= 10/sumDF;
 
-
+			// Find parent and parent distance
 			if(lvl < pyrLevelsUsed-1 )
 			{
 				resultSet1.init(ret_index, ret_dist);
@@ -1090,9 +1149,6 @@ void CoarseInitializer::makeNN()
 			}
 		}
 	}
-
-
-
 	// done.
 
 	for(int i=0;i<pyrLevelsUsed;i++)
