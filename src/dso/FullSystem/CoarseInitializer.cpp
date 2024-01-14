@@ -142,7 +142,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	// Set photometric values
 	AffLight refToNew_aff_current = thisToNext_aff;
 	if(firstFrame->ab_exposure>0 && newFrame->ab_exposure>0)
-		refToNew_aff_current = AffLight(logf(newFrame->ab_exposure /  firstFrame->ab_exposure),0); // coarse approximation.
+		refToNew_aff_current = AffLight(logf(newFrame->ab_exposure /  firstFrame->ab_exposure),0); // coarse approximation
 
 
 	Vec3f latestRes = Vec3f::Zero();
@@ -153,7 +153,11 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 			propagateDown(lvl+1);
 
 		Mat88f H,Hsc; Vec8f b,bsc;
+		// Prepare points for energy calculations
 		resetPoints(lvl);
+		// Calculate initial energy
+		// refToNew_current for the first frame will have no movement
+		// refToNew_aff_current for the first frame will be the default or a coarse approximation
 		Vec3f resOld = calcResAndGS(lvl, H, b, Hsc, bsc, refToNew_current, refToNew_aff_current, false);
 		applyStep(lvl);
 
@@ -341,7 +345,19 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
         ow->pushDepthImage(&iRImg);
 }
 
-// calculates residual, Hessian and Hessian-block needed for re-substituting depth.
+/**
+ * @brief Calculates residual, Hessian and Hessian-block needed for re-substituting depth.
+ * 
+ * @param lvl 
+ * @param H_out 
+ * @param b_out 
+ * @param H_out_sc 
+ * @param b_out_sc 
+ * @param refToNew 
+ * @param refToNew_aff 
+ * @param plot 
+ * @return Vec3f 
+ */
 Vec3f CoarseInitializer::calcResAndGS(
 		int lvl, Mat88f &H_out, Vec8f &b_out,
 		Mat88f &H_out_sc, Vec8f &b_out_sc,
@@ -946,27 +962,33 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 		dGrads[i].setZero();
 }
 
+/**
+ * @brief Set the values of bad points and resets the energy of all points to zero
+ * 
+ * @param lvl 
+ */
 void CoarseInitializer::resetPoints(int lvl)
 {
 	Pnt* pts = points[lvl];
 	int npts = numPoints[lvl];
+
 	for(int i=0;i<npts;i++)
 	{
 		pts[i].energy.setZero();
 		pts[i].idepth_new = pts[i].idepth;
 
-
-		if(lvl==pyrLevelsUsed-1 && !pts[i].isGood)
+		if(lvl==pyrLevelsUsed-1 && !pts[i].isGood)  // Set the values of bad point using it's neighbours
 		{
 			float snd=0, sn=0;
 			for(int n = 0;n<10;n++)
 			{
 				if(pts[i].neighbours[n] == -1 || !pts[pts[i].neighbours[n]].isGood) continue;
+
 				snd += pts[pts[i].neighbours[n]].iR;
 				sn += 1;
 			}
 
-			if(sn > 0)
+			if(sn > 0) // The new iR of the point will be the average of the neighbouring values
 			{
 				pts[i].isGood=true;
 				pts[i].iR = pts[i].idepth = pts[i].idepth_new = snd/sn;
