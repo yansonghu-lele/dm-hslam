@@ -214,6 +214,15 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 	}
 }
 
+/**
+ * @brief Set values that are commonly used in the optimization
+ * 
+ * Transformation matrixes, calibration matrix, and photogrammetric values
+ * 
+ * @param host 
+ * @param target 
+ * @param HCalib 
+ */
 void FrameFramePrecalc::set(FrameHessian* host, FrameHessian* target, CalibHessian* HCalib )
 {
 	this->host = host;

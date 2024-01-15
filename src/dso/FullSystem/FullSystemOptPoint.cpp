@@ -48,6 +48,7 @@
 
 namespace dso
 {
+
 PointHessian* FullSystem::optimizeImmaturePoint(
 		ImmaturePoint* point, int minObs,
 		ImmaturePointTemporaryResidual* residuals)
@@ -72,11 +73,6 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 	float lastHdd=0;
 	float lastbd=0;
 	float currentIdepth=(point->idepth_max+point->idepth_min)*0.5f;
-
-
-
-
-
 
 	for(int i=0;i<nres;i++)
 	{
@@ -203,7 +199,4 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 	statistics_numActivatedPoints++;
 	return p;
 }
-
-
-
 }

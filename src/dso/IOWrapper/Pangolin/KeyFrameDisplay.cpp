@@ -109,7 +109,8 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	if(numSparseBufferSize < npoints)
 	{
 		if(originalInputSparse != 0) delete originalInputSparse;
-		numSparseBufferSize = npoints+100;
+
+		numSparseBufferSize = npoints+128;
         originalInputSparse = new InputPointSparse<MAX_RES_PER_POINT>[numSparseBufferSize];
 	}
 
@@ -175,6 +176,7 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 		
 		numSparsePoints++;
 	}
+
 	assert(numSparsePoints <= npoints);
 
 	camToWorld = fh->PRE_camToWorld;
@@ -260,26 +262,30 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 
 			if(my_displayMode==0)
 			{
-				if(originalInputSparse[i].status==0)
+				if(originalInputSparse[i].status==0) // immature
 				{
+					// cyan
 					tmpColorBuffer[vertexBufferNumPoints][0] = (81 + (color_intensity/4)*2)/2;
 					tmpColorBuffer[vertexBufferNumPoints][1] = 81 + (color_intensity/4)*2;
 					tmpColorBuffer[vertexBufferNumPoints][2] = 81 + (color_intensity/4)*2;
 				}
-				else if(originalInputSparse[i].status==1)
+				else if(originalInputSparse[i].status==1) // active
 				{
+					// red
 					tmpColorBuffer[vertexBufferNumPoints][0] = 255;
 					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
 					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
 				}
-				else if(originalInputSparse[i].status==2)
+				else if(originalInputSparse[i].status==2) // marginalized 
 				{
+					// yellow
 					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/6)*4;
 					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/6)*4;
 					tmpColorBuffer[vertexBufferNumPoints][2] = (51 + (color_intensity/6)*4)/4;
 				}
-				else if(originalInputSparse[i].status==3)
+				else if(originalInputSparse[i].status==3) // outlier
 				{
+					// blue
 					tmpColorBuffer[vertexBufferNumPoints][0] = (51 + (color_intensity/6)*4)/4;
 					tmpColorBuffer[vertexBufferNumPoints][1] = (51 + (color_intensity/6)*4)/4;
 					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/6)*4;

@@ -70,7 +70,7 @@ PixelSelector::PixelSelector(int w, int h)
         std::cout << "ERROR: Height or width seem to be not divisible by 16!" << std::endl;
         assert(0);
     }
-    std::cout << "PixelSelector: Using block sizes: " << bW << ", " << bH << '\n';
+    if(!setting_debugout_runquiet) std::cout << "PixelSelector: Using block sizes: " << bW << ", " << bH << '\n';
 
 	gradHistFrame = 0;
 

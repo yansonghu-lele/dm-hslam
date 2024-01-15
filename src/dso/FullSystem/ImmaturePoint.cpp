@@ -497,6 +497,20 @@ float ImmaturePoint::calcResidual(
 	return energyLeft;
 }
 
+/**
+ * @brief Calculate some residual values for the immature points
+ * 
+ * Will not calculate the Hessian
+ * Calculates the energy residual and values that are helpful for point optimizations
+ * 
+ * @param HCalib 			Calibration matrices
+ * @param outlierTHSlack 	Outlier threshold
+ * @param tmpRes 			Struct storing residual information
+ * @param Hdd 				Depth derivative
+ * @param bd 				Residual energy
+ * @param idepth 			Input inverse depth
+ * @return double 			EnergyLeft
+ */
 double ImmaturePoint::linearizeResidual(
 		CalibHessian *  HCalib, const float outlierTHSlack,
 		ImmaturePointTemporaryResidual* tmpRes,
@@ -509,11 +523,15 @@ double ImmaturePoint::linearizeResidual(
 	FrameFramePrecalc* precalc = &(host->targetPrecalc[tmpRes->target->idx]);
 
 	float energyLeft=0;
+	// Get image
 	const Eigen::Vector3f* dIl = tmpRes->target->dI;
+
+	// Set transforms
 	const Mat33f &PRE_RTll = precalc->PRE_RTll;
 	const Vec3f &PRE_tTll = precalc->PRE_tTll;
 	//const float * const Il = tmpRes->target->I;
 
+	// Get photometric values
 	Vec2f affLL = precalc->PRE_aff_mode;
 
 	for(int idx=0;idx<PATTERNNUM;idx++)
@@ -525,16 +543,17 @@ double ImmaturePoint::linearizeResidual(
 		float Ku, Kv;
 		Vec3f KliP;
 
+		// Get intensity of point at transformed location
 		if(!projectPoint(this->u,this->v, idepth, dx, dy, HCalib,
 				PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth))
 			{tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}
-
-
 		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG[0]));
 
 		if(!std::isfinite((float)hitColor[0])) {tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}
+		
+		// Calculate residual
 		float residual = hitColor[0] - (affLL[0] * color[idx] + affLL[1]);
-
+		// Huber loss
 		float hw = fabsf(residual) < setting_huberTH ? 1 : setting_huberTH / fabsf(residual);
 		energyLeft += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
 
@@ -543,6 +562,7 @@ double ImmaturePoint::linearizeResidual(
 		float dyInterp = hitColor[2]*HCalib->fyl();
 		float d_idepth = derive_idepth(PRE_tTll, u, v, dx, dy, dxInterp, dyInterp, drescale);
 
+		// Huber weight
 		hw *= weights[idx]*weights[idx];
 
 		Hdd += (hw*d_idepth)*d_idepth;

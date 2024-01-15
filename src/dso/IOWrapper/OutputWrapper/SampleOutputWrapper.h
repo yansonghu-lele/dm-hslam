@@ -22,6 +22,7 @@
 */
 
 
+
 #pragma once
 #include "boost/thread.hpp"
 #include "util/MinimalImage.h"
