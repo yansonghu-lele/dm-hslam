@@ -114,10 +114,10 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	int maxIterations[] = {5,5,10,30,50};
 
 
-	alphaK = 2.5*2.5;	//*freeDebugParam1*freeDebugParam1;
-	alphaW = 150*150;	//*freeDebugParam2*freeDebugParam2;
-	regWeight = 0.8;	//*freeDebugParam4;
-	couplingWeight = 1;	//*freeDebugParam5;
+	alphaK = 2.5*2.5;
+	alphaW = 150*150;
+	regWeight = 0.8;
+	couplingWeight = 1;
 
 	if(!snapped)
 	{

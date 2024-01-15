@@ -74,7 +74,7 @@ public:
 	int neighbours[10];
 	float neighboursDist[10];
 
-	float my_type;		// my_type is pyramid level where point was selected
+	float my_type;		// my_type is block level where point was selected (1,2 or 4)
 	float outlierTH;
 };
 

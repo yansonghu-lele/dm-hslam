@@ -429,7 +429,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	if(!std::isfinite(idepth_min) || !std::isfinite(idepth_max) || (idepth_max<0))
 	{
-		printf("COUGHT INF / NAN minmax depth!\n");
+		if(!setting_debugout_runquiet) printf("CAUGHT INF / NAN minmax depth!\n");
 
 		lastTracePixelInterval=0;
 		lastTraceUV = Vec2f(-1,-1);

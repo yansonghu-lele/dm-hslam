@@ -1023,7 +1023,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
             {
                 // Maybe change first frame.
                 double timeBetweenFrames = fh->shell->timestamp - coarseInitializer->firstFrame->shell->timestamp;
-                std::cout << "InitTimeBetweenFrames: " << timeBetweenFrames << std::endl;
+                if(!setting_debugout_runquiet) std::cout << "InitTimeBetweenFrames: " << timeBetweenFrames << std::endl;
 
                 if(timeBetweenFrames > imuIntegration.getImuSettings().maxTimeBetweenInitFrames)
                 {
@@ -1169,7 +1169,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
             // Enforce setting_minFramesBetweenKeyframes.
             if(framesBetweenKFs < (int) setting_minFramesBetweenKeyframes) // if integer value is smaller we just skip.
             {
-                std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
+                if(!setting_debugout_runquiet) std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
                 needToMakeKF = false;
             }
 			else if(framesBetweenKFs < setting_minFramesBetweenKeyframes) // Enforce it for non-integer values.
@@ -1178,7 +1178,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
                 framesBetweenKFsRest += fractionalPart;
                 if(framesBetweenKFsRest >= 1.0)
                 {
-                    std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
+                    if(!setting_debugout_runquiet) std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
                     needToMakeKF = false;
                     framesBetweenKFsRest--;
                 }
@@ -1679,7 +1679,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     float rescaleFactor = 1;
 	rescaleFactor = 1 / (sumID / numID);
     SE3 firstToNew = coarseInitializer->thisToNext;
-    std::cout << "Scaling with rescaleFactor: " << rescaleFactor << std::endl;
+    if(!setting_debugout_runquiet) std::cout << "Scaling with rescaleFactor: " << rescaleFactor << std::endl;
     firstToNew.translation() /= rescaleFactor;
 
 	// randomly sub-select the points
@@ -1733,7 +1733,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     imuIntegration.finishCoarseTracking(*(newFrame->shell), true);
 
     initialized=true;
-	printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
+	if (!setting_debugout_runquiet) printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
 }
 
 

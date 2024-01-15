@@ -236,11 +236,11 @@ void handleKey(char k)
 	switch(kkk)
 	{
 	case 'd': case 'D':
-		freeDebugParam5 = ((int)(freeDebugParam5+1))%10;
+		freeDebugParam5 = ((int)(freeDebugParam5+1))%8;
 		printf("new freeDebugParam5: %f!\n", freeDebugParam5);
 		break;
 	case 's': case 'S':
-		freeDebugParam5 = ((int)(freeDebugParam5-1+10))%10;
+		freeDebugParam5 = ((int)(freeDebugParam5-1+8))%8;
 		printf("new freeDebugParam5: %f!\n", freeDebugParam5);
 		break;
 	}

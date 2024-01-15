@@ -643,7 +643,7 @@ void PangolinDSOViewer::addGTCamPose(const Sophus::SE3d& gtPose)
 
 	if(!setting_render_display3D || !HCalib) return;
 
-	std::cout << "GTPose: " << gtPose.translation().transpose() << std::endl;
+	if (!setting_debugout_runquiet) std::cout << "GTPose: " << gtPose.translation().transpose() << std::endl;
 
 	if(!gtCamPoseSet)
     {

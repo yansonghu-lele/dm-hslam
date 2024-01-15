@@ -369,7 +369,7 @@ public:
         }
 
 		double distSeconds = (double) dist * 1e-9;
-        std::cout << "GTData distance (seconds): " << distSeconds << std::endl;
+		if (!setting_debugout_runquiet) std::cout << "GTData distance (seconds): " << distSeconds << std::endl;
 
         if(distSeconds > 0.01)
         {
