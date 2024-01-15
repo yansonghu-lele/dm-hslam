@@ -388,7 +388,7 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 				_mm_mul_ps(id,dy), // inverse_depth * dy
 				// inverse_depth* (u*dx + v*dy)
 				_mm_sub_ps(zero, _mm_mul_ps(id,_mm_add_ps(_mm_mul_ps(u,dx), _mm_mul_ps(v,dy)))),
-				// dx * (u*v) + dy * (1 + v^2)
+				// -dx * (u*v) - dy * (1 + v^2)
 				_mm_sub_ps(zero, _mm_add_ps(
 						_mm_mul_ps(_mm_mul_ps(u,v),dx),
 						_mm_mul_ps(dy,_mm_add_ps(one, _mm_mul_ps(v,v))))),

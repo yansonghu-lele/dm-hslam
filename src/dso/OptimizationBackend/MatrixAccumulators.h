@@ -1084,10 +1084,6 @@ public:
 	  shiftUp(false);
   }
 
-
-
-
-
   inline void updateSSE_eighted(
 		  const __m128 J0,const __m128 J1,
 		  const __m128 J2,const __m128 J3,
@@ -1164,7 +1160,6 @@ public:
 	  numIn1++;
 	  shiftUp(false);
   }
-
 
   inline void updateSingle(
 		  const float J0,const float J1,

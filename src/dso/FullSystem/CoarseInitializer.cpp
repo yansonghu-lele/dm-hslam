@@ -180,6 +180,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 			std::cout << refToNew_current.log().transpose() << " AFF " << refToNew_aff_current.vec().transpose() <<"\n";
 		}
 
+		// Iterate till good values are found or too many iterations
 		int iteration=0;
 		while(true)
 		{
@@ -194,6 +195,8 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
             Vec8f inc;
             SE3 refToNew_new;
+
+			// Calculate the increment from the given H and b matrices
             if (fixAffine)
             {
                 // Note as we set the weights of rotation and translation to 1 the wM is just the identity in this case.
@@ -201,25 +204,27 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
                                   (Hl.topLeftCorner<6, 6>().ldlt().solve(bl.head<6>())));
                 inc.tail<2>().setZero();
             } else
-                inc = -(wM * (Hl.ldlt().solve(bl)));    //=-H^-1 * b.
-
+                inc = -(wM * (Hl.ldlt().solve(bl)));    // = -H^-1 * b.
             double incNorm = inc.norm();
 
+			// Calculate new photometric values
             refToNew_new = SE3::exp(inc.head<6>().cast<double>()) * refToNew_current;
 
 			AffLight refToNew_aff_new = refToNew_aff_current;
 			refToNew_aff_new.a += inc[6];
 			refToNew_aff_new.b += inc[7];
+
+			// Update point depths
 			doStep(lvl, lambda, inc);
 
-
+			// Repeat optimization with new values
 			Mat88f H_new, Hsc_new; Vec8f b_new, bsc_new;
 			Vec3f resNew = calcResAndGS(lvl, H_new, b_new, Hsc_new, bsc_new, refToNew_new, refToNew_aff_new, false);
 			Vec3f regEnergy = calcEC(lvl);
 
+			// Decide to accept or reject
 			float eTotalNew = (resNew[0]+resNew[1]+regEnergy[1]);
 			float eTotalOld = (resOld[0]+resOld[1]+regEnergy[0]);
-
 
 			bool accept = eTotalOld > eTotalNew;
 
@@ -242,43 +247,48 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 			if(accept)
 			{
-				if(resNew[1] == alphaK*numPoints[lvl])
+				if(resNew[1] == alphaK*numPoints[lvl]) // Stop init if values good enough
 					snapped = true;
+
+				// Update H, b, and residual
 				H = H_new;
 				b = b_new;
 				Hsc = Hsc_new;
 				bsc = bsc_new;
 				resOld = resNew;
+				// Update transform
 				refToNew_aff_current = refToNew_aff_new;
 				refToNew_current = refToNew_new;
+				// Update points
 				applyStep(lvl);
 				optReg(lvl);
+
 				lambda *= 0.5;
 				fails=0;
 				if(lambda < 0.0001) lambda = 0.0001;
 			}
-			else
+			else // reduce step size and try again
 			{
 				fails++;
 				lambda *= 4;
+
 				if(lambda > 10000) lambda = 10000;
 			}
 
-			bool quitOpt = false;
 
+			bool quitOpt = false;
 			if(!(incNorm > eps) || iteration >= maxIterations[lvl] || fails >= 2)
 			{
 				quitOpt = true;
 			}
 
-
 			if(quitOpt) break;
 			iteration++;
 		}
 		latestRes = resOld;
-
 	}
 
+	// Update transformation with optimized values
 	thisToNext = refToNew_current;
 	thisToNext_aff = refToNew_aff_current;
 
@@ -296,6 +306,12 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	return snapped && frameID > snappedAt+5;
 }
 
+/**
+ * @brief Creates depth image
+ * 
+ * @param lvl 
+ * @param wraps 
+ */
 void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*> &wraps)
 {
     bool needCall = false;
@@ -311,7 +327,6 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
 	for(int i=0;i<wl*hl;i++)
 		iRImg.at(i) = Vec3b(colorRef[i][0],colorRef[i][0],colorRef[i][0]);
-
 
 	int npts = numPoints[lvl];
 
@@ -334,11 +349,9 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
 		if(!point->isGood)
 			iRImg.setPixel9(point->u+0.5f,point->v+0.5f,Vec3b(0,0,0));
-
 		else
 			iRImg.setPixel9(point->u+0.5f,point->v+0.5f,makeRainbow3B(point->iR*fac));
 	}
-
 
 	//IOWrap::displayImage("idepth-R", &iRImg, false);
     for(IOWrap::Output3DWrapper* ow : wraps)
@@ -356,7 +369,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
  * @param refToNew 
  * @param refToNew_aff 
  * @param plot 
- * @return Vec3f 
+ * @return Vec3f 		(Energy Residual, alphaEnergy, number of points)
  */
 Vec3f CoarseInitializer::calcResAndGS(
 		int lvl, Mat88f &H_out, Vec8f &b_out,
@@ -368,16 +381,16 @@ Vec3f CoarseInitializer::calcResAndGS(
 	Eigen::Vector3f* colorRef = firstFrame->dIp[lvl];
 	Eigen::Vector3f* colorNew = newFrame->dIp[lvl];
 
+	// Set transformation matrix
 	Mat33f RKi = (refToNew.rotationMatrix() * Ki[lvl]).cast<float>();
 	Vec3f t = refToNew.translation().cast<float>();
 	Eigen::Vector2f r2new_aff = Eigen::Vector2f(exp(refToNew_aff.a), refToNew_aff.b);
 
+	// Set calibration matrix
 	float fxl = fx[lvl];
 	float fyl = fy[lvl];
 	float cxl = cx[lvl];
 	float cyl = cy[lvl];
-
-
 
     for(auto&& acc9 : acc9s)
     {
@@ -391,16 +404,20 @@ Vec3f CoarseInitializer::calcResAndGS(
 	int npts = numPoints[lvl];
 	Pnt* ptsl = points[lvl];
 
-    // This part takes most of the time for this method --> parallelize this only.
+	// lambda function so it can be parallelized
+    // This part takes most of the time for this method --> parallelize this only
     auto processPointsForReduce = [&](int min=0, int max=1, double* stats=0, int tid=0)
     {
         auto& acc9 = acc9s[tid];
         auto& E = accE[tid];
+
         for(int i = min; i < max; i++)
         {
             Pnt* point = ptsl + i;
 
             point->maxstep = 1e10;
+
+			// use previous valid value of energy of point if bad point
             if(!point->isGood)
             {
                 E.updateSingle((float) (point->energy[0]));
@@ -429,54 +446,58 @@ Vec3f CoarseInitializer::calcResAndGS(
                 int dx = PATTERNP[idx][0];
                 int dy = PATTERNP[idx][1];
 
-
+				// Apply transform
                 Vec3f pt = RKi * Vec3f(point->u + dx, point->v + dy, 1) + t * point->idepth_new;
+				// Calculate new position and depth
                 float u = pt[0] / pt[2];
                 float v = pt[1] / pt[2];
                 float Ku = fxl * u + cxl;
                 float Kv = fyl * v + cyl;
                 float new_idepth = point->idepth_new / pt[2];
 
-                if(!(Ku > 1 && Kv > 1 && Ku < wl - 2 && Kv < hl - 2 && new_idepth > 0))
+                if(!(Ku > 1 && Kv > 1 && Ku < wl - 2 && Kv < hl - 2 && new_idepth > 0)) // out of bounds
                 {
                     isGood = false;
                     break;
                 }
 
+				// Get intensitives of the pixel values in the new and first frames
                 Vec3f hitColor = getInterpolatedElement33(colorNew, Ku, Kv, wl);
-                //Vec3f hitColor = getInterpolatedElement33BiCub(colorNew, Ku, Kv, wl);
-
-                //float rlR = colorRef[point->u+dx + (point->v+dy) * wl][0];
                 float rlR = getInterpolatedElement31(colorRef, point->u + dx, point->v + dy, wl);
 
-                if(!std::isfinite(rlR) || !std::isfinite((float) hitColor[0]))
+                if(!std::isfinite(rlR) || !std::isfinite((float) hitColor[0])) // infinite residual
                 {
                     isGood = false;
                     break;
                 }
 
 
+				// Calculate residual
                 float residual = hitColor[0] - r2new_aff[0] * rlR - r2new_aff[1];
-                float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
-                energy += hw * residual * residual * (2 - hw);
 
+				// Huber loss
+                float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+				energy += hw * residual * residual * (2 - hw);
+
+
+				// Calculate Hessian
 
                 float dxdd = (t[0] - t[2] * u) / pt[2];
                 float dydd = (t[1] - t[2] * v) / pt[2];
 
-                if(hw < 1) hw = sqrtf(hw);
+                if(hw < 1) hw = sqrtf(hw); // huber weight
                 float dxInterp = hw * hitColor[1] * fxl;
                 float dyInterp = hw * hitColor[2] * fyl;
-                dp0[idx] = new_idepth * dxInterp;
-                dp1[idx] = new_idepth * dyInterp;
-                dp2[idx] = -new_idepth * (u * dxInterp + v * dyInterp);
-                dp3[idx] = -u * v * dxInterp - (1 + v * v) * dyInterp;
-                dp4[idx] = (1 + u * u) * dxInterp + u * v * dyInterp;
-                dp5[idx] = -v * dxInterp + u * dyInterp;
-                dp6[idx] = -hw * r2new_aff[0] * rlR;
-                dp7[idx] = -hw * 1;
+                dp0[idx] = new_idepth * dxInterp;						// inverse_depth * dx
+                dp1[idx] = new_idepth * dyInterp;						// inverse_depth * dy
+                dp2[idx] = -new_idepth * (u * dxInterp + v * dyInterp);	// inverse_depth* (u*dx + v*dy)
+                dp3[idx] = -u * v * dxInterp - (1 + v * v) * dyInterp;	// -dx * (u*v) - dy * (1 + v^2)
+                dp4[idx] = (1 + u * u) * dxInterp + u * v * dyInterp;	// dy * (u*v) + dx * (1 + u^2)
+                dp5[idx] = -v * dxInterp + u * dyInterp;				// dy * u - dx * v
+                dp6[idx] = -hw * r2new_aff[0] * rlR;					// a * (b0 - I)
+                dp7[idx] = -hw * 1;										// -1
                 dd[idx] = dxInterp * dxdd + dyInterp * dydd;
-                r[idx] = hw * residual;
+                r[idx] = hw * residual;									// residual energy				
 
                 float maxstep = 1.0f / Vec2f(dxdd * fxl, dydd * fyl).norm();
                 if(maxstep < point->maxstep) point->maxstep = maxstep;
@@ -494,6 +515,7 @@ Vec3f CoarseInitializer::calcResAndGS(
                 JbBuffer_new[i][9] += dd[idx] * dd[idx];
             }
 
+			 // use previous valid value of energy of point if outlier
             if(!isGood || energy > point->outlierTH * 20)
             {
                 E.updateSingle((float) (point->energy[0]));
@@ -503,12 +525,12 @@ Vec3f CoarseInitializer::calcResAndGS(
             }
 
 
-            // add into energy.
+            // Add into energy.
             E.updateSingle(energy);
             point->isGood_new = true;
             point->energy_new[0] = energy;
 
-            // update Hessian matrix.
+            // Update Hessian matrix.
             for(int j = 0; j + 3 < PATTERNNUM; j += 4){
                 acc9.updateSSE(
                         _mm_load_ps(((float*) (&dp0)) + j),
@@ -522,7 +544,6 @@ Vec3f CoarseInitializer::calcResAndGS(
                         _mm_load_ps(((float*) (&r)) + j));
 			}
 
-
             for(int j = ((PATTERNNUM >> 2) << 2); j < PATTERNNUM; j++){
                 acc9.updateSingle(
                         (float) dp0[j], (float) dp1[j], (float) dp2[j], (float) dp3[j],
@@ -533,6 +554,7 @@ Vec3f CoarseInitializer::calcResAndGS(
         }
     };
 
+	// Calculate Hessian (acc9) and Residual Energy (E)
     reduce.reduce(processPointsForReduce, 0, npts, 50);
 
     for(auto&& acc9 : acc9s)
@@ -545,7 +567,7 @@ Vec3f CoarseInitializer::calcResAndGS(
     }
 
 
-	// calculate alpha energy, and decide if we cap it.
+	// Calculate alpha energy (EAlpha), and decide if we cap it.
 	Accumulator11 EAlpha;
 	EAlpha.initialize();
 	for(int i=0;i<npts;i++)
@@ -571,7 +593,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 	//printf("AE = %f * %f + %f\n", alphaW, EAlpha.A, refToNew.translation().squaredNorm() * npts);
 
 
-	// compute alpha opt.
+	// compute alpha opt
 	float alphaOpt;
 	if(alphaEnergy > alphaK*npts)
 	{
@@ -583,7 +605,8 @@ Vec3f CoarseInitializer::calcResAndGS(
 		alphaOpt = alphaW;
 	}
 
-
+	
+	// Calculate the HessianSC
 	acc9SC.initialize();
 	for(int i=0;i<npts;i++)
 	{
@@ -610,7 +633,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 	}
 	acc9SC.finish();
 
-
+	// Extract the H and b matrices
     H_out.setZero();
     b_out.setZero();
     // This needs to sum up the acc9s from all the workers!
@@ -621,7 +644,6 @@ Vec3f CoarseInitializer::calcResAndGS(
     }
 	H_out_sc = acc9SC.H.topLeftCorner<8,8>();// / acc9.num;
 	b_out_sc = acc9SC.H.topRightCorner<8,1>();// / acc9.num;
-
 
 
 	H_out(0,0) += alphaOpt*npts;
@@ -641,6 +663,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 
     H_out(0, 0) += setting_weightZeroPriorDSOInitX;
     b_out(0) += setting_weightZeroPriorDSOInitX * refToNew.translation().x();
+
 
     double A = 0;
     int num = 0;
@@ -751,8 +774,6 @@ void CoarseInitializer::optReg(int lvl)
 /**
  * @brief Apply information from children point to parent points for given level
  * 
- * This function smooths out the differences between the values between pyramid levels
- * 
  * @param srcLvl 
  */
 void CoarseInitializer::propagateUp(int srcLvl)
@@ -766,14 +787,15 @@ void CoarseInitializer::propagateUp(int srcLvl)
 	Pnt* ptst = points[srcLvl+1];
 
 	// set to zero.
-	for(int i=0;i<nptst;i++)
+	for(int i=0;i<nptst;i++) // for all parent points
 	{
 		Pnt* parent = ptst+i;
 		parent->iR=0;
 		parent->iRSumNum=0;
 	}
 
-	for(int i=0;i<nptss;i++)
+	// Set parent point parameters with child values
+	for(int i=0;i<nptss;i++) // for all points
 	{
 		Pnt* point = ptss+i;
 		if(!point->isGood) continue;
@@ -783,7 +805,7 @@ void CoarseInitializer::propagateUp(int srcLvl)
 		parent->iRSumNum += point->lastHessian;
 	}
 
-	for(int i=0;i<nptst;i++)
+	for(int i=0;i<nptst;i++) // for all parent points
 	{
 		Pnt* parent = ptst+i;
 		if(parent->iRSumNum > 0)
@@ -996,17 +1018,24 @@ void CoarseInitializer::resetPoints(int lvl)
 		}
 	}
 }
+
+/**
+ * @brief Update point depths
+ * 
+ * @param lvl 
+ * @param lambda 
+ * @param inc 
+ */
 void CoarseInitializer::doStep(int lvl, float lambda, Vec8f inc)
 {
-
 	const float maxPixelStep = 0.25;
 	const float idMaxStep = 1e10;
 	Pnt* pts = points[lvl];
 	int npts = numPoints[lvl];
+
 	for(int i=0;i<npts;i++)
 	{
 		if(!pts[i].isGood) continue;
-
 
 		float b = JbBuffer[i][8] + JbBuffer[i].head<8>().dot(inc);
 		float step = - b * JbBuffer[i][9] / (1+lambda);
@@ -1021,15 +1050,21 @@ void CoarseInitializer::doStep(int lvl, float lambda, Vec8f inc)
 		float newIdepth = pts[i].idepth + step;
 		if(newIdepth < 1e-3 ) newIdepth = 1e-3;
 		if(newIdepth > 50) newIdepth = 50;
+
 		pts[i].idepth_new = newIdepth;
 	}
-
 }
 
+/**
+ * @brief Set the point parameters to the new values
+ * 
+ * @param lvl 
+ */
 void CoarseInitializer::applyStep(int lvl)
 {
 	Pnt* pts = points[lvl];
 	int npts = numPoints[lvl];
+
 	for(int i=0;i<npts;i++)
 	{
 		if(!pts[i].isGood)
@@ -1037,6 +1072,7 @@ void CoarseInitializer::applyStep(int lvl)
 			pts[i].idepth = pts[i].idepth_new = pts[i].iR;
 			continue;
 		}
+
 		pts[i].energy = pts[i].energy_new;
 		pts[i].isGood = pts[i].isGood_new;
 		pts[i].idepth = pts[i].idepth_new;
