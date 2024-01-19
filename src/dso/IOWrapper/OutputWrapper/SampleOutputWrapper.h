@@ -75,13 +75,13 @@ public:
 
 
 
-        virtual void publishKeyframes( std::vector<FrameHessian*> &frames, bool no_update_active, CalibHessian* HCalib) override
+        virtual void publishKeyframes( std::vector<FrameHessian*> &frames, bool final, CalibHessian* HCalib) override
         {
             for(FrameHessian* f : frames)
             {
                 printf("OUT: KF %d (%s) (id %d, tme %f): %d active, %d marginalized, %d immature points. CameraToWorld:\n",
                        f->frameID,
-                       no_update_active ? "final" : "non-final",
+                       final ? "final" : "non-final",
                        f->shell->incoming_id,
                        f->shell->timestamp,
                        (int)f->pointHessians.size(), (int)f->pointHessiansMarginalized.size(), (int)f->immaturePoints.size());
