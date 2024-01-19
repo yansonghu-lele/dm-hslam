@@ -231,6 +231,8 @@ void PangolinDSOViewer::run()
 				for(int id : active_frame_IDs)
 				{
 					if (id != -1){
+						if(keyframesByKFID.find(id) == keyframesByKFID.end()) continue;
+
 						KeyFrameDisplay* fh = keyframesByKFID[id];
 
 						if(this->settings_showKFCameras) {
