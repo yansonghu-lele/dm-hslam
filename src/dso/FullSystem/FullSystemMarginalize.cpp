@@ -198,12 +198,13 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
     delete frame->efFrame;
 	frame->efFrame = nullptr;
 
-    {
+  {
         std::vector<FrameHessian*> v;
         v.push_back(frame);
-        for(IOWrap::Output3DWrapper* ow : outputWrapper)
+        for(IOWrap::Output3DWrapper* ow : outputWrapper){
             ow->publishKeyframes(v, true, &Hcalib);
-    }
+		}
+    } 
 
 
 	frame->shell->marginalizedAt = frameHessians.back()->shell->id;

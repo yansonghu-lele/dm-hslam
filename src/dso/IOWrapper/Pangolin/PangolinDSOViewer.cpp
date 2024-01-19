@@ -73,6 +73,7 @@ PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread, std::sha
 	}
 
 	needReset = false;
+	active_frame_IDs.resize(setting_maxFrames+1, -1);
 
 
     if(startRunThread)
@@ -147,9 +148,10 @@ void PangolinDSOViewer::run()
 	pangolin::Var<bool> settings_showLiveVideo("ui.showVideo",true,true);
     pangolin::Var<bool> settings_showLiveResidual("ui.showResidual",false,true);
 
-	pangolin::Var<bool> settings_showFramesWindow("ui.showFramesWindow",false,true);
-	pangolin::Var<bool> settings_showFullTracking("ui.showFullTracking",false,true);
-	pangolin::Var<bool> settings_showCoarseTracking("ui.showCoarseTracking",false,true);
+	pangolin::Var<bool> settings_showFramesWindow("ui.BD-FramesWindow",false,true);
+	pangolin::Var<bool> settings_showFullTracking("ui.BD-FullTracking",false,true);
+	pangolin::Var<bool> settings_showCoarseTracking("ui.BD-CoarseTracking",false,true);
+	pangolin::Var<bool> settings_showImmatureTracking("ui.BD-ImmatureTracking",false,true);
 
 
 	pangolin::Var<int> settings_sparsity("ui.sparsity",1,1,20,false);
@@ -210,23 +212,39 @@ void PangolinDSOViewer::run()
 
 			int refreshed=0;
 
-			int frame_count = 0;
-			for (std::vector<KeyFrameDisplay*>::reverse_iterator i = keyframes.rbegin(); 
-        		i != keyframes.rend(); ++i ) {
-					if(frame_count>=setting_maxFrames && settings_showOnlyActive) break;
-					frame_count++;
-					KeyFrameDisplay* fh = *i;
+			if(!settings_showOnlyActive){
+				for (std::vector<KeyFrameDisplay*>::reverse_iterator i = keyframes.rbegin(); 
+					i != keyframes.rend(); ++i ) {
+						KeyFrameDisplay* fh = *i;
 
-					if(this->settings_showKFCameras) {
-						float blue[3] = {0.32,0.7,0.8};
-						fh->drawCam(1,blue,0.1 * sizeFactor);
+						if(this->settings_showKFCameras) {
+							float blue[3] = {0.32,0.7,0.8};
+							fh->drawCam(1,blue,0.1 * sizeFactor);
+						}
+
+						refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
+								this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
+						
+						if (settings_showDrawPC) fh->drawPC(1);
+				} 
+			} else {
+				for(int id : active_frame_IDs)
+				{
+					if (id != -1){
+						KeyFrameDisplay* fh = keyframesByKFID[id];
+
+						if(this->settings_showKFCameras) {
+							float blue[3] = {0.32,0.7,0.8};
+							fh->drawCam(1,blue,0.1 * sizeFactor);
+						}
+
+						refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
+								this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
+						
+						if (settings_showDrawPC) fh->drawPC(1);
 					}
-
-					refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
-							this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
-					
-					if (settings_showDrawPC) fh->drawPC(1);
-			} 
+				}
+			}
 
 			if(this->settings_showCurrentCamera) currentCam->drawCam(2,0,0.2 * sizeFactor);
 
@@ -334,6 +352,7 @@ void PangolinDSOViewer::run()
 		setting_render_renderWindowFrames = settings_showFramesWindow.Get();
 		setting_render_plotTrackingFull = settings_showFullTracking.Get();
 		setting_render_displayCoarseTrackingFull = settings_showCoarseTracking.Get();
+		setting_render_displayImmatureTracking = settings_showImmatureTracking.Get();
 
 
 	    this->settings_absVarTH = settings_absVarTH.Get();
@@ -557,6 +576,10 @@ void PangolinDSOViewer::publishKeyframes(
     if(disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(model3DMutex);
+
+	if (!final) std::fill(active_frame_IDs.begin(), active_frame_IDs.end(), -1);
+	int active_frame_count = 0;
+
 	for(FrameHessian* fh : frames)
 	{
 		if(keyframesByKFID.find(fh->frameID) == keyframesByKFID.end())
@@ -566,6 +589,11 @@ void PangolinDSOViewer::publishKeyframes(
 			keyframes.push_back(kfd);
 		}
 		keyframesByKFID[fh->frameID]->setFromKF(fh, HCalib);
+
+		if (!final){
+			active_frame_IDs[active_frame_count] = fh->frameID;
+			active_frame_count++;
+		}
     }
 }
 

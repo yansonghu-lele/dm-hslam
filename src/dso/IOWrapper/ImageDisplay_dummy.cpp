@@ -31,11 +31,11 @@ namespace dso
 
 namespace IOWrap
 {
-void displayImage(const char* windowName, const MinimalImageB* img, bool autoSize) {};
-void displayImage(const char* windowName, const MinimalImageB3* img, bool autoSize) {};
-void displayImage(const char* windowName, const MinimalImageF* img, bool autoSize) {};
-void displayImage(const char* windowName, const MinimalImageF3* img, bool autoSize) {};
-void displayImage(const char* windowName, const MinimalImageB16* img, bool autoSize) {};
+void displayImage(const char* windowName, const MinimalImageB* img, int autoSize) {};
+void displayImage(const char* windowName, const MinimalImageB3* img, int autoSize) {};
+void displayImage(const char* windowName, const MinimalImageF* img, int autoSize) {};
+void displayImage(const char* windowName, const MinimalImageF3* img, int autoSize) {};
+void displayImage(const char* windowName, const MinimalImageB16* img, int autoSize) {};
 
 
 void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*> images, int cc, int rc) {};

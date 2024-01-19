@@ -46,17 +46,17 @@ boost::mutex openCVdisplayMutex;
 
 
 
-void displayImage(const char* windowName, const cv::Mat& image, bool autoSize)
+void displayImage(const char* windowName, const cv::Mat& image, int autoSize)
 {
 	if(disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lock(openCVdisplayMutex);
-	if(!autoSize)
+	if(autoSize!=0)
 	{
 		if(openWindows.find(windowName) == openWindows.end())
 		{
 			cv::namedWindow(windowName, cv::WINDOW_NORMAL);
-			cv::resizeWindow(windowName, image.cols, image.rows);
+			cv::resizeWindow(windowName, image.cols*autoSize, image.rows*autoSize);
 			openWindows.insert(windowName);
 		}
 	}
@@ -111,28 +111,28 @@ void displayImageStitch(const char* windowName, const std::vector<cv::Mat*> imag
 		cv::Mat roi = stitch(cv::Rect(c*w, r*h, w,h));
 		images[i]->copyTo(roi);
 	}
-	displayImage(windowName, stitch, false);
+	displayImage(windowName, stitch, 1);
 }
 
 
 
-void displayImage(const char* windowName, const MinimalImageB* img, bool autoSize)
+void displayImage(const char* windowName, const MinimalImageB* img, int autoSize)
 {
 	displayImage(windowName, cv::Mat(img->h, img->w, CV_8U, img->data), autoSize);
 }
-void displayImage(const char* windowName, const MinimalImageB3* img, bool autoSize)
+void displayImage(const char* windowName, const MinimalImageB3* img, int autoSize)
 {
 	displayImage(windowName, cv::Mat(img->h, img->w, CV_8UC3, img->data), autoSize);
 }
-void displayImage(const char* windowName, const MinimalImageF* img, bool autoSize)
+void displayImage(const char* windowName, const MinimalImageF* img, int autoSize)
 {
 	displayImage(windowName, cv::Mat(img->h, img->w, CV_32F, img->data)*(1/254.0f), autoSize);
 }
-void displayImage(const char* windowName, const MinimalImageF3* img, bool autoSize)
+void displayImage(const char* windowName, const MinimalImageF3* img, int autoSize)
 {
 	displayImage(windowName, cv::Mat(img->h, img->w, CV_32FC3, img->data)*(1/254.0f), autoSize);
 }
-void displayImage(const char* windowName, const MinimalImageB16* img, bool autoSize)
+void displayImage(const char* windowName, const MinimalImageB16* img, int autoSize)
 {
 	displayImage(windowName, cv::Mat(img->h, img->w, CV_16U, img->data), autoSize);
 }

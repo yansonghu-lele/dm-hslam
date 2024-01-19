@@ -220,6 +220,7 @@ bool goStepByStep = false;
 
 
 bool setting_render_displayCoarseTrackingFull=false;
+bool setting_render_displayImmatureTracking=false;
 bool setting_render_renderWindowFrames=true;
 bool setting_render_plotTrackingFull = false;
 

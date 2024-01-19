@@ -587,7 +587,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 
 	if(debugPlot)
 	{
-		IOWrap::displayImage("RES", resImage, false);
+		IOWrap::displayImage("RES", resImage, 8);
 		IOWrap::waitKey(0);
 		delete resImage;
 	}
@@ -982,7 +982,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 					//mf.at(idx) = makeJet3B(id);
 				}
 			}
-		//IOWrap::displayImage("coarseDepth LVL0", &mf, false);
+		//IOWrap::displayImage("coarseDepth LVL0", &mf, 0);
 
 		for(IOWrap::Output3DWrapper* ow : wraps)
 			ow->pushDepthImage(&mf);

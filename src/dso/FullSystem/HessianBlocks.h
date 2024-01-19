@@ -240,7 +240,10 @@ struct FrameHessian
 
 		if(debugImage != 0) delete debugImage;
 	};
-	inline FrameHessian()
+
+	inline FrameHessian() :
+		ab_exposure(0.0),
+		idx(0)
 	{
 		instanceCounter++;
 		flaggedForMarginalization=false;
@@ -504,8 +507,7 @@ struct PointHessian
 		for(PointFrameResidual* r : residuals)
 		{
 			if(r->state_state != ResState::IN) continue;
-			for(FrameHessian* k : toMarg)
-				if(r->target == k) visInToMarg++;
+			for(const FrameHessian* k : toMarg) if(r->target == k) visInToMarg++;
 		}
 		if((int)residuals.size() >= setting_minGoodActiveResForMarg &&
 				numGoodResiduals > setting_minGoodResForMarg+10 &&

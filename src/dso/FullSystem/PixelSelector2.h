@@ -36,7 +36,6 @@
 #define NUM_BINS 100
 
 #define DEBUG_MESSAGE_PIXELSELECTOR2 0
-#define DEBUG_PLOT_PIXELSELECTOR2 0
 
 
 
@@ -60,7 +59,7 @@ public:
 
 	int currentPotential;
 
-	
+	bool debugPlot;
 private:
 	Eigen::Vector3i select(const FrameHessian* const fh,
 			float* map_out, int pot, float thFactor=1);

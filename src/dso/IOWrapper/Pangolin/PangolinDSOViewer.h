@@ -128,7 +128,7 @@ private:
 	bool shouldQuitVar{false};
 	int w,h;
 
-
+	std::vector<int> active_frame_IDs;
 
 	// images rendering
 	boost::mutex openImagesMutex;

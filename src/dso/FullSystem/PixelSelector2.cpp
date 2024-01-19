@@ -76,6 +76,8 @@ PixelSelector::PixelSelector(int w, int h)
 
 	// Potential is the minimum block size for the selector
 	currentPotential=3;
+
+	debugPlot = false;
 }
 
 /**
@@ -214,6 +216,8 @@ int PixelSelector::makeMaps(
 		const FrameHessian* const fh,
 		float* map_out, float density, int recursionsLeft, float thFactor)
 {
+	debugPlot = setting_render_displayImmatureTracking;
+
 	float numHave = 0;
 	float numWant = density;
 	float quotia;
@@ -305,33 +309,33 @@ int PixelSelector::makeMaps(
 
 	currentPotential = idealPotential;
 
-#if DEBUG_PLOT_PIXELSELECTOR2
 	int w = wG[0];
 	int h = hG[0];
 
-	MinimalImageB3 img(w,h);
+	if (debugPlot){
+		MinimalImageB3 img(w,h);
 
-	for(int i=0;i<w*h;i++)
-	{
-		float c = fh->dI[i][0]*0.7;
-		if(c>255) c=255;
-		img.at(i) = Vec3b(c,c,c);
-	}
-	IOWrap::displayImage("Selector Image", &img);
-
-	for(int y=0; y<h;y++)
-		for(int x=0;x<w;x++)
+		for(int i=0;i<w*h;i++)
 		{
-			int i=x+y*w;
-			if(map_out[i] == 1)
-				img.setPixelCirc(x,y,Vec3b(0,255,0));
-			else if(map_out[i] == 2)
-				img.setPixelCirc(x,y,Vec3b(255,0,0));
-			else if(map_out[i] == 4)
-				img.setPixelCirc(x,y,Vec3b(0,0,255));
+			float c = fh->dI[i][0]*0.7;
+			if(c>255) c=255;
+			img.at(i) = Vec3b(c,c,c);
 		}
-	IOWrap::displayImage("Selector Pixels", &img);
-#endif
+		IOWrap::displayImage("Selector Image", &img);
+
+		for(int y=0; y<h;y++)
+			for(int x=0;x<w;x++)
+			{
+				int i=x+y*w;
+				if(map_out[i] == 1)
+					img.setPixelCirc(x,y,Vec3b(0,255,0));
+				else if(map_out[i] == 2)
+					img.setPixelCirc(x,y,Vec3b(255,0,0));
+				else if(map_out[i] == 4)
+					img.setPixelCirc(x,y,Vec3b(0,0,255));
+			}
+		IOWrap::displayImage("Selector Pixels", &img);
+	}
 
 	return numHaveSub;
 }

@@ -353,7 +353,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 			iRImg.setPixel9(point->u+0.5f,point->v+0.5f,makeRainbow3B(point->iR*fac));
 	}
 
-	//IOWrap::displayImage("idepth-R", &iRImg, false);
+	//IOWrap::displayImage("idepth-R", &iRImg, 1);
     for(IOWrap::Output3DWrapper* ow : wraps)
         ow->pushDepthImage(&iRImg);
 }

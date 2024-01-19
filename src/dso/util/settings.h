@@ -175,6 +175,7 @@ extern float setting_trace_minImprovementFactor;
 
 // Debugging Plot Settings
 extern bool setting_render_displayCoarseTrackingFull;
+extern bool setting_render_displayImmatureTracking;
 extern bool setting_render_renderWindowFrames;
 extern bool setting_render_plotTrackingFull;
 

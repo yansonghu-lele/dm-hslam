@@ -49,6 +49,7 @@
 
 namespace dso
 {
+
 void FullSystem::linearizeAll_Reductor(bool fixLinearization, std::vector<PointFrameResidual*>* toRemove, int min, int max, Vec10* stats, int tid)
 {
 	for(int k=min;k<max;k++)
@@ -90,6 +91,7 @@ void FullSystem::applyRes_Reductor(bool copyJacobians, int min, int max, Vec10* 
 	for(int k=min;k<max;k++)
 		activeResiduals[k]->applyRes(true);
 }
+
 void FullSystem::setNewFrameEnergyTH()
 {
 
@@ -229,7 +231,7 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 	pstepfac.segment<4>(6).setConstant(stepfacA);
 
 
-	float sumA=0, sumB=0, sumT=0, sumR=0, sumID=0, numID=0;
+	float sumA=0, sumB=0, sumT=0, sumR=0, numID=0;
 
 	float sumNID=0;
 
@@ -249,13 +251,12 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 
 			for(PointHessian* ph : fh->pointHessians)
 			{
-				float step = ph->step+0.5f*(ph->step_backup);
-				ph->setIdepth(ph->idepth_backup + step);
-				sumID += step*step;
+				float step_ph = ph->step+0.5f*(ph->step_backup);
+				ph->setIdepth(ph->idepth_backup + step_ph);
 				sumNID += fabsf(ph->idepth_backup);
 				numID++;
 
-                ph->setIdepthZero(ph->idepth_backup + step);
+                ph->setIdepthZero(ph->idepth_backup + step_ph);
 			}
 		}
 	}
@@ -273,7 +274,6 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 			for(PointHessian* ph : fh->pointHessians)
 			{
 				ph->setIdepth(ph->idepth_backup + stepfacD*ph->step);
-				sumID += ph->step*ph->step;
 				sumNID += fabsf(ph->idepth_backup);
 				numID++;
 
@@ -286,7 +286,6 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 	sumB /= frameHessians.size();
 	sumR /= frameHessians.size();
 	sumT /= frameHessians.size();
-	sumID /= numID;
 	sumNID /= numID;
 
 
@@ -414,14 +413,10 @@ void FullSystem::printOptRes(const Vec3 &res, double resL, double resM, double r
 float FullSystem::optimize(int mnumOptIts)
 {
     dmvio::TimeMeasurement timeMeasurement("FullSystemOptimize");
+
 	if(frameHessians.size() < 2) return 0;
 	if(frameHessians.size() < 3) mnumOptIts = 20;
 	if(frameHessians.size() < 4) mnumOptIts = 15;
-
-
-
-
-
 
 	// get statistics and active residuals.
 
@@ -447,20 +442,15 @@ float FullSystem::optimize(int mnumOptIts)
     if(!setting_debugout_runquiet)
         printf("OPTIMIZE %d pts, %d active res, %d lin res!\n",ef->nPoints,(int)activeResiduals.size(), numLRes);
 
-
 	Vec3 lastEnergy = linearizeAll(false);
 	double lastEnergyL = calcLEnergy();
 	double lastEnergyM = calcMEnergy(false);
-
-
-
 
 
 	if(multiThreading)
 		treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0, activeResiduals.size(), 50);
 	else
 		applyRes_Reductor(true,0,activeResiduals.size(),0,0);
-
 
     if(!setting_debugout_runquiet)
     {
@@ -481,7 +471,7 @@ float FullSystem::optimize(int mnumOptIts)
 	int numIterations = 0;
 	for(int iteration=0;iteration<mnumOptIts;iteration++)
 	{
-	    dmvio::TimeMeasurement timeMeasurement("baIteration");
+	    dmvio::TimeMeasurement timeMeasurement_("baIteration");
 		// solve!
 		backupState(iteration!=0);
 		//solveSystemNew(0);
