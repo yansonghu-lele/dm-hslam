@@ -118,8 +118,17 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 	numSparsePoints=0;
 	for(ImmaturePoint* p : fh->immaturePoints)
 	{
-		for(int i=0;i<PATTERNNUM;i++)
+		for(int i=0;i<PATTERNNUM;i++){
 			pc[numSparsePoints].color[i] = p->color[i];
+			if(p->colourValid){
+				pc[numSparsePoints].colourValid = true;
+				pc[numSparsePoints].color_r[i] = p->colour3[i][0];
+				pc[numSparsePoints].color_g[i] = p->colour3[i][1];
+				pc[numSparsePoints].color_b[i] = p->colour3[i][2];
+			} else {
+				pc[numSparsePoints].colourValid = false;
+			}
+		}
 
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
@@ -134,8 +143,18 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessians)
 	{
-		for(int i=0;i<PATTERNNUM;i++)
+		for(int i=0;i<PATTERNNUM;i++){
 			pc[numSparsePoints].color[i] = p->color[i];
+			if(p->colourValid){
+				pc[numSparsePoints].colourValid = true;
+				pc[numSparsePoints].color_r[i] = p->colour3[i][0];
+				pc[numSparsePoints].color_g[i] = p->colour3[i][1];
+				pc[numSparsePoints].color_b[i] = p->colour3[i][2];
+			} else {
+				pc[numSparsePoints].colourValid = false;
+			}
+		}
+
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idepth = p->idepth_scaled;
@@ -149,8 +168,18 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansMarginalized)
 	{
-		for(int i=0;i<PATTERNNUM;i++)
+		for(int i=0;i<PATTERNNUM;i++){
 			pc[numSparsePoints].color[i] = p->color[i];
+			if(p->colourValid){
+				pc[numSparsePoints].colourValid = true;
+				pc[numSparsePoints].color_r[i] = p->colour3[i][0];
+				pc[numSparsePoints].color_g[i] = p->colour3[i][1];
+				pc[numSparsePoints].color_b[i] = p->colour3[i][2];
+			} else {
+				pc[numSparsePoints].colourValid = false;
+			}
+		}
+
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idepth = p->idepth_scaled;
@@ -164,8 +193,18 @@ void KeyFrameDisplay::setFromKF(FrameHessian* fh, CalibHessian* HCalib)
 
 	for(PointHessian* p : fh->pointHessiansOut)
 	{
-		for(int i=0;i<PATTERNNUM;i++)
+		for(int i=0;i<PATTERNNUM;i++){
 			pc[numSparsePoints].color[i] = p->color[i];
+			if(p->colourValid){
+				pc[numSparsePoints].colourValid = true;
+				pc[numSparsePoints].color_r[i] = p->colour3[i][0];
+				pc[numSparsePoints].color_g[i] = p->colour3[i][1];
+				pc[numSparsePoints].color_b[i] = p->colour3[i][2];
+			} else {
+				pc[numSparsePoints].colourValid = false;
+			}
+		}
+
 		pc[numSparsePoints].u = p->u;
 		pc[numSparsePoints].v = p->v;
 		pc[numSparsePoints].idepth = p->idepth_scaled;
@@ -245,6 +284,7 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 
 		// All imature points have a placeholder relObsBaseline of 0, so they are excluded from this check
 		if((originalInputSparse[i].relObsBaseline < my_minRelBS) && (originalInputSparse[i].status != 0)) continue;
+		bool useColour = originalInputSparse[i].colourValid;
 
 		for(int pnt=0;pnt<PATTERNNUM;pnt++)
 		{
@@ -312,9 +352,15 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			}
 			else
 			{
-				tmpColorBuffer[vertexBufferNumPoints][0] = color_intensity;
-				tmpColorBuffer[vertexBufferNumPoints][1] = color_intensity;
-				tmpColorBuffer[vertexBufferNumPoints][2] = color_intensity;
+				if(useColour){
+					tmpColorBuffer[vertexBufferNumPoints][0] = originalInputSparse[i].color_b[pnt];
+					tmpColorBuffer[vertexBufferNumPoints][1] = originalInputSparse[i].color_g[pnt];
+					tmpColorBuffer[vertexBufferNumPoints][2] = originalInputSparse[i].color_r[pnt];
+				} else {
+					tmpColorBuffer[vertexBufferNumPoints][0] = color_intensity;
+					tmpColorBuffer[vertexBufferNumPoints][1] = color_intensity;
+					tmpColorBuffer[vertexBufferNumPoints][2] = color_intensity;
+				}
 			}
 			vertexBufferNumPoints++;
 

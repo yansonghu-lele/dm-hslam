@@ -356,6 +356,7 @@ int main(int argc, char** argv)
 #endif
 
     bool use16Bit = false;
+    bool useColour = false;
 
     auto settingsUtil = std::make_shared<dmvio::SettingsUtil>();
 
@@ -374,6 +375,7 @@ int main(int argc, char** argv)
     settingsUtil->registerArg("sampleoutput", useSampleOutput);
     settingsUtil->registerArg("reverse", reverse);
     settingsUtil->registerArg("use16Bit", use16Bit);
+    settingsUtil->registerArg("useColour", useColour);
     settingsUtil->registerArg("maxPreloadImages", maxPreloadImages);
 
     // This call will parse all commandline arguments and potentially also read a settings yaml file if passed.
@@ -396,7 +398,7 @@ int main(int argc, char** argv)
     // hook crtl+C.
     boost::thread exThread = boost::thread(exitThread);
 
-    ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit);
+    ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit, useColour);
     reader->loadIMUData(imuFile);
     reader->setGlobalCalibration();
 

@@ -965,6 +965,9 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
     // =========================== Place image and image settings into frame =========================
 	fh->ab_exposure = image->exposure_time;
 	fh->makeImages(image->image, &Hcalib); // Image derivative and gradient is also calculated
+	if(image->useColour){
+		fh->makeColourImages(image->r_image, image->g_image, image->b_image);
+	}
 
     measureInit.end();
 
