@@ -55,6 +55,8 @@
 #include "IOWrapper/Pangolin/PangolinDSOViewer.h"
 #include "IOWrapper/OutputWrapper/SampleOutputWrapper.h"
 
+
+
 std::string gtFile = "";
 std::string source = "";
 std::string imuFile = "";
@@ -67,10 +69,11 @@ bool useSampleOutput = false;
 
 using namespace dso;
 
-
 dmvio::MainSettings mainSettings;
 dmvio::IMUCalibration imuCalibration;
 dmvio::IMUSettings imuSettings;
+
+
 
 void my_exit_handler(int s)
 {
@@ -91,9 +94,6 @@ void exitThread()
 
 
 
-
-
-
 void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 {
 
@@ -102,7 +102,6 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         printf("ERROR: dont't have photometric calibation. Need to use commandline options mode=1 or mode=2 ");
         exit(1);
     }
-
 
     int lstart = start;
     int lend = end;
@@ -226,12 +225,14 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             }
         }
 
+
         dmvio::GTData data;
         bool found = false;
         if(gtDataThere)
         {
             data = reader->getGTData(i, found);
         }
+
 
         std::unique_ptr<dmvio::IMUData> imuData;
         if(setting_useIMU)
@@ -257,8 +258,8 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             skippedIMUData.insert(skippedIMUData.end(), imuData->begin(), imuData->end());
         }
 
-
         delete img;
+
 
         if(fullSystem->initFailed || setting_fullResetRequested)
         {
@@ -346,6 +347,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 
     printf("EXIT NOW!\n");
 }
+
 
 int main(int argc, char** argv)
 {

@@ -20,6 +20,8 @@
 * along with DM-VIO. If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+
 #ifndef DMVIO_SETTINGSUTIL_H
 #define DMVIO_SETTINGSUTIL_H
 
@@ -28,6 +30,8 @@
 #include <functional>
 #include <assert.h>
 #include <pangolin/var/var.h>
+
+
 
 // This file contains utils for settings.
 // Most settings should be in (potentially nested) settings classes which.

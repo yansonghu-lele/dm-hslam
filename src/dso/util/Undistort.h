@@ -55,7 +55,7 @@ public:
 
 
 private:
-    float G[256*256];
+    float G[256*256]; // Large enough to handle 16 bit images
     int GDepth;
 	float* vignetteMap;
 	float* vignetteMapInv;

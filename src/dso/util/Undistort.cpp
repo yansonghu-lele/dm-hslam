@@ -243,6 +243,8 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 	{
 		for(int i=0; i<wh;i++)
 		{
+			// Multiply to factor and set to 0-255
+			// This should divide by 256 if the image is 16 bit
 			data[i] = factor*image_in[i];
 		}
 		if (setMeta){
@@ -255,6 +257,7 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 		// Gamma Correction
 		for(int i=0; i<wh;i++)
 		{
+			// Note that this also sets the image to 0-255
 			data[i] = G[image_in[i]];
 		}
 
