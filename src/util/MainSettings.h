@@ -37,9 +37,6 @@ public:
     // Parse all commandline arguments. Unknown arguments will be forwarded to settingsUtil.
     void parseArguments(int argc, char** argv, SettingsUtil& settingsUtil);
 
-    // Parse a single argument. Unknown arguments will be forwarded to settingsUtil.
-    void parseArgument(char* arg, dmvio::SettingsUtil& settingsUtil);
-
     // Register args for these settings and for global DSO settings.
     void registerArgs(dmvio::SettingsUtil& set);
 
@@ -47,10 +44,12 @@ public:
     std::string gammaCalib = "";
     std::string calib = "";
     std::string imuCalibFile = "";
+    std::string settingsFile = "";
 
     // only relevant for datasets.
     float playbackSpeed = 0;    // 0 for linearize (play as fast as possible, while sequentializing tracking & mapping). otherwise, factor on timestamps.
     bool preload = false;
+    bool print_settings = false;
 
     // 0 means photometric calibration (exposure times, vignette and response calibration) is available, 1 means no
     // photometric calibration there.

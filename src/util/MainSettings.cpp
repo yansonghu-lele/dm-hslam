@@ -26,94 +26,34 @@
 * along with DM-VIO. If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+
 #include "MainSettings.h"
 #include "dso/util/settings.h"
+
+
 
 using namespace dmvio;
 using namespace dso;
 
 void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsUtil)
 {
-    for(int i = 1; i < argc; i++)
-        parseArgument(argv[i], settingsUtil);
-}
+    cxxopts::ParseResult result = settingsUtil.cmd_options->parse(argc, argv);
 
-
-void MainSettings::parseArgument(char* arg, SettingsUtil& settingsUtil)
-{
-    int option;
-    float foption;
-    char buf[1000];
-
-    // --------------------------------------------------
-    // These are mostly the original DSO commandline arguments which also work for DM-VIO.
-    // The DM-VIO specific settings can also be set with commandline arguments (and also with the yaml settings file)
-    // and have been registered in the main function. See IMUSettings and its members for details.
-    // --------------------------------------------------
-    if(1 == sscanf(arg, "quiet=%d", &option))
+    if (result.count("help"))
     {
-        if(option == 1)
-        {
-            setting_debugout_runquiet = true;
-            printf("QUIET MODE, I'll shut up!\n");
-        }
-        return;
+      std::cout << settingsUtil.cmd_options->help() << std::endl;
+      exit(0);
     }
 
-    if(1 == sscanf(arg, "preset=%d", &option))
-    {
-        settingsDefault(option);
-        return;
-    }
-
-
-    if(1 == sscanf(arg, "nolog=%d", &option))
-    {
-        if(option == 1)
-        {
-            setting_logStuff = false;
-            printf("DISABLE LOGGING!\n");
-        }
-        return;
-    }
-    if(1 == sscanf(arg, "nogui=%d", &option))
-    {
-        if(option == 1)
-        {
-            disableAllDisplay = true;
-            printf("NO GUI!\n");
-        }
-        return;
-    }
-    if(1 == sscanf(arg, "nomt=%d", &option))
-    {
-        if(option == 1)
-        {
-            multiThreading = false;
-            printf("NO MultiThreading!\n");
-        }
-        return;
-    }
-
-    if(1 == sscanf(arg, "useimu=%d", &option))
-    {
-        if(option == 0)
-        {
-            printf("Disabling IMU integration!\n");
-            setting_useIMU = false;
-        }else if(option == 1)
-        {
-            printf("Enabling IMU integration!\n");
-            setting_useIMU = true;
-        }
-        return;
-    }
-
-    if(1 == sscanf(arg, "save=%d", &option))
-    {
-        if(option == 1)
-        {
-            debugSaveImages = true;
+    for(const cxxopts::KeyValue &kv: result)
+	{
+        // Additional handling for some variables
+        if(kv.key()=="quiet" && kv.value()=="1") printf("QUIET MODE!\n");
+        if(kv.key()=="nolog" && kv.value()=="1") printf("DISABLE LOGGING!\n");
+        if(kv.key()=="nogui" && kv.value()=="1") printf("NO GUI!\n");
+        if(kv.key()=="nomt" && kv.value()=="1") printf("NO MULTITHREADING!\n");
+        if(kv.key()=="save" && kv.value()=="1"){
             if(42 == system("rm -rf images_out"))
                 printf("system call returned 42 - what are the odds?. This is only here to shut up the compiler.\n");
             if(42 == system("mkdir images_out"))
@@ -124,72 +64,69 @@ void MainSettings::parseArgument(char* arg, SettingsUtil& settingsUtil)
                 printf("system call returned 42 - what are the odds?. This is only here to shut up the compiler.\n");
             printf("SAVE IMAGES!\n");
         }
-        return;
-    }
 
-    if(1 == sscanf(arg, "mode=%d", &option))
+        // Process parameters
+        if(kv.value() != "")
+            settingsUtil.tryReadFromCommandLine(kv.key(), kv.value());
+	}
+
+    //Set photometric mode
+    if(mode == 0)
     {
-
-        mode = option;
-        if(option == 0)
-        {
-            printf("PHOTOMETRIC MODE WITH CALIBRATION!\n");
-        }
-        if(option == 1)
-        {
-            printf("PHOTOMETRIC MODE WITHOUT CALIBRATION!\n");
-            setting_photometricCalibration = 0;
-            setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
-            setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
-        }
-        if(option == 2)
-        {
-            printf("PHOTOMETRIC MODE WITH PERFECT IMAGES!\n");
-            setting_photometricCalibration = 0;
-            setting_affineOptModeA = -1; //-1: fix. >=0: optimize (with prior, if > 0).
-            setting_affineOptModeB = -1; //-1: fix. >=0: optimize (with prior, if > 0).
-            setting_minGradHistAdd = 0.005;
-        }
-        if(option == 3)
-        {
-            // This mode is useful because mode 0 assumes that exposure is available (as it adds a strong prior to
-            // the affine brightness change between images), and mode 1 does not use vignette at all.
-            // This mode uses vignette (and response), but still fully optimizes brightness changes, hence it is
-            // appropriate for sensors without exposure time but with a calibrated vignette.
-            printf("PHOTOMETRIC MODE WITH CALIBRATION, BUT NO OR INACCURATE EXPOSURE!\n");
-            setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
-            setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
-        }
-        return;
+        printf("PHOTOMETRIC MODE WITH CALIBRATION!\n");
     }
-
-    if(1 == sscanf(arg, "settingsFile=%s", buf))
+    if(mode == 1)
     {
-        YAML::Node settings = YAML::LoadFile(buf);
-        settingsUtil.tryReadFromYaml(settings);
-        printf("Loading settings from yaml file: %s!\n", buf);
-        return;
+        printf("PHOTOMETRIC MODE WITHOUT CALIBRATION!\n");
+        setting_photometricCalibration = 0;
+        setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
+        setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
     }
-
-    if(settingsUtil.tryReadFromCommandLine(arg))
+    if(mode == 2)
     {
-        return;
+        printf("PHOTOMETRIC MODE WITH PERFECT IMAGES!\n");
+        setting_photometricCalibration = 0;
+        setting_affineOptModeA = -1; //-1: fix. >=0: optimize (with prior, if > 0).
+        setting_affineOptModeB = -1; //-1: fix. >=0: optimize (with prior, if > 0).
+        setting_minGradHistAdd = 0.005;
+    }
+    if(mode == 3)
+    {
+        // This mode is useful because mode 0 assumes that exposure is available (as it adds a strong prior to
+        // the affine brightness change between images), and mode 1 does not use vignette at all.
+        // This mode uses vignette (and response), but still fully optimizes brightness changes, hence it is
+        // appropriate for sensors without exposure time but with a calibrated vignette.
+        printf("PHOTOMETRIC MODE WITH CALIBRATION, BUT NO OR INACCURATE EXPOSURE!\n");
+        setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
+        setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
     }
 
-    printf("could not parse argument \"%s\"!!!!\n", arg);
-    assert(0);
+    if(settingsFile!=""){
+        settingsUtil.tryReadFromYaml(settingsFile);
+    }
+
+    if(result.count("print")) print_settings = true;
 }
+
 
 void MainSettings::registerArgs(SettingsUtil& set)
 {
-    set.registerArg("vignette", vignette);
-    set.registerArg("gamma", gammaCalib);
-    set.registerArg("calib", calib);
-    set.registerArg("imuCalib", imuCalibFile);
-    set.registerArg("speed", playbackSpeed);
+    // The DM-VIO settings can also be set with commandline arguments (and also with the yaml settings file)
+    set.registerArg("vignette", vignette, "V", "Photometric calibration vignette file path", "");
+    set.registerArg("gamma", gammaCalib, "G", "Photometric calibration gamma file path", "");
+    set.registerArg("calib", calib, "C", "Camera calibration file path", "");
+    set.registerArg("imuCalib", imuCalibFile, "I", "IMU calibration file path", "");
+    set.registerArg("speed", playbackSpeed, "S", "Playback speed", std::to_string(playbackSpeed));
     set.registerArg("preload", preload);
 
-    // We don't register preset and mode as they will be handled in parseArgument.
+    // These are mostly the original DSO commandline arguments which also work for DM-VIO
+    set.registerArg("quiet", setting_debugout_runquiet, "q", "Turn console text output off", setting_debugout_runquiet ? "1" : "0");
+    set.registerArg("nolog", setting_logStuff, "n", "Turn logging off", setting_logStuff ? "1" : "0");
+    set.registerArg("nogui", disableAllDisplay, "g", "Turn gui output off", disableAllDisplay ? "1" : "0");
+    set.registerArg("useimu", setting_useIMU, "u", "Turn IMU on or off", setting_useIMU ? "1" : "0");
+    set.registerArg("save", debugSaveImages, "a", "Save data", debugSaveImages ? "1" : "0");
+    set.registerArg("mode", mode, "m", "Photometric mode (1=full, 2=no calibration, 3=Synthetic, 4=none)", "0");
+    set.registerArg("settingsFile", settingsFile, "F", "Settings file", "");
 
     // Register global settings.
     set.registerArg("setting_minOptIterations", setting_minOptIterations);
@@ -200,59 +137,9 @@ void MainSettings::registerArgs(SettingsUtil& set)
     set.registerArg("setting_weightZeroPriorDSOInitX", setting_weightZeroPriorDSOInitX);
     set.registerArg("setting_forceNoKFTranslationThresh", setting_forceNoKFTranslationThresh);
     set.registerArg("setting_minFramesBetweenKeyframes", setting_minFramesBetweenKeyframes);
+    set.registerArg("setting_desiredImmatureDensity", setting_desiredImmatureDensity);
+    set.registerArg("setting_desiredPointDensity", setting_desiredPointDensity);
+    set.registerArg("setting_minFrames", setting_minFrames);
+    set.registerArg("setting_maxFrames", setting_maxFrames);
 
 }
-
-void dmvio::MainSettings::settingsDefault(int preset)
-{
-    printf("\n=============== PRESET Settings: ===============\n");
-    if(preset == 0 || preset == 1)
-    {
-        printf("DEFAULT settings:\n"
-               "- %s real-time enforcing\n"
-               "- 2000 active points\n"
-               "- 5-7 active frames\n"
-               "- 1-6 LM iteration each KF\n"
-               "- original image resolution\n", preset == 0 ? "no " : "1x");
-
-        playbackSpeed = (preset == 0 ? 0 : 1.0);
-        preload = preset == 1;
-        setting_desiredImmatureDensity = 1500;
-        setting_desiredPointDensity = 1000;
-        setting_minFrames = 5;
-        setting_maxFrames = 7;
-        setting_maxOptIterations = 6;
-        setting_minOptIterations = 1;
-
-        setting_logStuff = false;
-    }
-
-    if(preset == 2 || preset == 3)
-    {
-        // Note: These presets were not tested with DM-VIO yet, you will probably need to adjust benchmarkSetting_width
-        // and benchmarkSetting_height at least.
-        printf("FAST settings:\n"
-               "- %s real-time enforcing\n"
-               "- 800 active points\n"
-               "- 4-6 active frames\n"
-               "- 1-4 LM iteration each KF\n"
-               "- 424 x 320 image resolution\n", preset == 0 ? "no " : "5x");
-
-        playbackSpeed = (preset == 2 ? 0 : 5);
-        preload = preset == 3;
-        setting_desiredImmatureDensity = 600;
-        setting_desiredPointDensity = 800;
-        setting_minFrames = 4;
-        setting_maxFrames = 6;
-        setting_maxOptIterations = 4;
-        setting_minOptIterations = 1;
-
-        benchmarkSetting_width = 424;
-        benchmarkSetting_height = 320;
-
-        setting_logStuff = false;
-    }
-
-    printf("==============================================\n");
-}
-

@@ -1,0 +1,6 @@
+setting_desiredImmatureDensity: 1500
+setting_desiredPointDensity: 1000
+setting_minFrames: 5
+setting_maxFrames: 7
+setting_maxOptIterations: 6
+setting_minOptIterations: 1

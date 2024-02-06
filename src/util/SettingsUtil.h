@@ -30,6 +30,7 @@
 #include <functional>
 #include <assert.h>
 #include <pangolin/var/var.h>
+#include <cxxopts.hpp>
 
 
 
@@ -40,6 +41,7 @@
 // Can also create settings which can be modified in the Pangolin GUI.
 namespace dmvio
 {
+
 template<typename T> void defaultCommandLineHandler(void* pointer, std::string arg)
 {
     std::stringstream stream(arg);
@@ -115,12 +117,12 @@ class SettingsUtil
 public:
     // Overwrite settings with the ones saved in the yaml file.
     // Note that for this we don't check that every element in the yaml file must be read, so typos are not checked.
-    void tryReadFromYaml(const YAML::Node& node);
+    void tryReadFromYaml(const std::string& settingsFile);
 
     // Set a parameter from a (single) commandline argument.
     // Returns true if the setting existed and was set.
     // Settings set from commandline have preference over ones set from yaml.
-    bool tryReadFromCommandLine(const std::string& arg);
+    bool tryReadFromCommandLine(const std::string& key, const std::string& value);
 
     // Register argument with the given name.
     template<typename T>
@@ -134,6 +136,15 @@ public:
         parameters.emplace(name,
                            Parameter(static_cast<void*>(&arg), defaultCommandLineHandler<T>, defaultYAMLHandler<T>,
                                      defaultPrintHandler<T>));
+    }
+
+    // The following method adds a command line prompt
+    template<typename T> void registerArg(std::string name, T& arg, std::string sn, std::string description, std::string default_val)
+    {
+        registerArg(name, arg);
+
+        std::string display = sn + "," + name;
+        cmd_options->add_options()(display, description, cxxopts::value<T>()->default_value(default_val));
     }
 
     // The following 2 methods will also create a GUI item in Pangolin for the setting (either a toggle switch or a slider).
@@ -155,6 +166,16 @@ public:
     // Should be called from Pangolin thread.
     void createPangolinSettings();
     void updatePangolinSettings();
+
+    SettingsUtil() {
+        cmd_options = std::make_unique<cxxopts::Options>("dm-vio", "Direct SLAM system");
+        cmd_options->add_options()("h,help", "Print usage");
+        cmd_options->add_options()("p,print", "Print settings");
+    }
+
+    ~SettingsUtil() {}
+
+    std::unique_ptr<cxxopts::Options> cmd_options;
 
 private:
     struct Parameter

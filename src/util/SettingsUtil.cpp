@@ -29,8 +29,21 @@ dmvio::SettingsUtil::Parameter::Parameter(void* pointer,
         pointer), commandLineHandler(commandLineHandler), yamlHandler(yamlHandler), printHandler(printHandler)
 {}
 
-void dmvio::SettingsUtil::tryReadFromYaml(const YAML::Node& node)
+void dmvio::SettingsUtil::tryReadFromYaml(const std::string& settingsFile)
 {
+    YAML::Node node = YAML::LoadFile(settingsFile);
+    std::cout << "Loading settings from yaml file: " <<  settingsFile << std::endl;
+
+    if(node["parent"]){
+        std::string base_directory = settingsFile;
+        const size_t last_slash_idx = base_directory.find_last_of("\\/");
+        if (std::string::npos != last_slash_idx)
+        {
+            base_directory = base_directory.substr(0, last_slash_idx);
+        }
+        tryReadFromYaml(base_directory+node["parent"].as<std::string>());
+    }
+
     // Loop through parameters and check if their name is in the node.
     for(auto& pair : parameters)
     {
@@ -46,15 +59,10 @@ void dmvio::SettingsUtil::tryReadFromYaml(const YAML::Node& node)
     }
 }
 
-bool dmvio::SettingsUtil::tryReadFromCommandLine(const std::string& arg)
+bool dmvio::SettingsUtil::tryReadFromCommandLine(const std::string& key, const std::string& value)
 {
     // Extract name as part before the = sign and lookup in map
-    auto pos = arg.find('=');
-    if(pos == std::string::npos)
-    {
-        return false;
-    }
-    std::string name = arg.substr(0, pos);
+    std::string name = key;
 
     auto it = parameters.find(name);
     if(it == parameters.end())
@@ -62,9 +70,10 @@ bool dmvio::SettingsUtil::tryReadFromCommandLine(const std::string& arg)
         return false;
     }
 
-    it->second.commandLineHandler(it->second.pointer, arg.substr(pos + 1));
+    
+    it->second.commandLineHandler(it->second.pointer, value);
     it->second.loadedFromCommandLine = true;
-
+    
     return true;
 }
 
