@@ -35,6 +35,7 @@
  
 #include <iostream>
 #include <fstream>
+#include <unordered_map> 
 #include "util/NumType.h"
 #include "FullSystem/Residuals.h"
 #include "FullSystem/HessianBlocks.h"
@@ -134,6 +135,27 @@ inline bool eigenTestNan(const MatXX &m, const std::string& msg)
 	return foundNan;
 }
 
+inline Eigen::Vector3d convert_uv_xyz(float u, float v, float idepth, float fxi, float fyi, float cxi, float cyi, SE3 camToWorld)
+{
+	float x = (u * fxi + cxi) / idepth;
+	float y = (v * fyi + cyi) / idepth;
+	float z = (1 + 2 * fxi) / idepth;
+
+	Eigen::Vector4d camPoint(x, y, z, 1.f);
+	return camToWorld.matrix3x4() * camPoint;
+}
+
+struct PC_output
+{
+	float x=-1;
+	float y=-1;
+	float z=-1;
+
+	unsigned char r=0;
+	unsigned char g=0;
+	unsigned char b=0;
+};
+
 
 class FullSystem {
 public:
@@ -152,6 +174,7 @@ public:
 	float optimize(int mnumOptIts);
 
 	void printResult(std::string file, bool onlyLogKFPoses, bool saveMetricPoses, bool useCamToTrackingRef);
+	void printPC(std::string file);
 
 	void debugPlot(std::string name);
 
@@ -269,6 +292,7 @@ private:
 	// ================== changed by mapper-thread. protected by mapMutex ===============
 	boost::mutex mapMutex;
 	std::vector<FrameShell*> allKeyFramesHistory;
+	std::unordered_map<unsigned long, PC_output> allMargPointsHistory;
 
 	EnergyFunctional* ef;
 	IndexThreadReduce<Vec10> treadReduce;

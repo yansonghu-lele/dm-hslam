@@ -170,7 +170,7 @@ public:
     SettingsUtil() {
         cmd_options = std::make_unique<cxxopts::Options>("dm-vio", "Direct SLAM system");
         cmd_options->add_options()("h,help", "Print usage");
-        cmd_options->add_options()("p,print", "Print settings");
+        cmd_options->add_options()("print", "Print settings");
     }
 
     ~SettingsUtil() {}

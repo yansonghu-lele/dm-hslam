@@ -198,19 +198,50 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
     delete frame->efFrame;
 	frame->efFrame = nullptr;
 
-  {
+	{
         std::vector<FrameHessian*> v;
         v.push_back(frame);
         for(IOWrap::Output3DWrapper* ow : outputWrapper){
             ow->publishKeyframes(v, true, &Hcalib);
 		}
-    } 
+	} 
 
 
 	frame->shell->marginalizedAt = frameHessians.back()->shell->id;
 	frame->shell->movedByOpt = frame->w2c_leftEps().norm();
 
 	auto frameID = frame->frameID;
+
+	if (outputPC){
+		float fxi = 1 / Hcalib.fxl();
+		float fyi = 1 / Hcalib.fyl();
+		float cxi = -Hcalib.cxl() / Hcalib.fxl();
+		float cyi = -Hcalib.cyl() / Hcalib.fyl();
+
+		for(PointHessian* p : frame->pointHessiansMarginalized){
+			if (allMargPointsHistory.find(p->point_id) == allMargPointsHistory.end()) {
+				PC_output tmp_point_output;
+				Eigen::Vector3d worldPoint = convert_uv_xyz(p->u, p->v, p->idepth, fxi, fyi, cxi, cyi, firstPose.inverse() * frame->shell->camToWorld);
+
+				tmp_point_output.x = worldPoint[0];
+				tmp_point_output.y = worldPoint[1];
+				tmp_point_output.z = worldPoint[2];
+
+				if(p->colourValid){
+					tmp_point_output.r = p->colour3[0][0];
+					tmp_point_output.g = p->colour3[0][1];
+					tmp_point_output.b = p->colour3[0][2];
+				} else{
+					tmp_point_output.r = p->color[0];
+					tmp_point_output.g = p->color[0];
+					tmp_point_output.b = p->color[0];
+				}
+
+				allMargPointsHistory[p->point_id] = tmp_point_output;
+			}
+		}
+	}
+
 
 	deleteOutOrder<FrameHessian>(frameHessians, frame);
 	for(unsigned int i=0;i<frameHessians.size();i++)

@@ -302,6 +302,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     fullSystem->printResult(imuSettings.resultsPrefix + "result.txt", false, false, true);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultKFs.txt", true, false, false);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultScaled.txt", false, true, true);
+    if (outputPC) fullSystem->printPC(imuSettings.resultsPrefix + "PC.PCD");
 
     dmvio::TimeMeasurement::saveResults(imuSettings.resultsPrefix + "timings.txt");
 
