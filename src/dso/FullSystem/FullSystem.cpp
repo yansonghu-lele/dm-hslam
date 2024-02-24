@@ -313,15 +313,18 @@ void FullSystem::printPC(std::string file)
 	myfile.open (file.c_str());
 	myfile << std::setprecision(9);
 
+	unsigned long totalpcs = allMargPointsHistory.size();
+	//unsigned long totalpcs = allMargPointsHistory.size()+allFrameHistory.size();
+	
 	myfile << std::string("# .PCD v.6 - Point Cloud Data file format\n");
 	myfile << std::string("FIELDS x y z rgb\n");
 	myfile << std::string("SIZE 4 4 4 4\n");
 	myfile << std::string("TYPE F F F F\n");
 	myfile << std::string("COUNT 1 1 1 1\n");
-	myfile << std::string("WIDTH ") << allMargPointsHistory.size()+allFrameHistory.size() << std::string("\n");
+	myfile << std::string("WIDTH ") << totalpcs << std::string("\n");
 	myfile << std::string("HEIGHT 1\n");
 	myfile << std::string("#VIEWPOINT 0 0 0 1 0 0 0\n");
-	myfile << std::string("POINTS ") << allMargPointsHistory.size()+allFrameHistory.size() << std::string("\n");
+	myfile << std::string("POINTS ") << totalpcs << std::string("\n");
 	myfile << std::string("DATA ascii\n");
 	
 	std::unordered_map<unsigned long, PC_output>::iterator itr; 
@@ -336,7 +339,6 @@ void FullSystem::printPC(std::string file)
 	} 
 
 	// Show trajectory in point cloud
-	/*
 	for (FrameShell* s : allFrameHistory)  
 	{
 		Sophus::SE3d camToWorld = s->camToWorld;
@@ -348,7 +350,6 @@ void FullSystem::printPC(std::string file)
             " " << camToFirst.translation().y() <<
             " " << camToFirst.translation().z() << " " << rgb << "\n";
 	} 
-	*/
 
 	myfile.close();
 }

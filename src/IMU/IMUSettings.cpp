@@ -120,7 +120,7 @@ IMUCalibration::IMUCalibration(const Sophus::SE3d& tCamImu) : T_cam_imu(tCamImu)
 
 void IMUSettings::registerArgs(dmvio::SettingsUtil& set)
 {
-    set.registerArg("resultsPrefix", resultsPrefix);
+    set.registerArg("resultsPrefix", resultsPrefix, "R", "Prefix of output files", "");
 
     set.registerArg("maxTimeBetweenInitFrames", maxTimeBetweenInitFrames);
 
