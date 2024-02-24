@@ -76,8 +76,6 @@ PointFrameResidual::PointFrameResidual(PointHessian* point_, FrameHessian* host_
 	resetOOB();
 	J = new RawResidualJacobian();
 	assert(((long)J)%16==0);
-
-	isNew=true;
 }
 
 /**

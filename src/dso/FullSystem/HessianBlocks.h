@@ -175,7 +175,6 @@ struct FrameHessian
 	void setStateZero(const Vec10 &state_zero);
 	inline void setState(const Vec10 &state)
 	{
-
 		this->state = state;
 		state_scaled.segment<3>(0) = SCALE_XI_TRANS * state.segment<3>(0);
 		state_scaled.segment<3>(3) = SCALE_XI_ROT * state.segment<3>(3);
@@ -515,22 +514,17 @@ struct PointHessian
 			return true;
 
 
-
-
-
 		if(lastResiduals[0].second == ResState::OOB) return true;
 		if(residuals.size() < 2) return false;
 		if(lastResiduals[0].second == ResState::OUTLIER && lastResiduals[1].second == ResState::OUTLIER) return true;
 		return false;
 	}
 
-
 	inline bool isInlierNew()
 	{
 		return (int)residuals.size() >= setting_minGoodActiveResForMarg
                     && numGoodResiduals >= setting_minGoodResForMarg;
 	}
-
 };
 
 }

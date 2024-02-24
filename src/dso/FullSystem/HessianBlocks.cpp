@@ -57,7 +57,7 @@ PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hc
 	assert(std::isfinite(rawPoint->idepth_max));
 	// idepth_init = rawPoint->idepth_GT;
 
-	// my_type is pyramid level where point was selected
+	// my_type is block level where point was selected
 	my_type = rawPoint->my_type;
 
 	setIdepthScaled((rawPoint->idepth_max + rawPoint->idepth_min)*0.5);
@@ -71,14 +71,21 @@ PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hc
 	efPoint=0;
 }
 
-
+/**
+ * @brief Release residuals
+ * 
+ */
 void PointHessian::release()
 {
 	for(unsigned int i=0;i<residuals.size();i++) delete residuals[i];
 	residuals.clear();
 }
 
-
+/**
+ * @brief Set zero state
+ * 
+ * @param state_zero 
+ */
 void FrameHessian::setStateZero(const Vec10 &state_zero)
 {
 	assert(state_zero.head<6>().squaredNorm() < 1e-20);
@@ -114,8 +121,6 @@ void FrameHessian::setStateZero(const Vec10 &state_zero)
 	nullspaces_affine.topRightCorner<2,1>() = Vec2(0, expf(aff_g2l_0().a)*ab_exposure);
 };
 
-
-
 void FrameHessian::release()
 {
 	// DELETE POINT
@@ -132,6 +137,13 @@ void FrameHessian::release()
 	immaturePoints.clear();
 }
 
+
+/**
+ * @brief Make images
+ * 
+ * @param color 
+ * @param HCalib 
+ */
 void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 {
 	// dIp contains (color, dx, dy)

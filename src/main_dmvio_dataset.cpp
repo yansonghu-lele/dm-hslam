@@ -90,10 +90,6 @@ void exitThread()
 }
 
 
-
-
-
-
 void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 {
 
