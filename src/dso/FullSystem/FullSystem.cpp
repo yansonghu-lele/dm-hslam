@@ -926,6 +926,7 @@ void FullSystem::flagPointsForRemoval()
 					flag_in++;
 					int ngoodRes=0;
 
+					// Linearize all
 					for(PointFrameResidual* r : ph->residuals)
 					{
 						r->resetOOB();
@@ -1143,6 +1144,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
         }
 
 		// =========================== Do coarse tracking =========================
+		// Coarse Tracking is only done on only a single frame
         std::pair<Vec4, bool> pair = trackNewCoarse(fh, referenceToFramePassed);
 
         dso::Vec4 tres = std::move(pair.first);
@@ -1572,7 +1574,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
     }
 
 
-	// =========================== OPTIMIZE ALL =========================
+	// =========================== OPTIMIZE ALL!!!!! =========================
 	fh->frameEnergyTH = frameHessians.back()->frameEnergyTH;
 	float rmse = optimize(setting_maxOptIterations);
 

@@ -58,6 +58,12 @@
 
 namespace dso
 {
+
+/**
+ * @brief Flags frames for marginalization
+ * 
+ * @param newFH 
+ */
 void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 {
     dmvio::TimeMeasurement timeMeasurement("flagFramesForMarginalization");
@@ -108,7 +114,7 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 		}
 	}
 
-	// marginalize one.
+	// marginalize one if active window size is too large
 	if((int)frameHessians.size()-flagged >= setting_maxFrames)
 	{
 		double smallestScore = 1;
@@ -126,7 +132,6 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 			{
 				if(ffh.target->frameID > latest->frameID-setting_minFrameAge+1 || ffh.target == ffh.host) continue;
 				distScore += 1/(1e-5+ffh.distanceLL);
-
 			}
 			distScore *= -sqrtf(fh->targetPrecalc.back().distanceLL);
 
@@ -150,6 +155,11 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 //	printf("\n");
 }
 
+/**
+ * @brief Marginalizes frame
+ * 
+ * @param frame 
+ */
 void FullSystem::marginalizeFrame(FrameHessian* frame)
 {
     dmvio::TimeMeasurement timeMeasurement("marginalizeFrame");
@@ -157,13 +167,12 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 
 	assert((int)frame->pointHessians.size()==0);
 
-
+	// This actually does the marginalization math!!!
 	ef->marginalizeFrame(frame->efFrame);
 
 	dmvio::TimeMeasurement timeMeasurementEnd("marginalizeFrameOverhead");
 
-	// drop all observations of existing points in that frame.
-
+	// drop all observations of existing points in that frame
 	for(FrameHessian* fh : frameHessians)
 	{
 		if(fh==frame) continue;
@@ -205,7 +214,6 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
             ow->publishKeyframes(v, true, &Hcalib);
 		}
 	} 
-
 
 	frame->shell->marginalizedAt = frameHessians.back()->shell->id;
 	frame->shell->movedByOpt = frame->w2c_leftEps().norm();

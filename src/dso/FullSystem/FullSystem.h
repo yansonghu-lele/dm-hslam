@@ -301,7 +301,7 @@ private:
 	std::unique_ptr<PixelSelector> pixelSelector;
 	std::unique_ptr<CoarseDistanceMap> coarseDistanceMap;
 
-	std::vector<FrameHessian*> frameHessians;	// ONLY changed in marginalizeFrame and addFrame.
+	std::vector<FrameHessian*> frameHessians;			// ONLY changed in marginalizeFrame and addFrame.
 	std::vector<PointFrameResidual*> activeResiduals;
 	float currentMinActDist;
 

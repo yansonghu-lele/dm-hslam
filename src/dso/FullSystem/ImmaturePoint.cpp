@@ -516,8 +516,8 @@ float ImmaturePoint::calcResidual(
  * @param HCalib 			Calibration matrices
  * @param outlierTHSlack 	Outlier threshold
  * @param tmpRes 			Struct storing residual information
- * @param Hdd 				Depth derivative
- * @param bd 				Residual energy
+ * @param Hdd 				
+ * @param bd 				
  * @param idepth 			Input inverse depth
  * @return double 			EnergyLeft
  */
