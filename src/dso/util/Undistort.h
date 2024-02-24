@@ -46,7 +46,7 @@ public:
 	// affine normalizes values to 0 <= I < 256.
 	// raw irradiance = a*I + b.
 	// output will be written in [output].
-	template<typename T> void processFrame(T* image_in, float exposure_time, float factor=1);
+	template<typename T> void processFrame(T* image_in, float exposure_time, float factor=1, bool setMeta = true);
 	void unMapFloatImage(float* image);
 
 	ImageAndExposure* output;
@@ -55,7 +55,7 @@ public:
 
 
 private:
-    float G[256*256];
+    float G[256*256]; // Large enough to handle 16 bit images
     int GDepth;
 	float* vignetteMap;
 	float* vignetteMapInv;
@@ -79,7 +79,9 @@ public:
 	inline bool isValid() {return valid;};
 
 	template<typename T>
-	ImageAndExposure* undistort(const MinimalImage<T>* image_raw, float exposure=0, double timestamp=0, float factor=1) const;
+	ImageAndExposure* undistort(const MinimalImage<T>* image_raw, float exposure=0, double timestamp=0, float factor=1, bool useColourPassed = false) const;
+	template<typename T>
+	void undistort_colour(MinimalImage<T>* r_image, MinimalImage<T>* g_image, MinimalImage<T>* b_image, ImageAndExposure* out_image, float exposure=0, double timestamp=0, float factor=1);
 	static Undistort* getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename);
 
 	void loadPhotometricCalibration(std::string file, std::string noiseImage, std::string vignetteImage);

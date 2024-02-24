@@ -117,6 +117,10 @@ struct FrameHessian
 	FrameShell* shell;
 
 	Eigen::Vector3f* dI;				 	// trace, fine tracking. Used for direction select (not for gradient histograms etc.)
+	
+	Eigen::Vector3f* dI_c;
+	bool colourValid;
+
 	Eigen::Vector3f* dIp[PYR_LEVELS];	 	// coarse tracking / coarse initializer. NAN in [0] only.
 	float* absSquaredGrad[PYR_LEVELS];  	// only used for pixel select (histograms etc.). no NAN.
 
@@ -232,9 +236,9 @@ struct FrameHessian
 		{
 			delete[] dIp[i];
 			delete[]  absSquaredGrad[i];
-
 		}
-
+		if(colourValid)
+			delete[] dI_c;
 
 
 		if(debugImage != 0) delete debugImage;
@@ -253,10 +257,12 @@ struct FrameHessian
 		debugImage=0;
 
         addCamPrior = false;
+		colourValid = false;
 	};
 
 
     void makeImages(float* color, CalibHessian* HCalib);
+	void makeColourImages(float* r, float* g ,float* b);
 
 	inline Vec10 getPrior()
 	{
@@ -434,6 +440,8 @@ struct PointHessian
 	float color[MAX_RES_PER_POINT];			// colors in host frame
 	float weights[MAX_RES_PER_POINT];		// host-weights for respective residuals.
 
+	Eigen::Vector3f colour3[MAX_RES_PER_POINT];
+	bool colourValid;
 
 	float u,v;
 	int idx;

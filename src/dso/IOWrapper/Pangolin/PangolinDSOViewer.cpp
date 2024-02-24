@@ -628,11 +628,19 @@ void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 
 	boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
-	for(int i=0;i<w*h;i++)
-		internalVideoImg->data[i][0] =
-		internalVideoImg->data[i][1] =
-		internalVideoImg->data[i][2] =
-			image->dI[i][0]*0.8 > 255.0f ? 255.0 : image->dI[i][0]*0.8;
+	if (!image->colourValid){
+		for(int i=0;i<w*h;i++)
+			internalVideoImg->data[i][0] =
+			internalVideoImg->data[i][1] =
+			internalVideoImg->data[i][2] =
+				image->dI[i][0]*0.8 > 255.0f ? 255.0 : image->dI[i][0]*0.8;
+	} else {
+		for(int i=0;i<w*h;i++){
+				internalVideoImg->data[i][0] = image->dI_c[i][0]*0.8 > 255.0f ? 255.0 : image->dI_c[i][0]*0.8;
+				internalVideoImg->data[i][1] = image->dI_c[i][1]*0.8 > 255.0f ? 255.0 : image->dI_c[i][1]*0.8;
+				internalVideoImg->data[i][2] = image->dI_c[i][2]*0.8 > 255.0f ? 255.0 : image->dI_c[i][2]*0.8;
+			}
+	}
 
 	internalVideoImg->HaveNewImage = true;
 }
