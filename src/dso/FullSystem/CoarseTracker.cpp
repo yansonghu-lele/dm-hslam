@@ -292,6 +292,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	}
 
 
+	// Sets the semi-dense depth and pixel map for the reference frame
 	// normalize idepths and weights
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
@@ -313,6 +314,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 			{
 				int i = x+y*wl;
 
+				// Add the active frames to the point list
 				if(weightSumsl[i] > 0)
 				{
 					idepthl[i] /= weightSumsl[i];
@@ -428,7 +430,9 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 }
 
 /**
- * @brief Calculates the corase tracking residual
+ * @brief Calculates the coarse tracking residual
+ * 
+ * Only two-frame residual is done for coarse tracking
  * 
  * @param lvl 
  * @param refToNew 
@@ -446,11 +450,12 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 
 	int wl = w[lvl];
 	int hl = h[lvl];
-	Eigen::Vector3f* dINewl = newFrame->dIp[lvl];
 	float fxl = fx[lvl];
 	float fyl = fy[lvl];
 	float cxl = cx[lvl];
 	float cyl = cy[lvl];
+	// Target frame is the newly inserted frame
+	Eigen::Vector3f* dINewl = newFrame->dIp[lvl];
 
 
 	Mat33f RKi = (refToNew.rotationMatrix().cast<float>() * Ki[lvl]);
@@ -480,9 +485,10 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 
 
 	// Start accumulating residuals
-	for(int i=0;i<nl;i++) // for every point in the frame
+	for(int i=0;i<nl;i++) // for every point in the semi-dense depth and point map
 	{
 		// Get depth and position of point
+		// Every active point from the last keyframe is projected onto the new frame
 		float id = lpc_idepth[i];
 		float x = lpc_u[i];
 		float y = lpc_v[i];
@@ -608,6 +614,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 /**
  * @brief Setup
  * 
+ * Sets the last reference frame as the newest keyframe
+ * 
  * @param frameHessians 
  */
 void CoarseTracker::setCoarseTrackingRef(
@@ -627,12 +635,15 @@ void CoarseTracker::setCoarseTrackingRef(
 /**
  * @brief Coarse frame tracking function
  * 
- * @param newFrameHessian 
- * @param lastToNew_out 
- * @param aff_g2l_out 
+ * Only two-frame tracking is done for coarse tracking
+ * 
+ * @param newFrameHessian 	New frame structure
+ * @param lastToNew_out 	Motion prediction to initalize
+ * @param aff_g2l_out 		Lighting prediction to intialize
  * @param coarsestLvl 
- * @param minResForAbort 
+ * @param minResForAbort 	Best previously achieved residual for current track
  * @param wrap 
+ * 
  * @return true 
  * @return false 
  */
@@ -845,6 +856,7 @@ bool CoarseTracker::trackNewestCoarse(
 		lastResiduals[lvl] = sqrtf((float)(resOld[0] / resOld[1]));
 		lastFlowIndicators = resOld.segment<3>(2);
 
+		// Track is bad if the residual is invalid or more than many times the previously achieved residual
 		if(std::isnan(lastResiduals[lvl])) return false;
 		if(lastResiduals[lvl] > 1.5*minResForAbort[lvl]) return false;
 

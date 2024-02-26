@@ -335,7 +335,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
     }
 
     // For backwards-compatibility: Use Pinhole / FoV model for 5 parameter.
-	// fx, fy, cx, cy, focal length
+	// fx, fy, cx, cy, scale
     else if(std::sscanf(l1.c_str(), "%f %f %f %f %f",
 			&ic[0], &ic[1], &ic[2], &ic[3], &ic[4]) == 5)
 	{
@@ -382,7 +382,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
         if(!u->isValid()) {delete u; return 0; }
     }
 
-	// fx, fy, cx, cy, focal length
+	// fx, fy, cx, cy, scale
     else if(std::sscanf(l1.c_str(), "FOV %f %f %f %f %f",
             &ic[0], &ic[1], &ic[2], &ic[3],
             &ic[4]) == 5)
@@ -930,7 +930,7 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
                parsOrg[0] * wOrg, parsOrg[1] * hOrg, parsOrg[2] * wOrg - 0.5, parsOrg[3] * hOrg - 0.5 );
 
         // rescale and substract 0.5 offset.
-        // the 0.5 is because I'm assuming the calibration is given such that the pixel at (0,0)
+        // the 0.5 is because it is assumed the calibration is given such that the pixel at (0,0)
         // contains the integral over intensity over [0,0]-[1,1], whereas I assume the pixel (0,0)
         // to contain a sample of the intensity ot [0,0], which is best approximated by the integral over
         // [-0.5,-0.5]-[0.5,0.5]. Thus, the shift by -0.5.
@@ -1304,9 +1304,6 @@ void UndistortKB::distortCoordinates(float* in_x, float* in_y, float* out_x, flo
 	    }
 	}
 }
-
-
-
 
 
 UndistortPinhole::UndistortPinhole(const char* configFileName, bool noprefix)

@@ -36,6 +36,13 @@
 using namespace dmvio;
 using namespace dso;
 
+/**
+ * @brief Parses command line arguements
+ * 
+ * @param argc          cmd line number of inputs
+ * @param argv          cmd line string input
+ * @param settingsUtil  Class that handles settings
+ */
 void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsUtil)
 {
     cxxopts::ParseResult result = settingsUtil.cmd_options->parse(argc, argv);
@@ -108,7 +115,11 @@ void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsU
     if(result.count("print")) print_settings = true;
 }
 
-
+/**
+ * @brief Register main settings
+ * 
+ * @param set 
+ */
 void MainSettings::registerArgs(SettingsUtil& set)
 {
     // The DM-VIO settings can also be set with commandline arguments (and also with the yaml settings file)
@@ -129,7 +140,8 @@ void MainSettings::registerArgs(SettingsUtil& set)
     set.registerArg("mode", mode, "m", "Photometric mode (1=full, 2=no calibration, 3=Synthetic, 4=none)", "0");
     set.registerArg("settingsFile", settingsFile, "F", "Settings file", "");
 
-    // Register global settings.
+    // Register global settings
+    // Mainly changed using the settings file
     set.registerArg("setting_minOptIterations", setting_minOptIterations);
     set.registerArg("setting_maxOptIterations", setting_maxOptIterations);
     set.registerArg("setting_minIdepth", setting_minIdepth);
@@ -142,5 +154,4 @@ void MainSettings::registerArgs(SettingsUtil& set)
     set.registerArg("setting_desiredPointDensity", setting_desiredPointDensity);
     set.registerArg("setting_minFrames", setting_minFrames);
     set.registerArg("setting_maxFrames", setting_maxFrames);
-
 }

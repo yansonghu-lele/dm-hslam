@@ -182,8 +182,11 @@ FullSystem::FullSystem(bool linearizeOperationPassed, const dmvio::IMUCalibratio
 
 	needNewKFAfter = -1;
 	runMapping=true;
-	mappingThread = boost::thread(&FullSystem::mappingLoop, this);
 	lastRefStopID=0;
+
+
+	// MAPPING THREAD IS STARTED HERE
+	mappingThread = boost::thread(&FullSystem::mappingLoop, this);
 
 
 	minIdJetVisDebug = -1;
@@ -377,12 +380,15 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
         ow->pushLiveFrame(fh);
 
 
+	// Frameshell of reference frame
 	FrameHessian* lastF = coarseTracker->lastRef;
 
 	AffLight aff_last_2_l = AffLight(0,0);
 
 
 	// ============== Create a list of possible poses ===================
+	// Poses will be relative to the reference frame
+
     // lastF_2_fh_tries holds list of possible poses
     std::vector<SE3,Eigen::aligned_allocator<SE3>> lastF_2_fh_tries;
 
@@ -429,8 +435,8 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
             {	
 				// lock on global pose consistency!
                 boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-                slast_2_sprelast = sprelast->camToWorld.inverse() * slast->camToWorld;
-                lastF_2_slast = slast->camToWorld.inverse() * lastF->shell->camToWorld;
+                slast_2_sprelast = sprelast->camToWorld.inverse() * slast->camToWorld;	// Constant motion from last frameshell
+                lastF_2_slast = slast->camToWorld.inverse() * lastF->shell->camToWorld;	// Changes current motion to reference frame
                 aff_last_2_l = slast->aff_g2l;
             }
             SE3 fh_2_slast = slast_2_sprelast;// assumed to be the same as fh_2_slast.
@@ -440,13 +446,14 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
             lastF_2_fh_tries.push_back(fh_2_slast.inverse() * fh_2_slast.inverse() * lastF_2_slast);	// assume double motion (frame skipped)
             lastF_2_fh_tries.push_back(SE3::exp(fh_2_slast.log()*0.5).inverse() * lastF_2_slast); 		// assume half motion.
             lastF_2_fh_tries.push_back(lastF_2_slast); 													// assume zero motion.
-            lastF_2_fh_tries.push_back(SE3()); 															// assume zero motion FROM KF.
+            lastF_2_fh_tries.push_back(SE3()); 															// assume zero motion from KF.
 
             // Just try a TON of different initializations (all rotations). In the end,
             // if they don't work they will only be tried on the coarsest level, which is super fast anyway.
-            // also, if tracking rails here we loose, so we really, really want to avoid that
+            // Tracking failure is really bad, so it needs to be avoided
             for(float rotDelta=0.02; rotDelta < 0.05; rotDelta++)
             {
+				// 27 different small rotations in different directions
                 lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1,rotDelta,0,0), Vec3(0,0,0)));
                 lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1,0,rotDelta,0), Vec3(0,0,0)));
                 lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1,0,0,rotDelta), Vec3(0,0,0)));
@@ -484,7 +491,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
     }
 
 	// ============== Test all of the pose guesses ===================
-	Vec3 flowVecs = Vec3(100,100,100); // Flow vector of tracked motion for debugging
+	Vec3 flowVecs = Vec3(100,100,100); // Flow vector of tracked motion
 	SE3 lastF_2_fh = SE3();
 	AffLight aff_g2l = AffLight(0,0);
 
@@ -506,7 +513,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		bool trackingIsGood = coarseTracker->trackNewestCoarse(
 				fh, lastF_2_fh_this, aff_g2l_this,
 				pyrLevelsUsed-1,
-				achievedRes);	// in each level has to be at least as good as the last try.
+				achievedRes);	// in each level this has to be at least as good as the last try.
 		
 		tryIterations++;
 
@@ -542,7 +549,10 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		}
 
 		// ============== Update variables if there is a good track ===================
-		// If the track is sucessful
+		// Track for given motion is sucessful is:
+		// 1. Tracking does not return invalid values
+		// 2. Residual is finite
+		// 3. Residual is smaller than last achieved residual
 		if(trackingIsGood && std::isfinite((float)coarseTracker->lastResiduals[0]) && !(coarseTracker->lastResiduals[0] >=  achievedRes[0]))
 		{
 			flowVecs = coarseTracker->lastFlowIndicators;
@@ -621,6 +631,9 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 
 /**
  * @brief Traces all the immature points
+ * 
+ * Because immature points are only made for new frames,
+ * the number of immature points per frame will decrease over time
  * 
  * @param fh Current frame
  */
@@ -707,7 +720,7 @@ void FullSystem::activatePointsMT()
     dmvio::TimeMeasurement timeMeasurement("activatePointsMT");
 
 	// ============== Update variables for desired point density ===================
-	// Change the currentMinActDist in order to achieve the desired point density
+	// Change the currentMinActDist in order to achieve the desired point number
     if(ef->nPoints < setting_desiredPointDensity*0.66)
 		currentMinActDist -= 0.8;
 	if(ef->nPoints < setting_desiredPointDensity*0.8)
@@ -793,6 +806,7 @@ void FullSystem::activatePointsMT()
 			// ============== Add immature point to activation list if it meets conditions ===================
 			// Determine if the point is far away enough from other points
 			// Points are only activated if it has good spacing compared to other active points
+			// once projected on the newest keyframe
 			Vec3f ptp = KRKi * Vec3f(ph->u, ph->v, 1) + Kt*(0.5f*(ph->idepth_max+ph->idepth_min));
 			int u = ptp[0] / ptp[2] + 0.5f;
 			int v = ptp[1] / ptp[2] + 0.5f;
@@ -837,7 +851,7 @@ void FullSystem::activatePointsMT()
 		if(newpoint != 0 && newpoint != (PointHessian*)((long)(-1)))
 		{
 			// Add new point into the optimization and active point list
-			newpoint->host->immaturePoints[ph->idxInImmaturePoints]=0; // set immature point as deleted
+			newpoint->host->immaturePoints[ph->idxInImmaturePoints]=0;
 			newpoint->host->pointHessians.push_back(newpoint); // add active point
 			ef->insertPoint(newpoint);
 			for(PointFrameResidual* r : newpoint->residuals)
@@ -1144,10 +1158,11 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
         }
 
 		// =========================== Do coarse tracking =========================
-		// Coarse Tracking is only done on only a single frame
+		// Coarse Tracking is only done on only the new frame and reference frame
+		// The reference frame should be the latest keyframe
         std::pair<Vec4, bool> pair = trackNewCoarse(fh, referenceToFramePassed);
 
-        dso::Vec4 tres = std::move(pair.first);
+        dso::Vec4 tres = std::move(pair.first); // Achieved residual and flow vectors
         bool forceNoKF = !pair.second; // If coarse tracking was bad don't make KF.
         bool forceKF = false;
 
@@ -1186,15 +1201,21 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			Vec2 refToFh=AffLight::fromToVecExposure(coarseTracker->lastRef->ab_exposure, fh->ab_exposure,
 					coarseTracker->lastRef_aff_g2l, fh->shell->aff_g2l);
 
-			// Make keyframe if image's brightness is good or the residual is low or too much time has passed 
+			// Make keyframe if:
+			// 1. If the field of view changes too much. FOV change is measured by the mean optical flow
+			// 2. If motion causes occlusions and disocclusions. This is measured by mean translation flow
+			// 3. If camera exposure is changed significantly.
+			// 4. Residual is too high.
+			// 5. If max time between keyframes is surpassed.
+			// 6. The IMU system needs a keyframe.
 			needToMakeKF = allFrameHistory.size()== 1 ||
-					setting_kfGlobalWeight*setting_maxShiftWeightT *  sqrtf((double)tres[1]) / (wG[0]+hG[0]) +
-					setting_kfGlobalWeight*setting_maxShiftWeightR *  sqrtf((double)tres[2]) / (wG[0]+hG[0]) +
-					setting_kfGlobalWeight*setting_maxShiftWeightRT * sqrtf((double)tres[3]) / (wG[0]+hG[0]) +
-					setting_kfGlobalWeight*setting_maxAffineWeight * fabs(logf((float)refToFh[0])) > 1 ||
-					2*coarseTracker->firstCoarseRMSE < tres[0] ||
-                    (setting_maxTimeBetweenKeyframes > 0 && timeSinceLastKeyframe > setting_maxTimeBetweenKeyframes) ||
-                    forceKF;
+					setting_kfGlobalWeight*setting_maxShiftWeightT *  sqrtf((double)tres[1]) / (wG[0]+hG[0]) + 			// Translation flow
+					setting_kfGlobalWeight*setting_maxShiftWeightR *  sqrtf((double)tres[2]) / (wG[0]+hG[0]) + 			// Rotation flow
+					setting_kfGlobalWeight*setting_maxShiftWeightRT * sqrtf((double)tres[3]) / (wG[0]+hG[0]) + 			// Overal flow
+					setting_kfGlobalWeight*setting_maxAffineWeight * fabs(logf((float)refToFh[0])) > 1 || 				// Exposure changes
+					2*coarseTracker->firstCoarseRMSE < tres[0] ||														// Residual value
+                    (setting_maxTimeBetweenKeyframes > 0 && timeSinceLastKeyframe > setting_maxTimeBetweenKeyframes) || // Time between keyframes
+                    forceKF;																							// IMU system needs keyframe
 
 			if(needToMakeKF && !setting_debugout_runquiet)
             {
@@ -1620,6 +1641,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
         }
 
         coarseTracker_forNewKF->makeK(&Hcalib);
+		// Set the reference frame for coarse tracking
 		coarseTracker_forNewKF->setCoarseTrackingRef(frameHessians);
 
         coarseTracker_forNewKF->debugPlotIDepthMap(&minIdJetVisTracker, &maxIdJetVisTracker, outputWrapper);
@@ -1696,7 +1718,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 
 
 /**
- * @brief Initializes the system if coarseInitializer finds goof initial systems
+ * @brief Initializes the system if coarseInitializer finds good initial systems
  * 
  * @param newFrame 
  */
@@ -1795,6 +1817,8 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 
 /**
  * @brief Create new immature points
+ * 
+ * Only made for the newest keyframe
  * 
  * @param newFrame 
  * @param gtDepth 

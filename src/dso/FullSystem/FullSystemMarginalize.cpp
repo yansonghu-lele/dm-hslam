@@ -62,11 +62,17 @@ namespace dso
 /**
  * @brief Flags frames for marginalization
  * 
+ * Conditions for marginalization:
+ * 1. Always keep latest keyframe
+ * 2. Marginalize if less than 5% of points are visable
+ * 3. If the frame window is full, marginalize the frame with a highest distance score
+ * 
  * @param newFH 
  */
 void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 {
     dmvio::TimeMeasurement timeMeasurement("flagFramesForMarginalization");
+
 	if(setting_minFrameAge > setting_maxFrames)
 	{
 		for(int i=setting_maxFrames;i<(int)frameHessians.size();i++)
@@ -114,7 +120,9 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 		}
 	}
 
-	// marginalize one if active window size is too large
+	// Marginalize one if active window size is too large
+	// Chose frame to be marginalized using the distance score
+	// The distance score tries to keep keyframes well distributed in 3D space
 	if((int)frameHessians.size()-flagged >= setting_maxFrames)
 	{
 		double smallestScore = 1;
@@ -127,6 +135,7 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 			if(fh->frameID > latest->frameID-setting_minFrameAge || fh->frameID == 0) continue;
 			//if(fh==frameHessians.front() == 0) continue;
 
+			// Calculate distance score
 			double distScore = 0;
 			for(FrameFramePrecalc &ffh : fh->targetPrecalc)
 			{
@@ -158,6 +167,8 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 /**
  * @brief Marginalizes frame
  * 
+ * Marginalizes the points in the frame and the frame itself
+ * 
  * @param frame 
  */
 void FullSystem::marginalizeFrame(FrameHessian* frame)
@@ -172,7 +183,8 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 
 	dmvio::TimeMeasurement timeMeasurementEnd("marginalizeFrameOverhead");
 
-	// drop all observations of existing points in that frame
+	// Marginalize all the points represented in the frame
+	// by dropping all observations of existing points in that frame
 	for(FrameHessian* fh : frameHessians)
 	{
 		if(fh==frame) continue;
@@ -220,6 +232,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 
 	auto frameID = frame->frameID;
 
+	// Only marginalized points are included in the final output point cloud
 	if (outputPC){
 		float fxi = 1 / Hcalib.fxl();
 		float fyi = 1 / Hcalib.fyl();

@@ -66,7 +66,7 @@ std::string imuFile = "";
 bool reverse = false;
 int start = 0;
 int end = 100000;
-int maxPreloadImages = 0; // If set we only preload if there are less images to be loade.
+int maxPreloadImages = 0;       // If set we only preload if there are less images to be loade.
 bool useSampleOutput = false;
 
 using namespace dso;
@@ -98,7 +98,7 @@ void exitThread()
 
 void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 {
-
+    // Handle Settings
     if(setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0)
     {
         printf("ERROR: dont't have photometric calibation. Need to use commandline options mode=1 or mode=2 ");
@@ -110,15 +110,14 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     int linc = 1;
     if(reverse)
     {
-        assert(!setting_useIMU); // Reverse is not supported with IMU data at the moment!
-        printf("REVERSE!!!!");
+        assert(!setting_useIMU);    // Reverse is not supported with IMU data at the moment
+        printf("REVERSE!!!");
         lstart = end - 1;
         if(lstart >= reader->getNumImages())
             lstart = reader->getNumImages() - 1;
         lend = start;
         linc = -1;
     }
-
 
     bool linearizeOperation = (mainSettings.playbackSpeed == 0);
 
@@ -129,16 +128,19 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
                   << " because of non-realtime mode." << std::endl;
     }
 
+
+    // Create system
     std::unique_ptr<FullSystem> fullSystem;
     fullSystem = std::make_unique<FullSystem> (linearizeOperation, imuCalibration, imuSettings);
     fullSystem->setGammaFunction(reader->getPhotometricGamma());
 
-
+    // Set GUI
     if(viewer != 0)
     {
         fullSystem->outputWrapper.push_back(viewer);
     }
 
+    // Create Output Wrapper for GUI
     std::unique_ptr<IOWrap::SampleOutputWrapper> sampleOutPutWrapper;
     if(useSampleOutput)
     {
@@ -146,6 +148,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         fullSystem->outputWrapper.push_back(sampleOutPutWrapper.get());
     }
 
+    // Prepare images for system
     std::vector<int> idsToPlay;
     std::vector<double> timesToPlayAt;
     for(int i = lstart; i >= 0 && i < reader->getNumImages() && linc * i < linc * lend; i += linc)
@@ -182,6 +185,8 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         }
     }
 
+
+    // Main Loop
     struct timeval tv_start;
     gettimeofday(&tv_start, NULL);
     clock_t started = clock();
@@ -191,7 +196,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 
     bool imuDataSkipped = false;
     dmvio::IMUData skippedIMUData;
-    for(int ii = 0; ii < (int) idsToPlay.size(); ii++)
+    for(int ii = 0; ii < (int) idsToPlay.size(); ii++) // loop through all images
     {
         if(!fullSystem->initialized)    // if not initialized: reset start time.
         {
@@ -202,14 +207,14 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 
         int i = idsToPlay[ii];
 
-
+        // Load image
         ImageAndExposure* img;
         if(mainSettings.preload)
             img = preloadedImages[ii];
         else
             img = reader->getImage(i);
 
-
+        // Set time information
         bool skipFrame = false;
         if(mainSettings.playbackSpeed != 0)
         {
@@ -227,7 +232,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             }
         }
 
-
+        // Get GT data if it exists
         dmvio::GTData data;
         bool found = false;
         if(gtDataThere)
@@ -235,7 +240,8 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             data = reader->getGTData(i, found);
         }
 
-
+        // Send image and IMU data into the system
+        // THIS IS WHERE THE SYSTEM IS ACTUALLY RAN
         std::unique_ptr<dmvio::IMUData> imuData;
         if(setting_useIMU)
         {
@@ -249,7 +255,9 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
                 skippedIMUData.clear();
                 imuDataSkipped = false;
             }
+            // FRAME IS ADDED TO SYSTEM!!!
             fullSystem->addActiveFrame(img, i, imuData.get(), (gtDataThere && found) ? &data : 0);
+            
             if(gtDataThere && found && !disableAllDisplay)
             {
                 viewer->addGTCamPose(data.pose);
@@ -263,6 +271,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         delete img;
 
 
+        // Restart system
         if(fullSystem->initFailed || setting_fullResetRequested)
         {
             if(ii < 250 || setting_fullResetRequested)
@@ -280,6 +289,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             }
         }
 
+        // Handle closing
         if(viewer != nullptr && viewer->shouldQuit())
         {
             std::cout << "User closed window -> Quit!" << std::endl;
@@ -293,12 +303,14 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         }
 
     }
+    // Handle end of operation messages and outputs
     fullSystem->blockUntilMappingIsFinished();
     clock_t ended = clock();
     struct timeval tv_end;
     gettimeofday(&tv_end, NULL);
 
 
+    // Output results
     fullSystem->printResult(imuSettings.resultsPrefix + "result.txt", false, false, true);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultKFs.txt", true, false, false);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultScaled.txt", false, true, true);
@@ -307,6 +319,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     dmvio::TimeMeasurement::saveResults(imuSettings.resultsPrefix + "timings.txt");
 
 
+    // Print info about run to cmd line
     int numFramesProcessed = abs(idsToPlay[0] - idsToPlay.back());
     double numSecondsProcessed = fabs(reader->getTimestamp(idsToPlay[0]) - reader->getTimestamp(idsToPlay.back()));
     double MilliSecondsTakenSingle = 1000.0f * (ended - started) / (float) (CLOCKS_PER_SEC);
@@ -325,6 +338,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
            1000 / (MilliSecondsTakenSingle / numSecondsProcessed),
            1000 / (MilliSecondsTakenMT / numSecondsProcessed));
     fullSystem->printFrameLifetimes();
+
     if(setting_logStuff)
     {
         std::ofstream tmlog;
@@ -336,11 +350,12 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         tmlog.close();
     }
 
+
+    // Clean up
     for(IOWrap::Output3DWrapper* ow : fullSystem->outputWrapper)
     {
         ow->join();
     }
-
 
     printf("DELETE FULLSYSTEM!\n");
     fullSystem.reset();
@@ -363,14 +378,15 @@ int main(int argc, char** argv)
     bool use16Bit = false;
     bool useColour = false;
 
+    // Hanlde settings and command inputs
     auto settingsUtil = std::make_shared<dmvio::SettingsUtil>();
 
     // Create Settings files.
     imuSettings.registerArgs(*settingsUtil);
     imuCalibration.registerArgs(*settingsUtil);
 
-    // Dataset specific arguments. For other commandline arguments check out MainSettings::parseArgument,
-    // MainSettings::registerArgs, IMUSettings.h and IMUInitSettings.h
+    // Dataset specific arguments
+    // cmd line handling is done by cxxopt
     settingsUtil->registerArg("files", source, "f", "Inputted file directory in alphabetical order", "");
     settingsUtil->registerArg("start", start, "s", "Start frame", std::to_string(start));
     settingsUtil->registerArg("end", end, "e", "End frame", std::to_string(end));
@@ -381,12 +397,12 @@ int main(int argc, char** argv)
     settingsUtil->registerArg("use16Bit", use16Bit, "b", "16 Bit image input", use16Bit ? "1" : "0");
     settingsUtil->registerArg("useColour", useColour, "c", "Colour image input", useColour ? "1" : "0");
     settingsUtil->registerArg("maxPreloadImages", maxPreloadImages);
-
     mainSettings.registerArgs(*settingsUtil);
 
-    // This call will parse all commandline arguments and potentially also read a settings yaml file if passed.
+    // This call will parse all commandline arguments and potentially also read a settings yaml file if passed
     mainSettings.parseArguments(argc, argv, *settingsUtil);
 
+    // Load imu calibration
     if(mainSettings.imuCalibFile != "")
     {
         imuCalibration.loadFromFile(mainSettings.imuCalibFile);
@@ -398,6 +414,7 @@ int main(int argc, char** argv)
         settingsUtil->printAllSettings(std::cout);
     }
 
+    // Load imu settings
     {
         std::ofstream settingsStream;
         settingsStream.open(imuSettings.resultsPrefix + "usedSettingsdso.txt");
@@ -407,17 +424,21 @@ int main(int argc, char** argv)
     // hook crtl+C.
     boost::thread exThread = boost::thread(exitThread);
 
+    // Create image reader
     ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit, useColour);
     reader->loadIMUData(imuFile);
     reader->setGlobalCalibration();
 
+    // Main operationing loop
     if(!disableAllDisplay)
     {
         IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(wG[0], hG[0], false, settingsUtil,
                                                                           nullptr);
 
+        // THIS IS WHERE THE MAIN THREAD IS RUN
         boost::thread runThread = boost::thread(boost::bind(run, reader, viewer));
 
+        // THIS IS WHERE THE VIEWER IS STARTED
         viewer->run();
 
         delete viewer;
@@ -426,6 +447,7 @@ int main(int argc, char** argv)
         runThread.join();
     }else
     {
+         // THIS IS WHERE THE MAIN THREAD IS RUN
         run(reader, 0);
     }
 

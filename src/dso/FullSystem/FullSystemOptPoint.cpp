@@ -54,8 +54,8 @@ namespace dso
  * 
  * For all of the active frames
  * - Starts by calculating an optimized depth value
- * - Checks the energy from the optimization to determine if the point should count as visible in the frame
- * - Creates a PointHessian struct for the activated point with the immature point values and new depth
+ * - Checks the energy from the optimization to determine if the point should count as visible in a frame
+ * - Creates a PointHessian struct for the activated point and frame with the immature point values and new depth
  * 
  * @param point 			List of immature points that are to be optimized
  * @param minObs 

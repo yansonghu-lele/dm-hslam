@@ -20,6 +20,8 @@
 * along with DM-VIO. If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+
 #ifndef GTData_hpp
 #define GTData_hpp
 
@@ -30,8 +32,15 @@
 #include <sophus/sophus.hpp>
 #include <sophus/se3.hpp>
 
+
+
 namespace dmvio
 {
+
+/**
+ * @brief Class to handle GT data
+ * 
+ */
 class GTData
 {
 public:
@@ -46,7 +55,7 @@ public:
 
 
     Sophus::SE3d pose;
-    Eigen::Vector3d velocity; // Note: velocities might be in the vicon frame instead of the world frame...
+    Eigen::Vector3d velocity; // Note: velocities might be in the vicon frame instead of the world frame
     Eigen::Vector3d biasRotation;
     Eigen::Vector3d biasTranslation;
 };

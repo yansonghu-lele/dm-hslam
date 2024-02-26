@@ -22,10 +22,14 @@
 
 // This file contains common utils used for the main files.
 
+
+
 #ifndef DMVIO_MAINSETTINGS_H
 #define DMVIO_MAINSETTINGS_H
 
 #include <util/SettingsUtil.h>
+
+
 
 namespace dmvio
 {
@@ -58,8 +62,6 @@ public:
 
     void settingsDefault(int preset);
 };
-
 }
-
 
 #endif //DMVIO_MAINSETTINGS_H
