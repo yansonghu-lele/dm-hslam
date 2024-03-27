@@ -81,7 +81,7 @@ public:
 
 		memset(&stats, 0, sizeof(Running));
 
-//		if(!multiThreading)
+//		if(settings_no_multiThreading)
 //		{
 //			callPerIndex(first, end, &stats, 0);
 //			return;

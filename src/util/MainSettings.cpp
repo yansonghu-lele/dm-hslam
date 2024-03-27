@@ -138,6 +138,7 @@ void MainSettings::registerArgs(SettingsUtil& set)
     set.registerArg("useimu", setting_useIMU, "u", "Turn IMU on or off", setting_useIMU ? "1" : "0");
     set.registerArg("save", debugSaveImages, "a", "Save data", debugSaveImages ? "1" : "0");
     set.registerArg("mode", mode, "m", "Photometric mode (1=full, 2=no calibration, 3=Synthetic, 4=none)", "0");
+    set.registerArg("nomt", settings_no_multiThreading, "M", "Turn multithreading off", "0");
     set.registerArg("settingsFile", settingsFile, "F", "Settings file", "");
 
     // Register global settings

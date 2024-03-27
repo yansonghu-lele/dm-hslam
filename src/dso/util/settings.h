@@ -196,7 +196,7 @@ extern bool debugSaveImages;
 extern int sparsityFactor;
 extern bool goStepByStep;
 extern bool plotStereoImages;
-extern bool multiThreading;
+extern bool settings_no_multiThreading;
 
 extern float freeDebugParam1;
 extern float freeDebugParam2;

@@ -210,7 +210,7 @@ float freeDebugParam5 = 1;
 
 
 bool debugSaveImages = false;
-bool multiThreading = true;
+bool settings_no_multiThreading = false;
 bool disableAllDisplay = false;
 bool outputPC = false;
 bool setting_logStuff = true;

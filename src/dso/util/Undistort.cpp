@@ -142,7 +142,7 @@ PhotometricUndistorter::PhotometricUndistorter(
 		for(int i=0;i<w*h;i++)
 			vignetteMap[i] = vm16->at(i) / maxV;
 	}
-	else if(vm8 != 0) // 16 bit vignette image
+	else if(vm8 != 0) // 8 bit vignette image
 	{
 		if(vm8->w != w ||vm8->h != h)
 		{

@@ -537,7 +537,7 @@ void EnergyFunctional::marginalizeFrame(EFFrame* fh)
 
     if(setting_useGTSAMIntegration)
     {
-        // When adding additional factors with GTSAM they need to be accounted for during keyframe marginalization.
+        // imu!: When adding additional factors with GTSAM they need to be accounted for during keyframe marginalization.
         // Hence we move the whole keyframe marginalization to the GTSAMIntegration.
         dmvio::TimeMeasurement innerMeas("MainMarginalization");
         assert(odim == (int)HM.rows());
@@ -852,13 +852,13 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
     VecX  bL_top, bA_top, bM_top, b_sc;
 
 
-    accumulateAF_MT(HA_top, bA_top,multiThreading);
+    accumulateAF_MT(HA_top, bA_top,!settings_no_multiThreading);
 
 
-    accumulateLF_MT(HL_top, bL_top,multiThreading);
+    accumulateLF_MT(HL_top, bL_top,!settings_no_multiThreading);
 
 
-    accumulateSCF_MT(H_sc, b_sc,multiThreading);
+    accumulateSCF_MT(H_sc, b_sc,!settings_no_multiThreading);
 
 
     bM_top = (bM+ HM * getStitchedDeltaF());
@@ -935,7 +935,7 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 		VecX myX;
         if(setting_useGTSAMIntegration)
         {
-            // Instead of directly solving the system we instead pass it to the GTSAMIntegration which will add more
+            // imu!: Instead of directly solving the system we instead pass it to the GTSAMIntegration which will add more
             // factors and then solve it for us. This is mathematically correct as long as the new residuals are
             // independent of the DSO residuals (which usually they are) and as long as they don't depend on the
             // points (as otherwise the Schur-complement trick doesn't work like this anymore).
@@ -966,7 +966,7 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 
     //resubstituteF(x, HCalib);
     currentLambda= lambda;
-    resubstituteF_MT(x, HCalib,multiThreading);
+    resubstituteF_MT(x, HCalib,!settings_no_multiThreading);
     currentLambda=0;
 }
 

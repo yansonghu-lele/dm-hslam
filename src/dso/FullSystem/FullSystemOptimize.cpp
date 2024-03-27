@@ -149,9 +149,9 @@ void FullSystem::setNewFrameEnergyTH()
 	newFrame->frameEnergyTH = newFrame->frameEnergyTH*newFrame->frameEnergyTH;
 	newFrame->frameEnergyTH *= setting_overallEnergyTHWeight*setting_overallEnergyTHWeight;
 
+	// imu!: Used to enforce a maximum energy threshold.
 	if(setting_useIMU)
     {
-	    // Used to enforce a maximum energy threshold.
 	    imuIntegration.newFrameEnergyTH(newFrame->frameEnergyTH);
     }
 
@@ -183,7 +183,7 @@ Vec3 FullSystem::linearizeAll(bool fixLinearization)
 	for(int i=0;i<NUM_THREADS;i++) toRemove[i].clear();
 
 	// Linearize all of the residuals
-	if(multiThreading)
+	if(!settings_no_multiThreading)
 	{
 		treadReduce.reduce(boost::bind(&FullSystem::linearizeAll_Reductor, this, fixLinearization, toRemove, _1, _2, _3, _4), 0, activeResiduals.size(), 0);
 		lastEnergyP = treadReduce.stats[0];
@@ -500,7 +500,7 @@ float FullSystem::optimize(int mnumOptIts)
 	double lastEnergyM = calcMEnergy(false);
 
 	// Set new states
-	if(multiThreading)
+	if(!settings_no_multiThreading)
 		treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0, activeResiduals.size(), 50);
 	else
 		applyRes_Reductor(true,0,activeResiduals.size(),0,0);
@@ -530,6 +530,7 @@ float FullSystem::optimize(int mnumOptIts)
 		backupState(iteration!=0);
 
 		// Solve!
+	// imu!: Update the dynamic weight
         if(imuIntegration.getImuSettings().updateDynamicWeightDuringOptimization || iteration==0)
         {
             // Update dynamic weight before solving (where the active DSO factor will be scaled accordingly).
@@ -572,9 +573,9 @@ float FullSystem::optimize(int mnumOptIts)
 		double newEnergyL = calcLEnergy();
 		double newEnergyM = calcMEnergy(true);
 
+	// imu!: Update dynamic weight before deciding whether to accept the step
 		if(imuIntegration.getImuSettings().updateDynamicWeightDuringOptimization)
         {
-		    // Update dynamic weight before deciding whether to accept the step.
             dynamicGTSAMWeight = baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float)(lastEnergy[0] / (PATTERNNUM*ef->resInA))), frameHessians.back()->shell->trackingWasGood);
         }
 
@@ -593,7 +594,7 @@ float FullSystem::optimize(int mnumOptIts)
 		if(setting_forceAceptStep || (newEnergy[0] +  newEnergy[1] +  newEnergyL + newEnergyM / dynamicGTSAMWeight <
 				lastEnergy[0] + lastEnergy[1] + lastEnergyL + lastEnergyM / dynamicGTSAMWeight))
 		{
-			if(multiThreading)
+			if(!settings_no_multiThreading)
 				treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0, activeResiduals.size(), 50);
 			else
 				applyRes_Reductor(true,0,activeResiduals.size(),0,0);
@@ -605,6 +606,7 @@ float FullSystem::optimize(int mnumOptIts)
 			lambda *= 0.25;
             lambda = std::max(lambda, minLambda);
 
+			// imu!: Accept the update to the bundle adjustment
 			if(setting_useGTSAMIntegration)
 			{
 				baIntegration->acceptBAUpdate(lastEnergy[0]);
@@ -680,7 +682,7 @@ float FullSystem::optimize(int mnumOptIts)
 		}
 	}
 
-
+	// imu!: Post optimization for BA
     baIntegration->postOptimization(ef->frames);
 
 	debugPlotTracking();
@@ -736,6 +738,7 @@ void FullSystem::removeOutliers()
 			PointHessian* ph = fh->pointHessians[i];
 			if(ph==0) continue;
 
+			// Remove point
 			if(ph->residuals.size() == 0)
 			{
 				fh->pointHessiansOut.push_back(ph);
