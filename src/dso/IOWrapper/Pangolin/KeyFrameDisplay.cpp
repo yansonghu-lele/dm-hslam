@@ -46,7 +46,7 @@ namespace IOWrap
 {
 
 
-KeyFrameDisplay::KeyFrameDisplay() : 
+KeyFrameDisplay::KeyFrameDisplay(int w, int h) : 
 	originalInputSparse(0),
 	numSparseBufferSize(0),
 	numSparsePoints(0),
@@ -60,7 +60,9 @@ KeyFrameDisplay::KeyFrameDisplay() :
 	my_minRelBS(0),
 	my_sparsifyFactor(1),
 	numGLBufferPoints(0),
-	bufferValid(false) {}
+	bufferValid(false),
+	wG0(w),
+	hG0(h) {}
 	
 void KeyFrameDisplay::setFromF(FrameShell* frame, CalibHessian* HCalib)
 {
@@ -69,8 +71,8 @@ void KeyFrameDisplay::setFromF(FrameShell* frame, CalibHessian* HCalib)
 	fy = HCalib->fyl();
 	cx = HCalib->cxl();
 	cy = HCalib->cyl();
-	width = wG[0];
-	height = hG[0];
+	width = wG0;
+	height = hG0;
 	fxi = 1/fx;
 	fyi = 1/fy;
 	cxi = -cx / fx;
@@ -86,8 +88,8 @@ void KeyFrameDisplay::setFromPose(const Sophus::SE3d& pose, CalibHessian *HCalib
 	fy = HCalib->fyl();
 	cx = HCalib->cxl();
 	cy = HCalib->cyl();
-	width = wG[0];
-	height = hG[0];
+	width = wG0;
+	height = hG0;
 	fxi = 1/fx;
 	fyi = 1/fy;
 	cxi = -cx / fx;

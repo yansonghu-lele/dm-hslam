@@ -42,12 +42,12 @@ namespace IOWrap
 
 
 
-PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread, std::shared_ptr<dmvio::SettingsUtil>
+PangolinDSOViewer::PangolinDSOViewer(int w_, int h_, bool startRunThread, std::shared_ptr<dmvio::SettingsUtil>
         settingsUtilPassed, std::shared_ptr<double> normalizeCamSize)
         : HCalib(0), settingsUtil(std::move(settingsUtilPassed)), normalizeCamSize(normalizeCamSize)
 {
-	this->w = w;
-	this->h = h;
+	this->w = w_;
+	this->h = h_;
 	running=true;
 
 
@@ -68,8 +68,8 @@ PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread, std::sha
 
 
 	{
-		currentCam = new KeyFrameDisplay();
-        currentGTCam = new KeyFrameDisplay();
+		currentCam = new KeyFrameDisplay(w, h);
+        currentGTCam = new KeyFrameDisplay(w, h);
 	}
 
 	needReset = false;
@@ -528,7 +528,7 @@ void PangolinDSOViewer::drawConstraints()
 void PangolinDSOViewer::publishGraph(const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>> &connectivity)
 {
     if(!setting_render_display3D) return;
-    if(disableAllDisplay) return;
+    if(setting_disableAllDisplay) return;
 
 	model3DMutex.lock();
     connections.resize(connectivity.size());
@@ -575,7 +575,7 @@ void PangolinDSOViewer::publishKeyframes(
 		CalibHessian* HCalib)
 {
 	if(!setting_render_display3D) return;
-    if(disableAllDisplay) return;
+    if(setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(model3DMutex);
 
@@ -586,7 +586,7 @@ void PangolinDSOViewer::publishKeyframes(
 	{
 		if(keyframesByKFID.find(fh->frameID) == keyframesByKFID.end())
 		{
-			KeyFrameDisplay* kfd = new KeyFrameDisplay();
+			KeyFrameDisplay* kfd = new KeyFrameDisplay(w,h);
 			keyframesByKFID[fh->frameID] = kfd;
 			keyframes.push_back(kfd);
 		}
@@ -603,7 +603,7 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 		CalibHessian* HCalib)
 {
     if(!setting_render_display3D) return;
-    if(disableAllDisplay) return;
+    if(setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(model3DMutex);
 	struct timeval time_now;
@@ -624,7 +624,7 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 {
 	if(!setting_render_displayVideo) return;
-    if(disableAllDisplay) return;
+    if(setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
@@ -653,7 +653,7 @@ void PangolinDSOViewer::pushDepthImage(MinimalImageB3* image)
 {
 
     if(!setting_render_displayDepth) return;
-    if(disableAllDisplay) return;
+    if(setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
@@ -670,7 +670,7 @@ void PangolinDSOViewer::pushDepthImage(MinimalImageB3* image)
 void PangolinDSOViewer::publishTransformDSOToIMU(const dmvio::TransformDSOToIMU& transformDSOToIMUPassed)
 {
     if(!setting_render_display3D) return;
-    if(disableAllDisplay) return;
+    if(setting_disableAllDisplay) return;
 
     boost::unique_lock<boost::mutex> lk(model3DMutex);
     transformDSOToIMU = std::make_unique<dmvio::TransformDSOToIMU>(transformDSOToIMUPassed, std::make_shared<bool>(false),

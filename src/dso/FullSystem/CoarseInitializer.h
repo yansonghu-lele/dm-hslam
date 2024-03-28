@@ -103,6 +103,8 @@ public:
 
 
 private:
+	int wG0;
+	int hG0;
 	Mat33 K[PYR_LEVELS];
 	Mat33 Ki[PYR_LEVELS];
 	double fx[PYR_LEVELS];

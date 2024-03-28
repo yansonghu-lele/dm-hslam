@@ -53,7 +53,7 @@ namespace dso
 	void FullSystem::debugPlotTracking()
 	{
 		// Shows the points of each active frame in each active frame
-		if(disableAllDisplay) return;
+		if(setting_disableAllDisplay) return;
 		if(!setting_render_plotTrackingFull) return;
 		int wh = hG[0]*wG[0];
 
@@ -108,12 +108,12 @@ namespace dso
 	void FullSystem::debugPlot(std::string name)
 	{
         dmvio::TimeMeasurement timeMeasurement("debugPlot");
-		if(disableAllDisplay) return;
+		if(setting_disableAllDisplay) return;
 		if(!setting_render_renderWindowFrames) return;
 		std::vector<MinimalImageB3* > images;
 
 		float minID=0, maxID=0;
-		if((int)(freeDebugParam5+0.5f) == 7 || (debugSaveImages&&false))
+		if((int)(freeDebugParam5+0.5f) == 7 || (setting_debugSaveImages&&false))
 		{
 			std::vector<float> allID;
 			for(unsigned int f=0;f<frameHessians.size();f++)
@@ -308,7 +308,7 @@ namespace dso
 
 
 
-		if((debugSaveImages&&false))
+		if((setting_debugSaveImages&&false))
 		{
 			for(unsigned int f=0;f<frameHessians.size();f++)
 			{

@@ -37,6 +37,7 @@
 #include "FullSystem/Residuals.h"
 #include "util/ImageAndExposure.h"
 
+#include <iterator>
 
 
 namespace dso
@@ -111,6 +112,9 @@ struct FrameHessian
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	EFFrame* efFrame;
+
+	int wG[PYR_LEVELS];
+	int hG[PYR_LEVELS];
 
 	// Constant info & pre-calculated values
 	// DepthImageWrap* frame;
@@ -244,10 +248,13 @@ struct FrameHessian
 		if(debugImage != 0) delete debugImage;
 	};
 
-	inline FrameHessian() :
+	explicit inline FrameHessian(int (&wG_)[PYR_LEVELS], int (&hG_)[PYR_LEVELS]):
 		ab_exposure(0.0),
 		idx(0)
 	{
+		std::copy(std::begin(wG_), std::end(wG_), std::begin(wG));
+		std::copy(std::begin(hG_), std::end(hG_), std::begin(hG));
+
 		instanceCounter++;
 		flaggedForMarginalization=false;
 		frameID = -1;
@@ -332,15 +339,14 @@ struct CalibHessian
 	VecC value_minus_value_zero;
 
     inline ~CalibHessian() {instanceCounter--;}
-	inline CalibHessian()
+	explicit inline CalibHessian(const dso::Global_Calib& globalCalib)
 	{
-
 		VecC initial_value = VecC::Zero();
 		// K matrix
-		initial_value[0] = fxG[0];
-		initial_value[1] = fyG[0];
-		initial_value[2] = cxG[0];
-		initial_value[3] = cyG[0];
+		initial_value[0] = globalCalib.fxG[0];
+		initial_value[1] = globalCalib.fyG[0];
+		initial_value[2] = globalCalib.cxG[0];
+		initial_value[3] = globalCalib.cyG[0];
 
 		// Set K matrix
 		setValueScaled(initial_value);

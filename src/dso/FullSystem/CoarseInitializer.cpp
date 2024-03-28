@@ -66,6 +66,9 @@ CoarseInitializer::CoarseInitializer(int ww, int hh)
 		numPoints[lvl] = 0;
 	}
 
+	wG0 = ww;
+	hG0 = hh;
+
 	JbBuffer = new Vec10f[ww*hh];
 	JbBuffer_new = new Vec10f[ww*hh];
 
@@ -902,7 +905,7 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 	makeK(HCalib);
 	firstFrame = newFrameHessian;
 
-	PixelSelector sel(w[0],h[0]);
+	PixelSelector sel(w[0],h[0],w[1],w[2]);
 
 	// Stores positiions where points were selected to be
 	float* statusMap = new float[w[0]*h[0]];
@@ -1088,8 +1091,8 @@ void CoarseInitializer::applyStep(int lvl)
  */
 void CoarseInitializer::makeK(CalibHessian* HCalib)
 {
-	w[0] = wG[0];
-	h[0] = hG[0];
+	w[0] = wG0;
+	h[0] = hG0;
 
 	fx[0] = HCalib->fxl();
 	fy[0] = HCalib->fyl();

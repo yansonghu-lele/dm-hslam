@@ -57,6 +57,10 @@ class ImmaturePoint
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+	int wG0;
+	int hG0;
+
 	// static values
 	float color[MAX_RES_PER_POINT];
 	float weights[MAX_RES_PER_POINT];
@@ -78,7 +82,7 @@ public:
 
 	float idepth_min;
 	float idepth_max;
-	ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib);
+	ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_, float type, CalibHessian* HCalib);
 	~ImmaturePoint();
 
 	ImmaturePointStatus traceOn(FrameHessian* frame, const Mat33f &hostToFrame_KRKi, const Vec3f &hostToFrame_Kt, const Vec2f &hostToFrame_affine, CalibHessian* HCalib, bool debugPrint=false);

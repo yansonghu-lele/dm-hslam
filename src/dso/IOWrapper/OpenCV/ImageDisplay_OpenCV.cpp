@@ -48,7 +48,7 @@ boost::mutex openCVdisplayMutex;
 
 void displayImage(const char* windowName, const cv::Mat& image, int autoSize)
 {
-	if(disableAllDisplay) return;
+	if(setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lock(openCVdisplayMutex);
 	if(autoSize!=0)
@@ -66,7 +66,7 @@ void displayImage(const char* windowName, const cv::Mat& image, int autoSize)
 
 void displayImageStitch(const char* windowName, const std::vector<cv::Mat*> images, int cc, int rc)
 {
-	if(disableAllDisplay) return;
+	if(setting_disableAllDisplay) return;
 	if(images.size() == 0) return;
 
 	// get dimensions.
@@ -179,7 +179,7 @@ void displayImageStitch(const char* windowName, const std::vector<MinimalImageF3
 
 int waitKey(int milliseconds)
 {
-	if(disableAllDisplay) return 0;
+	if(setting_disableAllDisplay) return 0;
 
 	boost::unique_lock<boost::mutex> lock(openCVdisplayMutex);
 	return cv::waitKey(milliseconds);
@@ -187,7 +187,7 @@ int waitKey(int milliseconds)
 
 void closeAllWindows()
 {
-	if(disableAllDisplay) return;
+	if(setting_disableAllDisplay) return;
 	boost::unique_lock<boost::mutex> lock(openCVdisplayMutex);
 	cv::destroyAllWindows();
 	openWindows.clear();

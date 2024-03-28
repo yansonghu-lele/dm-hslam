@@ -233,7 +233,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 	auto frameID = frame->frameID;
 
 	// Only marginalized points are included in the final output point cloud
-	if (outputPC){
+	if (setting_outputPC){
 		float fxi = 1 / Hcalib.fxl();
 		float fyi = 1 / Hcalib.fyl();
 		float cxi = -Hcalib.cxl() / Hcalib.fxl();
@@ -271,7 +271,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 
 	// Culling the connectivity map is incompatible with viewing full constraints in GUI
 	// Culled connectivity map information is unneeded for operation and culling results in performance improvement
-	if (disableAllDisplay){
+	if (setting_disableAllDisplay){
 		int numDel = 0;
 		for(auto it = ef->connectivityMap.begin(); it != ef->connectivityMap.end();)
 		{

@@ -160,7 +160,9 @@ struct PC_output
 class FullSystem {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-	FullSystem(bool linearizeOperationPassed, const dmvio::IMUCalibration& imuCalibration,
+	FullSystem(bool linearizeOperationPassed, 
+				const dso::Global_Calib& globalCalib,
+				const dmvio::IMUCalibration& imuCalibration,
                dmvio::IMUSettings& imuSettings);
 	virtual ~FullSystem();
 
@@ -203,6 +205,8 @@ public:
 
 private:
 	CalibHessian Hcalib;
+	int wG[PYR_LEVELS];
+	int hG[PYR_LEVELS];
 
     dmvio::GravityInitializer gravityInit;
 

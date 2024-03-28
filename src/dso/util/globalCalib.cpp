@@ -26,29 +26,34 @@
 #include "util/globalCalib.h"
 #include "stdio.h"
 #include <iostream>
-
+#include <limits>
 
 
 namespace dso
 {
+	Global_Calib::Global_Calib()
+	{
+		for (size_t i = 0; i < PYR_LEVELS; i++)
+		{
+			wG[i] = 0;
+			hG[i] = 0;
 
-	// Image width and height
-	int wG[PYR_LEVELS], hG[PYR_LEVELS];
-	// Values of K matrix
-	float fxG[PYR_LEVELS], fyG[PYR_LEVELS],
-		  cxG[PYR_LEVELS], cyG[PYR_LEVELS];
-	// Values of inverse K matrix
-	float fxiG[PYR_LEVELS], fyiG[PYR_LEVELS],
-		  cxiG[PYR_LEVELS], cyiG[PYR_LEVELS];
-	// K and K inverse matrix
-	Eigen::Matrix3f KG[PYR_LEVELS], KiG[PYR_LEVELS];
+			fxG[i] = 0;
+			fyG[i] = 0;
+			cxG[i] = 0;
+			cyG[i] = 0;
 
-	// Image width and height at first level accounting for borders
-	float wM3G;
-	float hM3G;
+			fxiG[i] = INFINITY;
+			fyiG[i] = INFINITY;
+			cxiG[i] = INFINITY;
+			cyiG[i] = INFINITY;
 
+			KG[i] = Eigen::Matrix3f::Zero();
+			KiG[i] = Eigen::Matrix3f::Zero();
+		}
+	}
 
-	void setGlobalCalib(int w, int h,const Eigen::Matrix3f &K)
+	void Global_Calib::setGlobalCalib(int w, int h,const Eigen::Matrix3f &K)
 	{
 		int wlvl=w;
 		int hlvl=h;
@@ -78,9 +83,6 @@ namespace dso
 		}
 
 		// Set values for each pyramid level
-		wM3G = w-3;
-		hM3G = h-3;
-
 		wG[0] = w;
 		hG[0] = h;
 		KG[0] = K;

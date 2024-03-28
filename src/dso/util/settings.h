@@ -51,6 +51,7 @@ namespace dso
 
 // ============== PARAMETERS TO BE DECIDED ON COMPILE TIME =================
 #define PYR_LEVELS 6 // Should be between 1 and 6
+
 extern int pyrLevelsUsed;
 
 extern bool setting_useIMU;
@@ -109,7 +110,6 @@ extern float setting_outlierTHSumComponent;
 
 
 
-extern int setting_pattern;
 extern float setting_margWeightFac;
 extern int setting_GNItsOnPointActivation;
 
@@ -125,7 +125,6 @@ extern int   setting_minInlierVotesForMarg;
 
 
 
-
 extern int setting_photometricCalibration;
 extern bool setting_useExposure;
 extern float setting_affineOptModeA;
@@ -135,13 +134,10 @@ extern float setting_affineOptModeB_huberTH;
 extern int setting_gammaWeightsPixelSelect;
 
 
-
 extern bool setting_forceAceptStep;
 
 
-
 extern float setting_huberTH;
-
 
 extern bool setting_logStuff;
 extern float benchmarkSetting_fxfyfac;
@@ -165,7 +161,6 @@ extern float setting_gradDownweightPerLevel;
 extern bool  setting_selectDirectionDistribution;
 
 
-
 extern float setting_trace_stepsize;
 extern int setting_trace_GNIterations;
 extern float setting_trace_GNThreshold;
@@ -183,19 +178,15 @@ extern bool setting_fullResetRequested;
 
 extern bool setting_debugout_runquiet;
 
-extern bool disableAllDisplay;
-extern bool outputPC;
+extern bool setting_disableAllDisplay;
+extern bool setting_outputPC;
 
 
+extern bool setting_debugSaveImages;
 
-
-
-extern bool debugSaveImages;
-
-
-extern int sparsityFactor;
-extern bool goStepByStep;
-extern bool plotStereoImages;
+extern int setting_sparsityFactor;
+extern bool setting_goStepByStep;
+extern bool setting_plotStereoImages;
 extern bool settings_no_multiThreading;
 
 extern float freeDebugParam1;
@@ -204,38 +195,56 @@ extern float freeDebugParam3;
 extern float freeDebugParam4;
 extern float freeDebugParam5;
 
-
 void handleKey(char k);
 
 
 
+extern const int global_staticPattern[10][40][2];
 
-extern int staticPattern[10][40][2];
-extern int staticPatternNum[10];
-extern int staticPatternPadding[10];
+#define SETTING_PATTERN 8 // point pattern used
 
-
-
-
-//#define PATTERNNUM staticPatternNum[setting_pattern]
-//#define PATTERNP staticPattern[setting_pattern]
-//#define PATTERNPADDING staticPatternPadding[setting_pattern]
-
-//
-#define PATTERNNUM 8
-#define PATTERNP staticPattern[8]
-#define PATTERNPADDING 2
-
-
-
-
-
-
-
-
-
-
-
-
+#if SETTING_PATTERN == 0
+    #define PATTERNNUM 1
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 1
+#elif SETTING_PATTERN == 1
+    #define PATTERNNUM 5
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 1
+#elif SETTING_PATTERN == 2
+    #define PATTERNNUM 5
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 1
+#elif SETTING_PATTERN == 3
+    #define PATTERNNUM 9
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 1
+#elif SETTING_PATTERN == 4
+    #define PATTERNNUM 9
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 2
+#elif SETTING_PATTERN == 5
+    #define PATTERNNUM 13
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 2
+#elif SETTING_PATTERN == 6
+    #define PATTERNNUM 25
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 2
+#elif SETTING_PATTERN == 7
+    #define PATTERNNUM 21
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 3
+#elif SETTING_PATTERN == 8
+    #define PATTERNNUM 8
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 2
+#elif SETTING_PATTERN == 9
+    #define PATTERNNUM 25
+    #define PATTERNP global_staticPattern[SETTING_PATTERN]
+    #define PATTERNPADDING 4
+#else
+    #error Unsupported choice setting
+#endif
 
 }

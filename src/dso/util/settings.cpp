@@ -76,8 +76,6 @@ float setting_initialCalibHessian = 5e9;
 
 
 
-
-
 /* some modes for solving the resulting linear system (e.g. orthogonalize wrt. unobservable dimensions) */
 //int setting_solverMode = SOLVER_FIX_LAMBDA | SOLVER_ORTHOGONALIZE_X_LATER;
 int setting_solverMode = SOLVER_ORTHOGONALIZE_X_LATER;
@@ -89,7 +87,6 @@ bool setting_forceAceptStep = false;
 /* some thresholds on when to activate / marginalize points */
 float setting_minIdepthH_act = 100;
 float setting_minIdepthH_marg = 50;
-
 
 
 float setting_desiredImmatureDensity = 1500; // immature points per frame
@@ -107,16 +104,12 @@ float setting_thOptIterations=1.2; // factor on break threshold for GN iteration
 
 
 
-
-
 /* Outlier Threshold on photometric energy */
 float setting_outlierTH = 12*12;					// higher -> less strict
 float setting_outlierTHSumComponent = 50*50; 		// higher -> less strong gradient-based reweighting .
 
 
 
-
-int setting_pattern = 8;						// point pattern used. DISABLED.
 float setting_margWeightFac = 0.5*0.5;          // factor on hessian when marginalizing, to account for inaccurate linearization points.
 
 
@@ -124,13 +117,9 @@ float setting_margWeightFac = 0.5*0.5;          // factor on hessian when margin
 float setting_reTrackThreshold = 1.5; // (larger = re-track more often)
 
 
-
 /* require some minimum number of residuals for a point to become valid */
 int   setting_minGoodActiveResForMarg=3;
 int   setting_minGoodResForMarg=4;
-
-
-
 
 
 
@@ -147,10 +136,7 @@ int setting_gammaWeightsPixelSelect = 1; // 1 = use original intensity for pixel
 
 
 
-
 float setting_huberTH = 9; // Huber Threshold
-
-
 
 
 
@@ -163,16 +149,11 @@ float setting_coarseCutoffTH = 20;
 
 
 
-
-
 // parameters controlling pixel selection
 float setting_minGradHistCut = 0.5;
 float setting_minGradHistAdd = 0.005;
 float setting_gradDownweightPerLevel = 0.75;
 bool  setting_selectDirectionDistribution = true;
-
-
-
 
 
 
@@ -187,7 +168,6 @@ float setting_trace_GNThreshold = 0.1;				// GN stop after this stepsize.
 float setting_trace_extraSlackOnTH = 1.2;			// for energy-based outlier check, be slightly more relaxed by this factor.
 float setting_trace_slackInterval = 1.5;			// if pixel-interval is smaller than this, leave it be.
 float setting_trace_minImprovementFactor = 2;		// if pixel-interval is smaller than this, leave it be.
-
 
 
 
@@ -209,15 +189,15 @@ float freeDebugParam5 = 1;
 
 
 
-bool debugSaveImages = false;
+bool setting_debugSaveImages = false;
 bool settings_no_multiThreading = false;
-bool disableAllDisplay = false;
-bool outputPC = false;
+bool setting_disableAllDisplay = false;
+bool setting_outputPC = false;
 bool setting_logStuff = true;
 
 
 
-bool goStepByStep = false;
+bool setting_goStepByStep = false;
 
 
 bool setting_render_displayCoarseTrackingFull=false;
@@ -229,7 +209,7 @@ bool setting_fullResetRequested = false;
 
 bool setting_debugout_runquiet = false;
 
-int sparsityFactor = 5;	// not actually a setting, only some legacy stuff for coarse initializer.
+int setting_sparsityFactor = 5;	// not actually a setting, only some legacy stuff for coarse initializer.
 
 
 void handleKey(char k)
@@ -249,10 +229,7 @@ void handleKey(char k)
 
 }
 
-
-
-
-int staticPattern[10][40][2] = {
+const int global_staticPattern[10][40][2] = {
 		{{0,0}, 	  {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100},	// .
 		 {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100},
 		 {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100},
@@ -303,32 +280,5 @@ int staticPattern[10][40][2] = {
 		 {+4,-4}, 	  {+4,-2}, {+4,-0}, {+4,2}, {+4,4}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200},
 		 {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}, {-200,-200}},
 };
-
-int staticPatternNum[10] = {
-		1,
-		5,
-		5,
-		9,
-		9,
-		13,
-		25,
-		21,
-		8,
-		25
-};
-
-int staticPatternPadding[10] = {
-		1,
-		1,
-		1,
-		1,
-		2,
-		2,
-		2,
-		3,
-		2,
-		4
-};
-
 
 }

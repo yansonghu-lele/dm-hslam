@@ -63,6 +63,8 @@ public:
 	static int instanceCounter;
 
 
+	int wG0;
+	int hG0;
 	ResState state_state;
 	double state_energy;
 	ResState state_NewState;
@@ -84,7 +86,7 @@ public:
 
 	~PointFrameResidual();
 	PointFrameResidual();
-	PointFrameResidual(PointHessian* point_, FrameHessian* host_, FrameHessian* target_);
+	PointFrameResidual(int ww, int hh, PointHessian* point_, FrameHessian* host_, FrameHessian* target_);
 	double linearize(CalibHessian* HCalib);
 
 

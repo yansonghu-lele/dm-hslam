@@ -52,7 +52,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	int makeMaps( const FrameHessian* const fh, float* map_out, float density, int recursionsLeft=1, float thFactor=1);
 
-	PixelSelector(int w, int h);
+	PixelSelector(int w0, int h0, int w2, int w3);
 	~PixelSelector();
 
 	void makeThresTable(const FrameHessian* const fh);
@@ -73,6 +73,9 @@ private:
 	int thsStep;
 	const FrameHessian* gradHistFrame;
 
+	// With and height of image
+	int wG0, hG0;
+	int wG1, wG2;
 	// block width, and block height.
 	int bW, bH;
 	// number of blocks in x and y dimension.

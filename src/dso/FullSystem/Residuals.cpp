@@ -66,11 +66,13 @@ PointFrameResidual::~PointFrameResidual(){assert(efResidual==0); instanceCounter
  * @param host_ 
  * @param target_ 
  */
-PointFrameResidual::PointFrameResidual(PointHessian* point_, FrameHessian* host_, FrameHessian* target_) :
+PointFrameResidual::PointFrameResidual(int ww, int hh, PointHessian* point_, FrameHessian* host_, FrameHessian* target_) :
 	point(point_),
 	host(host_),
 	target(target_)
 {
+	wG0 = ww;
+	hG0 = hh;
 	efResidual=0;
 	instanceCounter++;
 	resetOOB();
@@ -129,7 +131,7 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
 		// The calibration and transformation matrices are applied by the projection
 		if(!projectPoint(point->u, point->v, point->idepth_zero_scaled, 0, 0, HCalib,
-				PRE_RTll_0, PRE_tTll_0, drescale, u, v, Ku, Kv, KliP, new_idepth))
+				PRE_RTll_0, PRE_tTll_0, drescale, u, v, Ku, Kv, KliP, new_idepth, wG0, hG0))
 			{ state_NewState = ResState::OOB; return state_energy; }
 
 		// Get the new coordinates
@@ -210,12 +212,12 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	for(int idx=0;idx<PATTERNNUM;idx++)
 	{
 		float Ku, Kv;
-		if(!projectPoint(point->u+PATTERNP[idx][0], point->v+PATTERNP[idx][1], point->idepth_scaled, PRE_KRKiTll, PRE_KtTll, Ku, Kv))
+		if(!projectPoint(point->u+PATTERNP[idx][0], point->v+PATTERNP[idx][1], point->idepth_scaled, PRE_KRKiTll, PRE_KtTll, Ku, Kv, wG0, hG0))
 			{ state_NewState = ResState::OOB; return state_energy; }
 
 		projectedTo[idx][0] = Ku;
 		projectedTo[idx][1] = Kv;
-        Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG[0]));
+        Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0));
 
 		// Calculate residual
         float residual = hitColor[0] - (float)(affLL[0] * color[idx] + affLL[1]);
@@ -327,7 +329,7 @@ void PointFrameResidual::debugPlot()
 
 	for(int i=0;i<PATTERNNUM;i++)
 	{
-		if((projectedTo[i][0] > 2 && projectedTo[i][1] > 2 && projectedTo[i][0] < wG[0]-3 && projectedTo[i][1] < hG[0]-3 ))
+		if((projectedTo[i][0] > PIXEL_BORDER && projectedTo[i][1] > PIXEL_BORDER && projectedTo[i][0] < wG0-PIXEL_BORDER-1 && projectedTo[i][1] < hG0-PIXEL_BORDER-1 ))
 			target->debugImage->setPixel1((float)projectedTo[i][0], (float)projectedTo[i][1],cT);
 	}
 }

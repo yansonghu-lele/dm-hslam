@@ -66,6 +66,8 @@ public:
 
 	bool debugPrint, debugPlot;
 
+	int wG0;
+	int hG0;
 	Mat33f K[PYR_LEVELS];
 	Mat33f Ki[PYR_LEVELS];
 	float fx[PYR_LEVELS];
@@ -149,6 +151,8 @@ public:
 
 	float* fwdWarpedIDDistFinal;
 
+	int wG0;
+	int hG0;
 	Mat33f K[PYR_LEVELS];
 	Mat33f Ki[PYR_LEVELS];
 	float fx[PYR_LEVELS];

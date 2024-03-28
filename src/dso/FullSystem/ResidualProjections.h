@@ -72,7 +72,7 @@ EIGEN_STRONG_INLINE bool projectPoint(
 		const float &u_pt,const float &v_pt,
 		const float &idepth,
 		const Mat33f &KRKi, const Vec3f &Kt,
-		float &Ku, float &Kv)
+		float &Ku, float &Kv, int ww, int hh)
 {
 	// Apply transformation matrix
 	Vec3f ptp = KRKi * Vec3f(u_pt,v_pt,1) + Kt*idepth;
@@ -80,7 +80,7 @@ EIGEN_STRONG_INLINE bool projectPoint(
 	Ku = ptp[0] / ptp[2];
 	Kv = ptp[1] / ptp[2];
 
-	return Ku>1.1f && Kv>1.1f && Ku<wM3G && Kv<hM3G;
+	return Ku>1.1f && Kv>1.1f && Ku<(ww-PIXEL_BORDER-1) && Kv<(hh-PIXEL_BORDER-1);
 }
 
 /**
@@ -110,7 +110,8 @@ EIGEN_STRONG_INLINE bool projectPoint(
 		CalibHessian* const &HCalib,
 		const Mat33f &R, const Vec3f &t,
 		float &drescale, float &u, float &v,
-		float &Ku, float &Kv, Vec3f &KliP, float &new_idepth)
+		float &Ku, float &Kv, Vec3f &KliP, float &new_idepth,
+		int ww, int hh)
 {
 	// Convert to projective coordinates
 	KliP = Vec3f(
@@ -131,7 +132,7 @@ EIGEN_STRONG_INLINE bool projectPoint(
 	Ku = u*HCalib->fxl() + HCalib->cxl();
 	Kv = v*HCalib->fyl() + HCalib->cyl();
 
-	return Ku>1.1f && Kv>1.1f && Ku<wM3G && Kv<hM3G;
+	return Ku>1.1f && Kv>1.1f && Ku<(ww-PIXEL_BORDER-1) && Kv<(hh-PIXEL_BORDER-1);
 }
 }
 

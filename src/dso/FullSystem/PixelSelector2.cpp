@@ -45,12 +45,17 @@ namespace dso
  * @param w 	Width of image
  * @param h 	Height of image
  */
-PixelSelector::PixelSelector(int w, int h)
+PixelSelector::PixelSelector(int w0, int h0, int w1, int w2)
 {
-	randomPattern = new unsigned char[w*h];
+	wG0 = w0;
+	hG0 = h0;
+	wG1 = w1;
+	wG2 = w2;
+	
+	randomPattern = new unsigned char[w0*h0];
 	std::srand(3141592); // Want to be deterministic
 	// X & 0xFF sets value between 0 and 255
-	for(int i=0;i<w*h;i++) randomPattern[i] = rand() & 0xFF;
+	for(int i=0;i<w0*h0;i++) randomPattern[i] = rand() & 0xFF;
 
 	// Grid thresholding is used to chose points
 
@@ -59,13 +64,13 @@ PixelSelector::PixelSelector(int w, int h)
     // Always use block size divisable by 16
     bW = 16;
     bH = 16;
-    nbW = w / bW;
-    nbH = h / bH;
+    nbW = w0 / bW;
+    nbH = h0 / bH;
 
 	ths = new float[(nbW)*(nbH)];
 	thsSmoothed = new float[(nbW)*(nbH)];
 
-    if(w != bW * nbW || h != bH * nbH)
+    if(w0 != bW * nbW || h0 != bH * nbH)
     {
         std::cout << "ERROR: Height or width seem to be not divisible by 16!" << std::endl;
         assert(0);
@@ -128,8 +133,8 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 	// absSquaredGrad contains normalized gradient values
 	float * mapmax0 = fh->absSquaredGrad[0];
 
-	int w = wG[0];
-	int h = hG[0];
+	int w = wG0;
+	int h = hG0;
 
 	int w32 = nbW;
 	int h32 = nbH;
@@ -249,8 +254,8 @@ int PixelSelector::makeMaps(
 
 #if DEBUG_MESSAGE_PIXELSELECTOR2
 		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-				100*numHave/(float)(wG[0]*hG[0]),
-				100*numWant/(float)(wG[0]*hG[0]),
+				100*numHave/(float)(wG0*hG0),
+				100*numWant/(float)(wG0*hG0),
 				currentPotential,
 				idealPotential);
 #endif
@@ -268,8 +273,8 @@ int PixelSelector::makeMaps(
 
 #if DEBUG_MESSAGE_PIXELSELECTOR2
 		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-				100*numHave/(float)(wG[0]*hG[0]),
-				100*numWant/(float)(wG[0]*hG[0]),
+				100*numHave/(float)(wG0*hG0),
+				100*numWant/(float)(wG0*hG0),
 				currentPotential,
 				idealPotential);
 #endif
@@ -281,7 +286,7 @@ int PixelSelector::makeMaps(
 	int numHaveSub = numHave;
 	if(quotia < 0.95)
 	{
-		int wh = wG[0]*hG[0];
+		int wh = wG0*hG0;
 		int rn = 0;
 		unsigned char charTH = 255*quotia;
 		for(int i=0;i<wh;i++)
@@ -300,17 +305,17 @@ int PixelSelector::makeMaps(
 
 #if DEBUG_MESSAGE_PIXELSELECTOR2
 	printf("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
-			100*numHave/(float)(wG[0]*hG[0]),
-			100*numWant/(float)(wG[0]*hG[0]),
+			100*numHave/(float)(wG0*hG0),
+			100*numWant/(float)(wG0*hG0),
 			currentPotential,
 			idealPotential,
-			100*numHaveSub/(float)(wG[0]*hG[0]));
+			100*numHaveSub/(float)(wG0*hG0));
 #endif
 
 	currentPotential = idealPotential;
 
-	int w = wG[0];
-	int h = hG[0];
+	int w = wG0;
+	int h = hG0;
 
 	if (debugPlot){
 		MinimalImageB3 img(w,h);
@@ -362,10 +367,10 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 	float * mapmax1 = fh->absSquaredGrad[1]; // 2nd pyramid level
 	float * mapmax2 = fh->absSquaredGrad[2]; // 3rd pyramid level
 
-	int w = wG[0];
-	int w1 = wG[1];
-	int w2 = wG[2];
-	int h = hG[0];
+	int w = wG0;
+	int w1 = wG1;
+	int w2 = wG2;
+	int h = hG0;
 
 	// Set of random directions to chose from
 	// Gradient is multiplied by random direction to add variance to point selection

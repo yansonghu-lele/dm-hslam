@@ -82,6 +82,10 @@ T* allocAligned(int size, std::vector<T*> &rawPtrVec)
  */
 CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegration) : lastRef_aff_g2l(0, 0), imuIntegration(imuIntegration)
 {
+	// Set width and height
+	wG0 = ww;
+	hG0 = hh;
+
 	// Make coarse tracking templates.
 	// All arrays are aligned to allow for the use of high performance instructions
 	// All pointers are stored in ptrToDelete for the destructor
@@ -136,8 +140,8 @@ CoarseTracker::~CoarseTracker()
  */
 void CoarseTracker::makeK(CalibHessian* HCalib)
 {
-	w[0] = wG[0];
-	h[0] = hG[0];
+	w[0] = wG0;
+	h[0] = hG0;
 
 	fx[0] = HCalib->fxl();
 	fy[0] = HCalib->fyl();
@@ -910,7 +914,7 @@ bool CoarseTracker::trackNewestCoarse(
 void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::vector<IOWrap::Output3DWrapper*> &wraps) const
 {
 	dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMap");
-	if(wraps.empty() && !debugSaveImages)
+	if(wraps.empty() && !setting_debugSaveImages)
 	{
 		return;
 	}
@@ -1000,7 +1004,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 		for(IOWrap::Output3DWrapper* ow : wraps)
 			ow->pushDepthImage(&mf);
 
-		if(debugSaveImages)
+		if(setting_debugSaveImages)
 		{
 			char buf[1000];
 			snprintf(buf, 1000, "images_out/predicted_%05d_%05d.png", lastRef->shell->id, refFrameID);
@@ -1032,6 +1036,8 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*
  */
 CoarseDistanceMap::CoarseDistanceMap(int ww, int hh)
 {
+	wG0 = ww;
+	hG0 = hh;
 	fwdWarpedIDDistFinal = new float[ww*hh/4];
 
 	bfsList1 = new Eigen::Vector2i[ww*hh/4];
@@ -1235,8 +1241,8 @@ void CoarseDistanceMap::addIntoDistFinal(int u, int v)
  */
 void CoarseDistanceMap::makeK(CalibHessian* HCalib)
 {
-	w[0] = wG[0];
-	h[0] = hG[0];
+	w[0] = wG0;
+	h[0] = hG0;
 
 	fx[0] = HCalib->fxl();
 	fy[0] = HCalib->fyl();

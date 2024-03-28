@@ -69,6 +69,7 @@ int start = 2;
 
 using namespace dso;
 
+dso::Global_Calib globalCalibSettings;
 dmvio::FrameContainer frameContainer;
 dmvio::MainSettings mainSettings;
 dmvio::IMUCalibration imuCalibration;
@@ -98,7 +99,7 @@ void exitThread()
 void run(IOWrap::PangolinDSOViewer* viewer, Undistort* undistorter)
 {
     bool linearizeOperation = false;
-    auto fullSystem = std::make_unique<FullSystem>(linearizeOperation, imuCalibration, imuSettings);
+    auto fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalibSettings, imuCalibration, imuSettings);
 
     if(setting_photometricCalibration > 0 && undistorter->photometricUndist == nullptr)
     {
@@ -148,7 +149,7 @@ void run(IOWrap::PangolinDSOViewer* viewer, Undistort* undistorter)
                 fullSystem.reset();
                 for(IOWrap::Output3DWrapper* ow : wraps) ow->reset();
 
-                fullSystem = std::make_unique<FullSystem>(linearizeOperation, imuCalibration, imuSettings);
+                fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalibSettings, imuCalibration, imuSettings);
                 if(undistorter->photometricUndist != nullptr)
                 {
                     fullSystem->setGammaFunction(undistorter->photometricUndist->getG());
@@ -267,7 +268,7 @@ int main(int argc, char** argv)
             Undistort::getUndistorterForFile(usedCalib, mainSettings.gammaCalib, mainSettings.vignette));
     realsense.setUndistorter(undistorter.get());
 
-    setGlobalCalib(
+    globalCalibSettings.setGlobalCalib(
             (int) undistorter->getSize()[0],
             (int) undistorter->getSize()[1],
             undistorter->getK().cast<float>());
@@ -281,9 +282,9 @@ int main(int argc, char** argv)
         imuCalibration = *(realsense.imuCalibration);
     }
 
-    if(!disableAllDisplay)
+    if(!setting_disableAllDisplay)
     {
-        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(wG[0], hG[0], false, settingsUtil,
+        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(globalCalibSettings.wG[0], globalCalibSettings.hG[0], false, settingsUtil,
                                                                           normalizeCamSize);
 
 

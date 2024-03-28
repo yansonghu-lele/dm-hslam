@@ -43,9 +43,12 @@ namespace dso
  * @param type 		Pyramid level point is detected in
  * @param HCalib 
  */
-ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, CalibHessian* HCalib)
+ImmaturePoint::ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_, float type, CalibHessian* HCalib)
 : u(u_), v(v_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
 {
+	wG0 = ww;
+	hG0 = hh;
+
 	gradH.setZero();
 
 	colourValid = false;
@@ -58,13 +61,13 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, Ca
 		int dy = PATTERNP[idx][1];
 
 		// ptc is (pixel intensity, dx, dy)
-        Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u+dx, v+dy, wG[0]);
+        Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u+dx, v+dy, wG0);
 		color[idx] = ptc[0]; // Set pixel internsity
 
 		if(colourValid){
 			int u_int = static_cast<int>(u);
 			int v_int = static_cast<int>(v);
-			Vec3f ptc_3 = host->dI_c[u_int+dx+(v_int+dy)*wG[0]];
+			Vec3f ptc_3 = host->dI_c[u_int+dx+(v_int+dy)*wG0];
 			colour3[idx] = ptc_3;
 		}
 
@@ -115,7 +118,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	if(lastTraceStatus == ImmaturePointStatus::IPS_OOB) return lastTraceStatus;
 
 	debugPrint = false;
-	float maxPixSearch = (wG[0]+hG[0])*setting_maxPixSearch;
+	float maxPixSearch = (wG0+hG0)*setting_maxPixSearch;
 
 	if(debugPrint)
 		printf("trace pt (%.1f %.1f) from frame %d to %d. Range %f -> %f. t %f %f %f!\n",
@@ -152,7 +155,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
     boundU = std::max(boundU, realBoundU);
     boundV = std::max(boundV, realBoundV);
 
-	if(!(uMin > boundU && vMin > boundV && uMin < wG[0]-boundU-1 && vMin < hG[0]-boundV-1)) // Pattern is OOB
+	if(!(uMin > boundU && vMin > boundV && uMin < wG0-boundU-1 && vMin < hG0-boundV-1)) // Pattern is OOB
 	{
 		if(debugPrint) printf("OOB uMin %f %f - %f %f %f (id %f-%f)!\n",
 				u,v,uMin, vMin,  ptpMin[2], idepth_min, idepth_max);
@@ -171,7 +174,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		uMax = ptpMax[0] / ptpMax[2];
 		vMax = ptpMax[1] / ptpMax[2];
 
-		if(!(uMax > boundU && vMax > boundV && uMax < wG[0]-boundU-1 && vMax < hG[0]-boundV-1)) // Pattern is OOB
+		if(!(uMax > boundU && vMax > boundV && uMax < wG0-boundU-1 && vMax < hG0-boundV-1)) // Pattern is OOB
 		{
 			if(debugPrint) printf("OOB uMax  %f %f - %f %f!\n",u,v, uMax, vMax);
 			lastTraceUV = Vec2f(-1,-1);
@@ -209,7 +212,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		uMax = uMin + dist*dx*d;
 		vMax = vMin + dist*dy*d;
 
-		if(!(uMax > boundU && vMax > boundV && uMax < wG[0]-boundU-1 && vMax < hG[0]-boundV-1)) // Pattern may still be OOB
+		if(!(uMax > boundU && vMax > boundV && uMax < wG0-boundU-1 && vMax < hG0-boundV-1)) // Pattern may still be OOB
 		{
 			if(debugPrint) printf("OOB uMax-coarse %f %f %f!\n", uMax, vMax,  ptpMax[2]);
 			lastTraceUV = Vec2f(-1,-1);
@@ -300,7 +303,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			float hitColor = getInterpolatedElement31(frame->dI,
 										(float)(ptx+rotatetPattern[idx][0]),
 										(float)(pty+rotatetPattern[idx][1]),
-										wG[0]);
+										wG0);
 
 			if(!std::isfinite(hitColor)) {energy+=1e5; continue;}
 			float residual = hitColor - (float)(hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
@@ -345,7 +348,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
             float posU = (float)(bestU + rotatetPattern[idx][0]);
             float posV = (float)(bestV + rotatetPattern[idx][1]);
 
-            if(posU < 0 || posV < 0 || posU >= wG[0] - 1 || posV >= hG[0] - 1) // Check if pattern is OOB
+            if(posU < 0 || posV < 0 || posU >= wG0 - 1 || posV >= hG0 - 1) // Check if pattern is OOB
             {
                 if(debugPrint) printf("OOB uMax  %f %f - %f %f!\n", posU, posV, uMax, vMax);
                 lastTraceUV = Vec2f(-1,-1);
@@ -353,7 +356,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
                 return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
             }
 
-			Vec3f hitColor = getInterpolatedElement33(frame->dI, posU, posV, wG[0]);
+			Vec3f hitColor = getInterpolatedElement33(frame->dI, posU, posV, wG0);
 
 			if(!std::isfinite((float)hitColor[0])) {energy+=1e5; continue;}
 			float residual = hitColor[0] - (hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
@@ -464,7 +467,7 @@ float ImmaturePoint::getdPixdd(
 	Vec3f KliP;
 
 	projectPoint(this->u,this->v, idepth, 0, 0, HCalib,
-			precalc->PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth);
+			precalc->PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth, wG0, hG0);
 
 	float dxdd = (PRE_tTll[0]-PRE_tTll[2]*u)*HCalib->fxl();
 	float dydd = (PRE_tTll[1]-PRE_tTll[2]*v)*HCalib->fyl();
@@ -488,10 +491,10 @@ float ImmaturePoint::calcResidual(
 	for(int idx=0;idx<PATTERNNUM;idx++)
 	{
 		float Ku, Kv;
-		if(!projectPoint(this->u+PATTERNP[idx][0], this->v+PATTERNP[idx][1], idepth, PRE_KRKiTll, PRE_KtTll, Ku, Kv))
+		if(!projectPoint(this->u+PATTERNP[idx][0], this->v+PATTERNP[idx][1], idepth, PRE_KRKiTll, PRE_KtTll, Ku, Kv, wG0, hG0))
 			{return 1e10;}
 
-		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG[0]));
+		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0));
 		if(!std::isfinite((float)hitColor[0])) {return 1e10;}
 
 		float residual = hitColor[0] - (affLL[0] * color[idx] + affLL[1]);
@@ -555,9 +558,9 @@ double ImmaturePoint::linearizeResidual(
 
 		// Get intensity of point at transformed location
 		if(!projectPoint(this->u,this->v, idepth, dx, dy, HCalib,
-				PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth))
+				PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth, wG0, hG0))
 			{tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}
-		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG[0]));
+		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0));
 
 		if(!std::isfinite((float)hitColor[0])) {tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}
 		

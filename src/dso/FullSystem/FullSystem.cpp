@@ -60,6 +60,7 @@
 #include "util/TimeMeasurement.h"
 #include "GTSAMIntegration/ExtUtils.h"
 
+#include <iterator>
 
 
 using dmvio::GravityInitializer;
@@ -81,12 +82,15 @@ boost::mutex FrameShell::shellPoseMutex{};
  * @param imuCalibration 
  * @param imuSettings 
  */
-FullSystem::FullSystem(bool linearizeOperationPassed, const dmvio::IMUCalibration& imuCalibration,
+FullSystem::FullSystem(bool linearizeOperationPassed, 
+						const dso::Global_Calib& globalCalib,
+						const dmvio::IMUCalibration& imuCalibration,
                        dmvio::IMUSettings& imuSettings)
-    : linearizeOperation(linearizeOperationPassed), imuIntegration(&Hcalib, imuCalibration, imuSettings,
-                                                                   linearizeOperation),
-                     secondKeyframeDone(false), gravityInit(imuSettings.numMeasurementsGravityInit, imuCalibration),
-                     shellPoseMutex(FrameShell::shellPoseMutex)
+    : linearizeOperation(linearizeOperationPassed), 
+	Hcalib(globalCalib),
+	imuIntegration(&Hcalib, imuCalibration, imuSettings, linearizeOperation),
+    secondKeyframeDone(false), gravityInit(imuSettings.numMeasurementsGravityInit, imuCalibration),
+    shellPoseMutex(FrameShell::shellPoseMutex)
 {
     setting_useGTSAMIntegration = setting_useIMU;
     baIntegration = imuIntegration.getBAGTSAMIntegration().get();
@@ -151,13 +155,16 @@ FullSystem::FullSystem(bool linearizeOperationPassed, const dmvio::IMUCalibratio
 
 	assert(retstat!=293847);
 
+	std::copy(std::begin(globalCalib.wG), std::end(globalCalib.wG), std::begin(wG));
+	std::copy(std::begin(globalCalib.hG), std::end(globalCalib.hG), std::begin(hG));
+
 	selectionMap = new float[wG[0]*hG[0]];
 
 	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (wG[0], hG[0]);
 	coarseTracker = new CoarseTracker(wG[0], hG[0], imuIntegration);
 	coarseTracker_forNewKF = new CoarseTracker(wG[0], hG[0], imuIntegration);
 	coarseInitializer = std::make_unique<CoarseInitializer> (wG[0], hG[0]);
-	pixelSelector = std::make_unique<PixelSelector> (wG[0], hG[0]);
+	pixelSelector = std::make_unique<PixelSelector> (wG[0], hG[0], wG[1], wG[2]);
 
 	statistics_lastNumOptIts=0;
 	statistics_numDroppedPoints=0;
@@ -1018,7 +1025,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 	dmvio::TimeMeasurement measureInit("initObjectsAndMakeImage");
 	// =========================== Add new frame into allFrameHistory =========================
 	// Initialize variables
-	FrameHessian* fh = new FrameHessian();
+	FrameHessian* fh = new FrameHessian(wG, hG);
 	FrameShell* shell = new FrameShell();
 	shell->camToWorld = SE3();
 	shell->aff_g2l = AffLight(0,0);
@@ -1342,7 +1349,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 
 	if(linearizeOperation) // play as fast as possible
 	{
-		if(goStepByStep && lastRefStopID != coarseTracker->refFrameID)
+		if(setting_goStepByStep && lastRefStopID != coarseTracker->refFrameID)
 		{
 			MinimalImageF3 img(wG[0], hG[0], fh->dI);
 			IOWrap::displayImage("frameToTrack", &img);
@@ -1581,7 +1588,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 		if(fh1 == fh) continue;
 		for(PointHessian* ph : fh1->pointHessians)
 		{
-			PointFrameResidual* r = new PointFrameResidual(ph, fh1, fh);
+			PointFrameResidual* r = new PointFrameResidual(wG[0], hG[0], ph, fh1, fh);
 			r->setState(ResState::IN);
 			ph->residuals.push_back(r);
 			ef->insertResidual(r);
@@ -1783,7 +1790,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 		if(rand()/(float)RAND_MAX > keepPercentage) continue;
 
 		Pnt* point = coarseInitializer->points[0]+i;
-		ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f,firstFrame,point->my_type, &Hcalib);
+		ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f, wG[0], hG[0], firstFrame,point->my_type, &Hcalib);
 
 		if(!std::isfinite(pt->energyTH)) { delete pt; continue; }
 
@@ -1853,7 +1860,7 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
 		int i = x+y*wG[0];
 		if(selectionMap[i]==0) continue;
 
-		ImmaturePoint* impt = new ImmaturePoint(x, y, newFrame, selectionMap[i], &Hcalib);
+		ImmaturePoint* impt = new ImmaturePoint(x, y, wG[0], hG[0], newFrame, selectionMap[i], &Hcalib);
 		if(!std::isfinite(impt->energyTH)) delete impt;
 		else newFrame->immaturePoints.push_back(impt);
 

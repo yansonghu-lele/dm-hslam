@@ -133,10 +133,10 @@ void MainSettings::registerArgs(SettingsUtil& set)
     // These are mostly the original DSO commandline arguments which also work for DM-VIO
     set.registerArg("quiet", setting_debugout_runquiet, "q", "Turn console text output off", setting_debugout_runquiet ? "1" : "0");
     set.registerArg("nolog", setting_logStuff, "n", "Turn logging off", setting_logStuff ? "1" : "0");
-    set.registerArg("nogui", disableAllDisplay, "g", "Turn gui output off", disableAllDisplay ? "1" : "0");
-    set.registerArg("outPC", outputPC, "p", "Output point cloud", outputPC ? "1" : "0");
+    set.registerArg("nogui", setting_disableAllDisplay, "g", "Turn gui output off", setting_disableAllDisplay ? "1" : "0");
+    set.registerArg("outPC", setting_outputPC, "p", "Output point cloud", setting_outputPC ? "1" : "0");
     set.registerArg("useimu", setting_useIMU, "u", "Turn IMU on or off", setting_useIMU ? "1" : "0");
-    set.registerArg("save", debugSaveImages, "a", "Save data", debugSaveImages ? "1" : "0");
+    set.registerArg("save", setting_debugSaveImages, "a", "Save data", setting_debugSaveImages ? "1" : "0");
     set.registerArg("mode", mode, "m", "Photometric mode (1=full, 2=no calibration, 3=Synthetic, 4=none)", "0");
     set.registerArg("nomt", settings_no_multiThreading, "M", "Turn multithreading off", "0");
     set.registerArg("settingsFile", settingsFile, "F", "Settings file", "");

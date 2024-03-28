@@ -74,7 +74,7 @@ class KeyFrameDisplay
 
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	KeyFrameDisplay();
+	KeyFrameDisplay(int w, int h);
 	~KeyFrameDisplay();
 
 	// copies points from KF over to internal buffer,
@@ -94,6 +94,8 @@ public:
 	void drawCam(float lineWidth = 1, float* color = 0, float sizeFactor=1);
 	void drawPC(float pointSize);
 
+	int wG0;
+	int hG0;
 	int id;
 	bool active;
 	SE3 camToWorld;
