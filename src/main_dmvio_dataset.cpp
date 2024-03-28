@@ -71,6 +71,7 @@ bool useSampleOutput = false;
 
 using namespace dso;
 
+dso::Global_Calib globalCalib;
 dmvio::MainSettings mainSettings;
 dmvio::IMUCalibration imuCalibration;
 dmvio::IMUSettings imuSettings;
@@ -131,7 +132,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 
     // Create system
     std::unique_ptr<FullSystem> fullSystem;
-    fullSystem = std::make_unique<FullSystem> (linearizeOperation, imuCalibration, imuSettings);
+    fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings);
     fullSystem->setGammaFunction(reader->getPhotometricGamma());
 
     // Set GUI
@@ -258,7 +259,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             // FRAME IS ADDED TO SYSTEM!!!
             fullSystem->addActiveFrame(img, i, imuData.get(), (gtDataThere && found) ? &data : 0);
             
-            if(gtDataThere && found && !disableAllDisplay)
+            if(gtDataThere && found && !setting_disableAllDisplay)
             {
                 viewer->addGTCamPose(data.pose);
             }
@@ -281,7 +282,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
                 fullSystem.reset();
                 for(IOWrap::Output3DWrapper* ow : wraps) ow->reset();
 
-                fullSystem = std::make_unique<FullSystem>(linearizeOperation, imuCalibration, imuSettings);
+                fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings);
                 fullSystem->setGammaFunction(reader->getPhotometricGamma());
                 fullSystem->outputWrapper = wraps;
 
@@ -314,7 +315,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     fullSystem->printResult(imuSettings.resultsPrefix + "result.txt", false, false, true);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultKFs.txt", true, false, false);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultScaled.txt", false, true, true);
-    if (outputPC) fullSystem->printPC(imuSettings.resultsPrefix + "PC.PCD");
+    if (setting_outputPC) fullSystem->printPC(imuSettings.resultsPrefix + "PC.PCD");
 
     dmvio::TimeMeasurement::saveResults(imuSettings.resultsPrefix + "timings.txt");
 
@@ -427,12 +428,12 @@ int main(int argc, char** argv)
     // Create image reader
     ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit, useColour);
     reader->loadIMUData(imuFile);
-    reader->setGlobalCalibration();
+    reader->setGlobalCalibration(globalCalib);
 
     // Main operationing loop
-    if(!disableAllDisplay)
+    if(!setting_disableAllDisplay)
     {
-        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(wG[0], hG[0], false, settingsUtil,
+        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(globalCalib.wG[0], globalCalib.hG[0], false, settingsUtil,
                                                                           nullptr);
 
         // THIS IS WHERE THE MAIN THREAD IS RUN
