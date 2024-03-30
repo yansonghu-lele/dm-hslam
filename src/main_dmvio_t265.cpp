@@ -69,6 +69,7 @@ int start = 2;
 
 using namespace dso;
 
+dso::GlobalSettings globalSettings;
 dso::Global_Calib globalCalibSettings;
 dmvio::FrameContainer frameContainer;
 dmvio::MainSettings mainSettings;
@@ -99,9 +100,9 @@ void exitThread()
 void run(IOWrap::PangolinDSOViewer* viewer, Undistort* undistorter)
 {
     bool linearizeOperation = false;
-    auto fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalibSettings, imuCalibration, imuSettings);
+    auto fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalibSettings, imuCalibration, imuSettings, globalSettings);
 
-    if(setting_photometricCalibration > 0 && undistorter->photometricUndist == nullptr)
+    if(globalSettings.setting_photometricCalibration > 0 && undistorter->photometricUndist == nullptr)
     {
         printf("ERROR: dont't have photometric calibation. Need to use commandline options mode=1 or mode=2 ");
         exit(1);
@@ -149,7 +150,7 @@ void run(IOWrap::PangolinDSOViewer* viewer, Undistort* undistorter)
                 fullSystem.reset();
                 for(IOWrap::Output3DWrapper* ow : wraps) ow->reset();
 
-                fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalibSettings, imuCalibration, imuSettings);
+                fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalibSettings, imuCalibration, imuSettings, globalSettings);
                 if(undistorter->photometricUndist != nullptr)
                 {
                     fullSystem->setGammaFunction(undistorter->photometricUndist->getG());
@@ -210,7 +211,7 @@ int main(int argc, char** argv)
     // Create Settings files.
     imuSettings.registerArgs(*settingsUtil);
     imuCalibration.registerArgs(*settingsUtil);
-    mainSettings.registerArgs(*settingsUtil);
+    mainSettings.registerArgs(*settingsUtil,globalSettings);
     frameSkippingSettings.registerArgs(*settingsUtil);
 
     settingsUtil->registerArg("start", start);
@@ -222,7 +223,7 @@ int main(int argc, char** argv)
     settingsUtil->registerArg("normalizeCamSize", *normalizeCamSize, 0.0, 5.0);
 
     // This call will parse all commandline arguments and potentially also read a settings yaml file if passed.
-    mainSettings.parseArguments(argc, argv, *settingsUtil);
+    mainSettings.parseArguments(argc, argv, *settingsUtil,globalSettings);
 
     // Print settings to commandline and file.
     std::cout << "Settings:\n";
@@ -265,13 +266,13 @@ int main(int argc, char** argv)
     }
 
     std::unique_ptr<Undistort> undistorter(
-            Undistort::getUndistorterForFile(usedCalib, mainSettings.gammaCalib, mainSettings.vignette));
+            Undistort::getUndistorterForFile(usedCalib, mainSettings.gammaCalib, mainSettings.vignette, globalSettings));
     realsense.setUndistorter(undistorter.get());
 
     globalCalibSettings.setGlobalCalib(
             (int) undistorter->getSize()[0],
             (int) undistorter->getSize()[1],
-            undistorter->getK().cast<float>());
+            undistorter->getK().cast<float>(), globalSettings);
 
     if(mainSettings.imuCalibFile != "")
     {
@@ -282,9 +283,9 @@ int main(int argc, char** argv)
         imuCalibration = *(realsense.imuCalibration);
     }
 
-    if(!setting_disableAllDisplay)
+    if(!globalSettings.setting_disableAllDisplay)
     {
-        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(globalCalibSettings.wG[0], globalCalibSettings.hG[0], false, settingsUtil,
+        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(globalCalibSettings.wG[0], globalCalibSettings.hG[0], globalSettings, false, settingsUtil,
                                                                           normalizeCamSize);
 
 

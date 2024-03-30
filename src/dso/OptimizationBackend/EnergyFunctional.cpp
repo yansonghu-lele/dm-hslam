@@ -86,7 +86,7 @@ void EnergyFunctional::setAdjointsF(CalibHessian* Hcalib)
 			adHost[h+t*nFrames] = AH;
 			adTarget[h+t*nFrames] = AT;
 		}
-	cPrior = VecC::Constant(setting_initialCalibHessian);
+	cPrior = VecC::Constant(globalSettings.setting_initialCalibHessian);
 
 
 	if(adHostF != 0) delete[] adHostF;
@@ -109,7 +109,8 @@ void EnergyFunctional::setAdjointsF(CalibHessian* Hcalib)
 
 
 
-EnergyFunctional::EnergyFunctional(dmvio::BAGTSAMIntegration &gtsamIntegration) : gtsamIntegration(gtsamIntegration)
+EnergyFunctional::EnergyFunctional(dmvio::BAGTSAMIntegration &gtsamIntegration,GlobalSettings& globalSettings_) 
+: gtsamIntegration(gtsamIntegration), globalSettings(globalSettings_)
 {
 	adHost=0;
 	adTarget=0;
@@ -484,7 +485,7 @@ EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
 }
 EFPoint* EnergyFunctional::insertPoint(PointHessian* ph)
 {
-	EFPoint* efp = new EFPoint(ph, ph->host->efFrame);
+	EFPoint* efp = new EFPoint(ph, ph->host->efFrame, globalSettings.setting_idepthFixPrior, globalSettings.setting_solverMode);
 	efp->idxInPoints = ph->host->efFrame->points.size();
 	ph->host->efFrame->points.push_back(efp);
 
@@ -690,7 +691,7 @@ void EnergyFunctional::marginalizePointsF()
             EFPoint* p = f->points[i];
             if(p->stateFlag == EFPointStatus::PS_MARGINALIZE)
             {
-                p->priorF *= setting_idepthFixPriorMargFac;
+                p->priorF *= globalSettings.setting_idepthFixPriorMargFac;
                 for(EFResidual* r : p->residualsAll)
                     if(r->isActive())
                         connectivityMap[(((uint64_t)r->host->frameID) << 32) + ((uint64_t)r->target->frameID)][1]++;
@@ -717,7 +718,7 @@ void EnergyFunctional::marginalizePointsF()
     MatXX H =  M-Msc;
     VecX b =  Mb-Mbsc;
 
-    if(setting_solverMode & SOLVER_ORTHOGONALIZE_POINTMARG)
+    if(globalSettings.setting_solverMode & SOLVER_ORTHOGONALIZE_POINTMARG)
     {
         // have a look if prior is there.
         bool haveFirstFrame = false;
@@ -729,13 +730,13 @@ void EnergyFunctional::marginalizePointsF()
 
     }
 
-    HM += setting_margWeightFac*H;
-    bM += setting_margWeightFac*b;
+    HM += globalSettings.setting_margWeightFac*H;
+    bM += globalSettings.setting_margWeightFac*b;
 
-    HMForGTSAM += setting_margWeightFac * H;
-    bMForGTSAM += setting_margWeightFac * b;
+    HMForGTSAM += globalSettings.setting_margWeightFac * H;
+    bMForGTSAM += globalSettings.setting_margWeightFac * b;
 
-    if(setting_solverMode & SOLVER_ORTHOGONALIZE_FULL)
+    if(globalSettings.setting_solverMode & SOLVER_ORTHOGONALIZE_FULL)
         orthogonalize(&bM, &HM);
 
     EFIndicesValid = false;
@@ -820,7 +821,7 @@ void EnergyFunctional::orthogonalize(VecX* b, MatXX* H)
         if(SNN[i] > maxSv) maxSv = SNN[i];
     }
     for(int i=0;i<SNN.size();i++)
-    { if(SNN[i] > setting_solverModeDelta*maxSv) SNN[i] = 1.0 / SNN[i]; else SNN[i] = 0; }
+    { if(SNN[i] > globalSettings.setting_solverModeDelta*maxSv) SNN[i] = 1.0 / SNN[i]; else SNN[i] = 0; }
 
     MatXX Npi = svdNN.matrixU() * SNN.asDiagonal() * svdNN.matrixV().transpose(); 	// [dim] x 9.
     MatXX NNpiT = N*Npi.transpose(); 	// [dim] x [dim].
@@ -841,8 +842,8 @@ void EnergyFunctional::orthogonalize(VecX* b, MatXX* H)
 
 void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* HCalib)
 {
-    if(setting_solverMode & SOLVER_USE_GN) lambda=0;
-    if(setting_solverMode & SOLVER_FIX_LAMBDA) lambda = 1e-5;
+    if(globalSettings.setting_solverMode & SOLVER_USE_GN) lambda=0;
+    if(globalSettings.setting_solverMode & SOLVER_FIX_LAMBDA) lambda = 1e-5;
 
     assert(EFDeltaValid);
     assert(EFAdjointsValid);
@@ -852,13 +853,13 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
     VecX  bL_top, bA_top, bM_top, b_sc;
 
 
-    accumulateAF_MT(HA_top, bA_top,!settings_no_multiThreading);
+    accumulateAF_MT(HA_top, bA_top,!globalSettings.settings_no_multiThreading);
 
 
-    accumulateLF_MT(HL_top, bL_top,!settings_no_multiThreading);
+    accumulateLF_MT(HL_top, bL_top,!globalSettings.settings_no_multiThreading);
 
 
-    accumulateSCF_MT(H_sc, b_sc,!settings_no_multiThreading);
+    accumulateSCF_MT(H_sc, b_sc,!globalSettings.settings_no_multiThreading);
 
 
     bM_top = (bM+ HM * getStitchedDeltaF());
@@ -867,7 +868,7 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
     MatXX HFinal_top;
     VecX bFinal_top;
 
-    if(setting_solverMode & SOLVER_ORTHOGONALIZE_SYSTEM)
+    if(globalSettings.setting_solverMode & SOLVER_ORTHOGONALIZE_SYSTEM)
     {
         // have a look if prior is there.
         bool haveFirstFrame = false;
@@ -901,7 +902,7 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 
 
     VecX x;
-    if(setting_solverMode & SOLVER_SVD)
+    if(globalSettings.setting_solverMode & SOLVER_SVD)
     {
         VecX SVecI = HFinal_top.diagonal().cwiseSqrt().cwiseInverse();
         MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();
@@ -920,10 +921,10 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
         int setZero=0;
         for(int i=0;i<Ub.size();i++)
         {
-            if(S[i] < setting_solverModeDelta*maxSv)
+            if(S[i] < globalSettings.setting_solverModeDelta*maxSv)
             { Ub[i] = 0; setZero++; }
 
-            if((setting_solverMode & SOLVER_SVD_CUT7) && (i >= Ub.size()-7))
+            if((globalSettings.setting_solverMode & SOLVER_SVD_CUT7) && (i >= Ub.size()-7))
             { Ub[i] = 0; setZero++; }
 
             else Ub[i] /= S[i];
@@ -954,7 +955,7 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
     }
 
 
-    if((setting_solverMode & SOLVER_ORTHOGONALIZE_X) || (iteration >= 2 && (setting_solverMode & SOLVER_ORTHOGONALIZE_X_LATER)))
+    if((globalSettings.setting_solverMode & SOLVER_ORTHOGONALIZE_X) || (iteration >= 2 && (globalSettings.setting_solverMode & SOLVER_ORTHOGONALIZE_X_LATER)))
     {
         VecX xOld = x;
         orthogonalize(&x, 0);
@@ -966,7 +967,7 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 
     //resubstituteF(x, HCalib);
     currentLambda= lambda;
-    resubstituteF_MT(x, HCalib,!settings_no_multiThreading);
+    resubstituteF_MT(x, HCalib,!globalSettings.settings_no_multiThreading);
     currentLambda=0;
 }
 

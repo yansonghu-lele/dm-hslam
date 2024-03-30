@@ -55,7 +55,8 @@ PhotometricUndistorter::PhotometricUndistorter(
 		std::string file,
 		std::string noiseImage,
 		std::string vignetteImage,
-		int w_, int h_)
+		int w_, int h_, GlobalSettings& globalSettings_)
+		: globalSettings(globalSettings_)
 {
 	valid = false;
 	vignetteMap = 0;
@@ -111,7 +112,7 @@ PhotometricUndistorter::PhotometricUndistorter(
 	}
 
 	// If no photometric calibration, set the gamma map to a linear correspondance
-	if(setting_photometricCalibration==0)
+	if(globalSettings.setting_photometricCalibration==0)
 	{
         for(int i=0;i<GDepth;i++) G[i]=255.0f*i/(float)(GDepth-1);
 	}
@@ -239,7 +240,7 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 	assert(output->w == w && output->h == h);
 	assert(data != 0);
 
-	if(!valid || exposure_time <= 0 || setting_photometricCalibration==0) // Disable full photometric calibration.
+	if(!valid || exposure_time <= 0 || globalSettings.setting_photometricCalibration==0) // Disable full photometric calibration.
 	{
 		for(int i=0; i<wh;i++)
 		{
@@ -262,7 +263,7 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 		}
 
 		// Vignette Correction
-		if(setting_photometricCalibration==2)
+		if(globalSettings.setting_photometricCalibration==2)
 		{
 			for(int i=0; i<wh;i++){
 				data[i] *= vignetteMapInv[i];
@@ -276,7 +277,7 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 		}
 	}
 
-	if(!setting_useExposure && setMeta)
+	if(!globalSettings.setting_useExposure && setMeta)
 		output->exposure_time = 1;
 }
 template void PhotometricUndistorter::processFrame<unsigned char>(unsigned char* image_in, float exposure_time, float factor, bool setMeta);
@@ -300,7 +301,7 @@ Undistort::~Undistort()
  * @param vignetteFilename 
  * @return Undistort* 
  */
-Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename)
+Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename, GlobalSettings& globalSettings_)
 {
 	printf("Reading Calibration from file %s",configFilename.c_str());
 
@@ -330,7 +331,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
 			&ic[4], &ic[5], &ic[6], &ic[7]) == 8)
 	{
         printf("found RadTan (OpenCV) camera model, building rectifier.\n");
-        u = new UndistortRadTan(configFilename.c_str(), true);
+        u = new UndistortRadTan(configFilename.c_str(), true, globalSettings_);
 		if(!u->isValid()) {delete u; return 0; }
     }
 
@@ -342,13 +343,13 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
 		if(ic[4]==0)
 		{
 			printf("found PINHOLE camera model, building rectifier.\n");
-            u = new UndistortPinhole(configFilename.c_str(), true);
+            u = new UndistortPinhole(configFilename.c_str(), true, globalSettings_);
 			if(!u->isValid()) {delete u; return 0; }
 		}
 		else
 		{
 			printf("found ATAN camera model, building rectifier.\n");
-            u = new UndistortFOV(configFilename.c_str(), true);
+            u = new UndistortFOV(configFilename.c_str(), true, globalSettings_);
 			if(!u->isValid()) {delete u; return 0; }
 		}
 	}
@@ -360,7 +361,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
             &ic[0], &ic[1], &ic[2], &ic[3],
             &ic[4], &ic[5], &ic[6], &ic[7]) == 8)
     {
-        u = new UndistortKB(configFilename.c_str(), false);
+        u = new UndistortKB(configFilename.c_str(), false, globalSettings_);
         if(!u->isValid()) {delete u; return 0; }
     }
 
@@ -369,7 +370,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
             &ic[0], &ic[1], &ic[2], &ic[3],
             &ic[4], &ic[5], &ic[6], &ic[7]) == 8)
     {
-        u = new UndistortRadTan(configFilename.c_str(), false);
+        u = new UndistortRadTan(configFilename.c_str(), false, globalSettings_);
         if(!u->isValid()) {delete u; return 0; }
     }
 
@@ -378,7 +379,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
             &ic[0], &ic[1], &ic[2], &ic[3],
             &ic[4], &ic[5], &ic[6], &ic[7]) == 8)
     {
-        u = new UndistortEquidistant(configFilename.c_str(), false);
+        u = new UndistortEquidistant(configFilename.c_str(), false, globalSettings_);
         if(!u->isValid()) {delete u; return 0; }
     }
 
@@ -387,7 +388,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
             &ic[0], &ic[1], &ic[2], &ic[3],
             &ic[4]) == 5)
     {
-        u = new UndistortFOV(configFilename.c_str(), false);
+        u = new UndistortFOV(configFilename.c_str(), false, globalSettings_);
         if(!u->isValid()) {delete u; return 0; }
     }
 
@@ -396,7 +397,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
             &ic[0], &ic[1], &ic[2], &ic[3],
             &ic[4]) == 5)
     {
-        u = new UndistortPinhole(configFilename.c_str(), false);
+        u = new UndistortPinhole(configFilename.c_str(), false, globalSettings_);
         if(!u->isValid()) {delete u; return 0; }
     }
 
@@ -410,7 +411,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
 	u->loadPhotometricCalibration(
 				gammaFilename,
 				"",
-				vignetteFilename);
+				vignetteFilename, globalSettings_);
 
 	return u;
 }
@@ -422,9 +423,9 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
  * @param noiseImage 
  * @param vignetteImage 
  */
-void Undistort::loadPhotometricCalibration(std::string file, std::string noiseImage, std::string vignetteImage)
+void Undistort::loadPhotometricCalibration(std::string file, std::string noiseImage, std::string vignetteImage, GlobalSettings& globalSettings)
 {
-	photometricUndist = new PhotometricUndistorter(file, noiseImage, vignetteImage,getOriginalSize()[0], getOriginalSize()[1]);
+	photometricUndist = new PhotometricUndistorter(file, noiseImage, vignetteImage,getOriginalSize()[0], getOriginalSize()[1], globalSettings);
 }
 
 /**
@@ -458,10 +459,10 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 
 		float* noiseMapX=0;
 		float* noiseMapY=0;
-		if(benchmark_varNoise>0) // Add noise to the images for testing
+		if(globalSettings.benchmark_varNoise>0) // Add noise to the images for testing
 		{
 			// Generate grid of random noise
-			int numnoise=(benchmark_noiseGridsize+8)*(benchmark_noiseGridsize+8);
+			int numnoise=(globalSettings.benchmark_noiseGridsize+8)*(globalSettings.benchmark_noiseGridsize+8);
 			noiseMapX=new float[numnoise];
 			noiseMapY=new float[numnoise];
 			memset(noiseMapX,0,sizeof(float)*numnoise);
@@ -470,8 +471,8 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 			for(int i=0;i<numnoise;i++)
 			{
 				// Random values are between (-benchmark_varNoise, benchmark_varNoise)
-				noiseMapX[i] =  benchmark_varNoise * 2 * (rand()/(float)RAND_MAX - 0.5f);
-				noiseMapY[i] =  benchmark_varNoise * 2 * (rand()/(float)RAND_MAX - 0.5f);
+				noiseMapX[i] =  globalSettings.benchmark_varNoise * 2 * (rand()/(float)RAND_MAX - 0.5f);
+				noiseMapY[i] =  globalSettings.benchmark_varNoise * 2 * (rand()/(float)RAND_MAX - 0.5f);
 			}
 		}
 
@@ -481,10 +482,10 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 			float xx = remapX[idx];
 			float yy = remapY[idx];
 
-			if(benchmark_varNoise>0) // Add remapping noise to the images for experiments
+			if(globalSettings.benchmark_varNoise>0) // Add remapping noise to the images for experiments
 			{
-				float deltax = getInterpolatedElement11BiCub(noiseMapX, 4+(xx/(float)wOrg)*benchmark_noiseGridsize, 4+(yy/(float)hOrg)*benchmark_noiseGridsize, benchmark_noiseGridsize+8 );
-				float deltay = getInterpolatedElement11BiCub(noiseMapY, 4+(xx/(float)wOrg)*benchmark_noiseGridsize, 4+(yy/(float)hOrg)*benchmark_noiseGridsize, benchmark_noiseGridsize+8 );
+				float deltax = getInterpolatedElement11BiCub(noiseMapX, 4+(xx/(float)wOrg)*globalSettings.benchmark_noiseGridsize, 4+(yy/(float)hOrg)*globalSettings.benchmark_noiseGridsize, globalSettings.benchmark_noiseGridsize+8 );
+				float deltay = getInterpolatedElement11BiCub(noiseMapY, 4+(xx/(float)wOrg)*globalSettings.benchmark_noiseGridsize, 4+(yy/(float)hOrg)*globalSettings.benchmark_noiseGridsize, globalSettings.benchmark_noiseGridsize+8 );
 				float x = idx%w + deltax;
 				float y = idx/w + deltay;
 				if(x < 0.01) x = 0.01;
@@ -518,7 +519,7 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 			}
 		}
 
-		if(benchmark_varNoise>0)
+		if(globalSettings.benchmark_varNoise>0)
 		{
 			delete[] noiseMapX;
 			delete[] noiseMapY;
@@ -612,19 +613,19 @@ template void Undistort::undistort_colour<unsigned short>(MinimalImage<unsigned 
  */
 void Undistort::applyBlurNoise(float* img) const
 {
-	if(benchmark_varBlurNoise==0) return;
+	if(globalSettings.benchmark_varBlurNoise==0) return;
 
-	int numnoise=(benchmark_noiseGridsize+8)*(benchmark_noiseGridsize+8);
+	int numnoise=(globalSettings.benchmark_noiseGridsize+8)*(globalSettings.benchmark_noiseGridsize+8);
 	float* noiseMapX=new float[numnoise];
 	float* noiseMapY=new float[numnoise];
 	float* blutTmp=new float[w*h];
 
-	if(benchmark_varBlurNoise>0)
+	if(globalSettings.benchmark_varBlurNoise>0)
 	{
 		for(int i=0;i<numnoise;i++)
 		{
-			noiseMapX[i] =  benchmark_varBlurNoise  * (rand()/(float)RAND_MAX);
-			noiseMapY[i] =  benchmark_varBlurNoise  * (rand()/(float)RAND_MAX);
+			noiseMapX[i] =  globalSettings.benchmark_varBlurNoise  * (rand()/(float)RAND_MAX);
+			noiseMapY[i] =  globalSettings.benchmark_varBlurNoise  * (rand()/(float)RAND_MAX);
 		}
 	}
 
@@ -638,9 +639,9 @@ void Undistort::applyBlurNoise(float* img) const
 		for(int x=0;x<w;x++)
 		{
 			float xBlur = getInterpolatedElement11BiCub(noiseMapX,
-					4+(x/(float)w)*benchmark_noiseGridsize,
-					4+(y/(float)h)*benchmark_noiseGridsize,
-					benchmark_noiseGridsize+8);
+					4+(x/(float)w)*globalSettings.benchmark_noiseGridsize,
+					4+(y/(float)h)*globalSettings.benchmark_noiseGridsize,
+					globalSettings.benchmark_noiseGridsize+8);
 
 			if(xBlur < 0.01) xBlur=0.01;
 
@@ -674,9 +675,9 @@ void Undistort::applyBlurNoise(float* img) const
 		for(int y=0;y<h;y++)
 		{
 			float yBlur = getInterpolatedElement11BiCub(noiseMapY,
-					4+(x/(float)w)*benchmark_noiseGridsize,
-					4+(y/(float)h)*benchmark_noiseGridsize,
-					benchmark_noiseGridsize+8 );
+					4+(x/(float)w)*globalSettings.benchmark_noiseGridsize,
+					4+(y/(float)h)*globalSettings.benchmark_noiseGridsize,
+					globalSettings.benchmark_noiseGridsize+8 );
 
 			if(yBlur < 0.01) yBlur=0.01;
 
@@ -973,15 +974,15 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
 	// line 4
 	if(std::sscanf(l4.c_str(), "%d %d", &w, &h) == 2)
 	{
-		if(benchmarkSetting_width != 0) // Experimental
+		if(globalSettings.benchmarkSetting_width != 0) // Experimental
         {
-			w = benchmarkSetting_width;
+			w = globalSettings.benchmarkSetting_width;
             if(outputCalibration[0] == -3)
                 outputCalibration[0] = -1;  // crop instead of none, since probably resolution changed.
         }
-        if(benchmarkSetting_height != 0) // Experimental
+        if(globalSettings.benchmarkSetting_height != 0) // Experimental
         {
-			h = benchmarkSetting_height;
+			h = globalSettings.benchmarkSetting_height;
             if(outputCalibration[0] == -3)
                 outputCalibration[0] = -1;  // crop instead of none, since probably resolution changed.
         }
@@ -1034,10 +1035,10 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
         K(1,2) = outputCalibration[3] * h - 0.5;
 	}
 
-	if(benchmarkSetting_fxfyfac != 0) // Experimental
+	if(globalSettings.benchmarkSetting_fxfyfac != 0) // Experimental
 	{
-		K(0,0) = fmax(benchmarkSetting_fxfyfac, (float)K(0,0));
-		K(1,1) = fmax(benchmarkSetting_fxfyfac, (float)K(1,1));
+		K(0,0) = fmax(globalSettings.benchmarkSetting_fxfyfac, (float)K(0,0));
+		K(1,1) = fmax(globalSettings.benchmarkSetting_fxfyfac, (float)K(1,1));
         passthrough = false; // cannot pass through when fx / fy have been overwritten.
 	}
 
@@ -1086,7 +1087,8 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
 
 // The functions below implement the distortCoordinates for the respective camera types
 
-UndistortFOV::UndistortFOV(const char* configFileName, bool noprefix)
+UndistortFOV::UndistortFOV(const char* configFileName, bool noprefix, GlobalSettings& globalSetting_)
+: Undistort(globalSetting_)
 {
     printf("Creating FOV undistorter\n");
 
@@ -1134,7 +1136,8 @@ void UndistortFOV::distortCoordinates(float* in_x, float* in_y, float* out_x, fl
 }
 
 
-UndistortRadTan::UndistortRadTan(const char* configFileName, bool noprefix)
+UndistortRadTan::UndistortRadTan(const char* configFileName, bool noprefix, GlobalSettings& globalSetting_)
+: Undistort(globalSetting_)
 {
     printf("Creating RadTan undistorter\n");
 
@@ -1189,7 +1192,8 @@ void UndistortRadTan::distortCoordinates(float* in_x, float* in_y, float* out_x,
 
 
 
-UndistortEquidistant::UndistortEquidistant(const char* configFileName, bool noprefix)
+UndistortEquidistant::UndistortEquidistant(const char* configFileName, bool noprefix, GlobalSettings& globalSetting_)
+: Undistort(globalSetting_)
 {
     printf("Creating Equidistant undistorter\n");
 
@@ -1244,7 +1248,8 @@ void UndistortEquidistant::distortCoordinates(float* in_x, float* in_y, float* o
 }
 
 
-UndistortKB::UndistortKB(const char* configFileName, bool noprefix)
+UndistortKB::UndistortKB(const char* configFileName, bool noprefix, GlobalSettings& globalSetting_)
+: Undistort(globalSetting_)
 {
 	printf("Creating KannalaBrandt undistorter\n");
 
@@ -1306,7 +1311,8 @@ void UndistortKB::distortCoordinates(float* in_x, float* in_y, float* out_x, flo
 }
 
 
-UndistortPinhole::UndistortPinhole(const char* configFileName, bool noprefix)
+UndistortPinhole::UndistortPinhole(const char* configFileName, bool noprefix, GlobalSettings& globalSetting_)
+: Undistort(globalSetting_)
 {
     if(noprefix)
         readFromFile(configFileName, 5);

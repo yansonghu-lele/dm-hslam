@@ -47,7 +47,7 @@ class Global_Calib
 		Eigen::Matrix3f KG[PYR_LEVELS],KiG[PYR_LEVELS];
 
 		Global_Calib();
-		void setGlobalCalib(int w, int h, const Eigen::Matrix3f &K);
+		void setGlobalCalib(int w, int h, const Eigen::Matrix3f &K, GlobalSettings& globalSettings);
 };
 
 }

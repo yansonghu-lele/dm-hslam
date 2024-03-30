@@ -55,7 +55,7 @@ int PointFrameResidual::instanceCounter = 0;
 long runningResID=0;
 
 
-PointFrameResidual::PointFrameResidual(){assert(false); instanceCounter++;}
+PointFrameResidual::PointFrameResidual(){assert(false); instanceCounter++; globalSettings = nullptr;}
 
 PointFrameResidual::~PointFrameResidual(){assert(efResidual==0); instanceCounter--; delete J;}
 
@@ -66,10 +66,11 @@ PointFrameResidual::~PointFrameResidual(){assert(efResidual==0); instanceCounter
  * @param host_ 
  * @param target_ 
  */
-PointFrameResidual::PointFrameResidual(int ww, int hh, PointHessian* point_, FrameHessian* host_, FrameHessian* target_) :
+PointFrameResidual::PointFrameResidual(int ww, int hh, PointHessian* point_, FrameHessian* host_, FrameHessian* target_,  GlobalSettings* globalSettings_) :
 	point(point_),
 	host(host_),
-	target(target_)
+	target(target_),
+	globalSettings(globalSettings_)
 {
 	wG0 = ww;
 	hG0 = hh;
@@ -229,10 +230,10 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
 		// Adjust residual
 		// Apply gradient-dependent weighting
-		float w = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + hitColor.tail<2>().squaredNorm()));
+		float w = sqrtf(globalSettings->setting_outlierTHSumComponent / (globalSettings->setting_outlierTHSumComponent + hitColor.tail<2>().squaredNorm()));
         w = 0.5f*(w + weights[idx]);
 		// Huber weight
-		float hw = fabsf(residual) < setting_huberTH ? 1 : setting_huberTH / fabsf(residual);
+		float hw = fabsf(residual) < globalSettings->setting_huberTH ? 1 : globalSettings->setting_huberTH / fabsf(residual);
 		// Use Huber Norm
 		// hw*(2-hw)*residual*residual results in Huber loss for the residual
 		energyLeft += w*w*hw*residual*residual*(2-hw);
@@ -272,8 +273,8 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 			wJI2_sum += hw*hw*(hitColor[1]*hitColor[1]+hitColor[2]*hitColor[2]);
 
 
-			if(setting_affineOptModeA < 0) J->JabF[0][idx]=0;
-			if(setting_affineOptModeB < 0) J->JabF[1][idx]=0;
+			if(globalSettings->setting_affineOptModeA < 0) J->JabF[0][idx]=0;
+			if(globalSettings->setting_affineOptModeB < 0) J->JabF[1][idx]=0;
 		}
 	}
 

@@ -97,7 +97,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 		residuals[i].state_energy = residuals[i].state_NewEnergy;
 	}
 
-	if(!std::isfinite(lastEnergy) || lastHdd < setting_minIdepthH_act)
+	if(!std::isfinite(lastEnergy) || lastHdd < globalSettings.setting_minIdepthH_act)
 	{
 		if(print)
 			printf("OptPoint: Not well-constrained (%d res, H=%.1f). E=%f. SKIP!\n",
@@ -110,7 +110,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 
 	// Optimize new values (depth) for activated point
 	float lambda = 0.1;
-	for(int iteration=0;iteration<setting_GNItsOnPointActivation;iteration++)
+	for(int iteration=0;iteration<globalSettings.setting_GNItsOnPointActivation;iteration++)
 	{
 		float H = lastHdd;
 		H *= 1+lambda;
@@ -121,7 +121,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 		for(int i=0;i<nres;i++)
 			newEnergy += point->linearizeResidual(&Hcalib, 1, residuals+i, newHdd, newbd, newIdepth);
 
-		if(!std::isfinite(lastEnergy) || newHdd < setting_minIdepthH_act)
+		if(!std::isfinite(lastEnergy) || newHdd < globalSettings.setting_minIdepthH_act)
 		{
 			if(print) printf("OptPoint: Not well-constrained (%d res, H=%.1f). E=%f. SKIP!\n",
 					nres,
@@ -179,7 +179,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 
 
 	// Set new PointHessian and PointFrameResidual structs for activated points
-	PointHessian* p = new PointHessian(point, &Hcalib);
+	PointHessian* p = new PointHessian(point, &Hcalib, globalSettings);
 	if(!std::isfinite(p->energyTH)) {delete p; return (PointHessian*)((long)(-1));}
 
 	p->lastResiduals[0].first = 0;
@@ -194,7 +194,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 	for(int i=0;i<nres;i++)
 		if(residuals[i].state_state == ResState::IN)
 		{
-			PointFrameResidual* r = new PointFrameResidual(wG[0], hG[0], p, p->host, residuals[i].target);
+			PointFrameResidual* r = new PointFrameResidual(wG[0], hG[0], p, p->host, residuals[i].target, std::addressof(globalSettings));
 			r->state_NewEnergy = r->state_energy = 0;
 			r->state_NewState = ResState::OUTLIER;
 			r->setState(ResState::IN);

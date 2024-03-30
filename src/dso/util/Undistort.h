@@ -29,6 +29,7 @@
 #include "util/MinimalImage.h"
 #include "util/NumType.h"
 #include "Eigen/Core"
+#include "util/settings.h"
 
 
 
@@ -39,7 +40,7 @@ class PhotometricUndistorter
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	PhotometricUndistorter(std::string file, std::string noiseImage, std::string vignetteImage, int w_, int h_);
+	PhotometricUndistorter(std::string file, std::string noiseImage, std::string vignetteImage, int w_, int h_, GlobalSettings& globalSettings_);
 	~PhotometricUndistorter();
 
 	// removes readout noise, and converts to irradiance.
@@ -55,6 +56,8 @@ public:
 
 
 private:
+	GlobalSettings& globalSettings;
+
     float G[256*256]; // Large enough to handle 16 bit images
     int GDepth;
 	float* vignetteMap;
@@ -68,6 +71,7 @@ class Undistort
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	Undistort(GlobalSettings& globalSetting_) : globalSettings(globalSetting_){};
 	virtual ~Undistort();
 
 	virtual void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const = 0;
@@ -82,14 +86,16 @@ public:
 	ImageAndExposure* undistort(const MinimalImage<T>* image_raw, float exposure=0, double timestamp=0, float factor=1, bool useColourPassed = false) const;
 	template<typename T>
 	void undistort_colour(MinimalImage<T>* r_image, MinimalImage<T>* g_image, MinimalImage<T>* b_image, ImageAndExposure* out_image, float exposure=0, double timestamp=0, float factor=1);
-	static Undistort* getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename);
+	static Undistort* getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename, GlobalSettings& globalSettings_);
 
-	void loadPhotometricCalibration(std::string file, std::string noiseImage, std::string vignetteImage);
+	void loadPhotometricCalibration(std::string file, std::string noiseImage, std::string vignetteImage, GlobalSettings& globalSettings);
 
 	PhotometricUndistorter* photometricUndist;
 
 
 protected:
+	GlobalSettings& globalSettings;
+
     int w, h, wOrg, hOrg, wUp, hUp;
     int upsampleUndistFactor;
 	Mat33 K;
@@ -115,7 +121,7 @@ class UndistortFOV : public Undistort
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-    UndistortFOV(const char* configFileName, bool noprefix);
+    UndistortFOV(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
 	~UndistortFOV();
 	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
 };
@@ -126,7 +132,7 @@ class UndistortRadTan : public Undistort
 
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    UndistortRadTan(const char* configFileName, bool noprefix);
+    UndistortRadTan(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
     ~UndistortRadTan();
     void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
 };
@@ -137,7 +143,7 @@ class UndistortEquidistant : public Undistort
 
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    UndistortEquidistant(const char* configFileName, bool noprefix);
+    UndistortEquidistant(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
     ~UndistortEquidistant();
     void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
 };
@@ -148,7 +154,7 @@ class UndistortPinhole : public Undistort
 
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    UndistortPinhole(const char* configFileName, bool noprefix);
+    UndistortPinhole(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
 	~UndistortPinhole();
 	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
 
@@ -163,7 +169,7 @@ class UndistortKB : public Undistort
 
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    UndistortKB(const char* configFileName, bool noprefix);
+    UndistortKB(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
 	~UndistortKB();
 	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
 };

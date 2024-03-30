@@ -45,7 +45,8 @@ namespace dso
  * @param w 	Width of image
  * @param h 	Height of image
  */
-PixelSelector::PixelSelector(int w0, int h0, int w1, int w2)
+PixelSelector::PixelSelector(int w0, int h0, int w1, int w2, GlobalSettings& globalSettings_):
+globalSettings(globalSettings_)
 {
 	wG0 = w0;
 	hG0 = h0;
@@ -172,7 +173,7 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 			}
 
 			// Calculate approximate threshold
-			ths[x+y*w32] = computeHistQuantile(gradHist, setting_minGradHistCut, num_hist_values) + setting_minGradHistAdd;
+			ths[x+y*w32] = computeHistQuantile(gradHist, globalSettings.setting_minGradHistCut, num_hist_values) + globalSettings.setting_minGradHistAdd;
 		}
 
 	// Smooth out the quantiles using a box kernel
@@ -221,7 +222,7 @@ int PixelSelector::makeMaps(
 		const FrameHessian* const fh,
 		float* map_out, float density, int recursionsLeft, float thFactor)
 {
-	debugPlot = setting_render_displayImmatureTracking;
+	debugPlot = globalSettings.setting_render_displayImmatureTracking;
 
 	float numHave = 0;
 	float numWant = density;
@@ -326,7 +327,7 @@ int PixelSelector::makeMaps(
 			if(c>255) c=255;
 			img.at(i) = Vec3b(c,c,c);
 		}
-		IOWrap::displayImage("Selector Image", &img);
+		if(!globalSettings.setting_disableAllDisplay) IOWrap::displayImage("Selector Image", &img);
 
 		for(int y=0; y<h;y++)
 			for(int x=0;x<w;x++)
@@ -339,7 +340,7 @@ int PixelSelector::makeMaps(
 				else if(map_out[i] == 4)
 					img.setPixelCirc(x,y,Vec3b(0,0,255));
 			}
-		IOWrap::displayImage("Selector Pixels", &img);
+		if(!globalSettings.setting_disableAllDisplay) IOWrap::displayImage("Selector Pixels", &img);
 	}
 
 	return numHaveSub;
@@ -396,7 +397,7 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 	memset(map_out,0,w*h*sizeof(PixelSelectorStatus));
 
 	// Each pyramid level has lower gradient requirements
-	float dw1 = setting_gradDownweightPerLevel;
+	float dw1 = globalSettings.setting_gradDownweightPerLevel;
 	float dw2 = dw1*dw1;
 
 	// The algorithm divides the image into grids for each pyramid level
@@ -449,7 +450,7 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					{
 						Vec2f ag0d = map0[idx].tail<2>();
 						float dirNorm = fabsf((float)(ag0d.dot(dir2)));
-						if(!setting_selectDirectionDistribution) dirNorm = ag0;
+						if(!globalSettings.setting_selectDirectionDistribution) dirNorm = ag0;
 
 						if(dirNorm > bestVal2)
 						{ bestVal2 = dirNorm; bestIdx2 = idx; bestIdx3 = -2; bestIdx4 = -2;}
@@ -462,7 +463,7 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					{
 						Vec2f ag0d = map0[idx].tail<2>();
 						float dirNorm = fabsf((float)(ag0d.dot(dir3)));
-						if(!setting_selectDirectionDistribution) dirNorm = ag1;
+						if(!globalSettings.setting_selectDirectionDistribution) dirNorm = ag1;
 
 						if(dirNorm > bestVal3)
 						{ bestVal3 = dirNorm; bestIdx3 = idx; bestIdx4 = -2;}
@@ -475,7 +476,7 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					{
 						Vec2f ag0d = map0[idx].tail<2>();
 						float dirNorm = fabsf((float)(ag0d.dot(dir4)));
-						if(!setting_selectDirectionDistribution) dirNorm = ag2;
+						if(!globalSettings.setting_selectDirectionDistribution) dirNorm = ag2;
 
 						if(dirNorm > bestVal4)
 						{ bestVal4 = dirNorm; bestIdx4 = idx; }

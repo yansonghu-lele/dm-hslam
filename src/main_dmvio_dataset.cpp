@@ -72,6 +72,7 @@ bool useSampleOutput = false;
 using namespace dso;
 
 dso::Global_Calib globalCalib;
+dso::GlobalSettings globalSettings;
 dmvio::MainSettings mainSettings;
 dmvio::IMUCalibration imuCalibration;
 dmvio::IMUSettings imuSettings;
@@ -100,7 +101,7 @@ void exitThread()
 void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 {
     // Handle Settings
-    if(setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0)
+    if(globalSettings.setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0)
     {
         printf("ERROR: dont't have photometric calibation. Need to use commandline options mode=1 or mode=2 ");
         exit(1);
@@ -122,17 +123,17 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 
     bool linearizeOperation = (mainSettings.playbackSpeed == 0);
 
-    if(linearizeOperation && setting_minFramesBetweenKeyframes < 0)
+    if(linearizeOperation && globalSettings.setting_minFramesBetweenKeyframes < 0)
     {
-        setting_minFramesBetweenKeyframes = -setting_minFramesBetweenKeyframes;
-        std::cout << "Using setting_minFramesBetweenKeyframes=" << setting_minFramesBetweenKeyframes
+        globalSettings.setting_minFramesBetweenKeyframes = -globalSettings.setting_minFramesBetweenKeyframes;
+        std::cout << "Using setting_minFramesBetweenKeyframes=" << globalSettings.setting_minFramesBetweenKeyframes
                   << " because of non-realtime mode." << std::endl;
     }
 
 
     // Create system
     std::unique_ptr<FullSystem> fullSystem;
-    fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings);
+    fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings, globalSettings);
     fullSystem->setGammaFunction(reader->getPhotometricGamma());
 
     // Set GUI
@@ -259,7 +260,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             // FRAME IS ADDED TO SYSTEM!!!
             fullSystem->addActiveFrame(img, i, imuData.get(), (gtDataThere && found) ? &data : 0);
             
-            if(gtDataThere && found && !setting_disableAllDisplay)
+            if(gtDataThere && found && !globalSettings.setting_disableAllDisplay)
             {
                 viewer->addGTCamPose(data.pose);
             }
@@ -282,7 +283,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
                 fullSystem.reset();
                 for(IOWrap::Output3DWrapper* ow : wraps) ow->reset();
 
-                fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings);
+                fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings, globalSettings);
                 fullSystem->setGammaFunction(reader->getPhotometricGamma());
                 fullSystem->outputWrapper = wraps;
 
@@ -315,7 +316,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     fullSystem->printResult(imuSettings.resultsPrefix + "result.txt", false, false, true);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultKFs.txt", true, false, false);
     fullSystem->printResult(imuSettings.resultsPrefix + "resultScaled.txt", false, true, true);
-    if (setting_outputPC) fullSystem->printPC(imuSettings.resultsPrefix + "PC.PCD");
+    if (globalSettings.setting_outputPC) fullSystem->printPC(imuSettings.resultsPrefix + "PC.PCD");
 
     dmvio::TimeMeasurement::saveResults(imuSettings.resultsPrefix + "timings.txt");
 
@@ -340,7 +341,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
            1000 / (MilliSecondsTakenMT / numSecondsProcessed));
     fullSystem->printFrameLifetimes();
 
-    if(setting_logStuff)
+    if(globalSettings.setting_logStuff)
     {
         std::ofstream tmlog;
         tmlog.open("logs/time.txt", std::ios::trunc | std::ios::out);
@@ -398,10 +399,10 @@ int main(int argc, char** argv)
     settingsUtil->registerArg("use16Bit", use16Bit, "b", "16 Bit image input", use16Bit ? "1" : "0");
     settingsUtil->registerArg("useColour", useColour, "c", "Colour image input", useColour ? "1" : "0");
     settingsUtil->registerArg("maxPreloadImages", maxPreloadImages);
-    mainSettings.registerArgs(*settingsUtil);
+    mainSettings.registerArgs(*settingsUtil, globalSettings);
 
     // This call will parse all commandline arguments and potentially also read a settings yaml file if passed
-    mainSettings.parseArguments(argc, argv, *settingsUtil);
+    mainSettings.parseArguments(argc, argv, *settingsUtil, globalSettings);
 
     // Load imu calibration
     if(mainSettings.imuCalibFile != "")
@@ -426,14 +427,14 @@ int main(int argc, char** argv)
     boost::thread exThread = boost::thread(exitThread);
 
     // Create image reader
-    ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit, useColour);
+    ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit, useColour, globalSettings);
     reader->loadIMUData(imuFile);
-    reader->setGlobalCalibration(globalCalib);
+    reader->setGlobalCalibration(globalCalib, globalSettings);
 
     // Main operationing loop
-    if(!setting_disableAllDisplay)
+    if(!globalSettings.setting_disableAllDisplay)
     {
-        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(globalCalib.wG[0], globalCalib.hG[0], false, settingsUtil,
+        IOWrap::PangolinDSOViewer* viewer = new IOWrap::PangolinDSOViewer(globalCalib.wG[0], globalCalib.hG[0], globalSettings, false, settingsUtil,
                                                                           nullptr);
 
         // THIS IS WHERE THE MAIN THREAD IS RUN

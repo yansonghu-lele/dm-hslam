@@ -80,7 +80,8 @@ T* allocAligned(int size, std::vector<T*> &rawPtrVec)
  * @param hh 
  * @param imuIntegration 
  */
-CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegration) : lastRef_aff_g2l(0, 0), imuIntegration(imuIntegration)
+CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegration, GlobalSettings& globalSettings_) 
+: lastRef_aff_g2l(0, 0), imuIntegration(imuIntegration), globalSettings(globalSettings_)
 {
 	// Set width and height
 	wG0 = ww;
@@ -89,7 +90,7 @@ CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegrati
 	// Make coarse tracking templates.
 	// All arrays are aligned to allow for the use of high performance instructions
 	// All pointers are stored in ptrToDelete for the destructor
-	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		int wl = ww>>lvl;
 		int hl = hh>>lvl;
@@ -148,7 +149,7 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
 	cx[0] = HCalib->cxl();
 	cy[0] = HCalib->cyl();
 
-	for (int level = 1; level < pyrLevelsUsed; ++ level)
+	for (int level = 1; level < globalSettings.pyrLevelsUsed; ++ level)
 	{
 		w[level] = w[0] >> level;
 		h[level] = h[0] >> level;
@@ -159,7 +160,7 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
 		cy[level] = (cy[0] + 0.5) / ((int)1<<level) - 0.5;
 	}
 
-	for (int level = 0; level < pyrLevelsUsed; ++ level)
+	for (int level = 0; level < globalSettings.pyrLevelsUsed; ++ level)
 	{
 		K[level]  << fx[level], 0.0, cx[level], 
 					0.0, fy[level], cy[level], 
@@ -206,7 +207,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	// Adjustments on depth values
 
 	// Do a 2 by 2 box kernal convolution on the depth and weight values
-	for(int lvl=1; lvl<pyrLevelsUsed; lvl++) // for all levels
+	for(int lvl=1; lvl<globalSettings.pyrLevelsUsed; lvl++) // for all levels
 	{
 		int lvlm1 = lvl-1;
 		int wl = w[lvl], hl = h[lvl], wlm1 = w[lvlm1];
@@ -269,7 +270,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 
 
 	// dilate idepth by 1 (2 on lower levels).
-	for(int lvl=2; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=2; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		int wh = w[lvl]*h[lvl]-w[lvl];
 		int wl = w[lvl];
@@ -298,7 +299,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 
 	// Sets the semi-dense depth and pixel map for the reference frame
 	// normalize idepths and weights
-	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		float* weightSumsl = weightSums[lvl];
 		float* idepthl = idepth[lvl];
@@ -471,7 +472,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 	float sumSquaredShiftRT=0;
 	float sumSquaredShiftNum=0;
 
-	float maxEnergy = 2*setting_huberTH*cutoffTH-setting_huberTH*setting_huberTH;	// energy for r=setting_coarseCutoffTH.
+	float maxEnergy = 2*globalSettings.setting_huberTH*cutoffTH-globalSettings.setting_huberTH*globalSettings.setting_huberTH;	// energy for r=setting_coarseCutoffTH.
 
 
 	MinimalImageB3* resImage = 0;
@@ -548,7 +549,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 		Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
 		if(!std::isfinite((float)hitColor[0])) continue;
 		float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
-		float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+		float hw = fabs(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabs(residual);
 
 		// Accumulate residuals
 		if(fabs(residual) > cutoffTH) // energy is too high
@@ -595,7 +596,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 	buf_warped_n = numTermsInWarped;
 
 
-	if(debugPlot)
+	if(debugPlot&& !globalSettings.setting_disableAllDisplay)
 	{
 		IOWrap::displayImage("RES", resImage, 8);
 		IOWrap::waitKey(0);
@@ -658,10 +659,10 @@ bool CoarseTracker::trackNewestCoarse(
 		Vec5 minResForAbort,
 		IOWrap::Output3DWrapper* wrap)
 {
-	debugPlot = setting_render_displayCoarseTrackingFull;
+	debugPlot = globalSettings.setting_render_displayCoarseTrackingFull;
 	debugPrint = !setting_debugout_runquiet;
 
-	assert(coarsestLvl < 5 && coarsestLvl < pyrLevelsUsed);
+	assert(coarsestLvl < 5 && coarsestLvl < globalSettings.pyrLevelsUsed);
 
 	lastResiduals.setConstant(NAN);
 	lastFlowIndicators.setConstant(1000);
@@ -684,16 +685,16 @@ bool CoarseTracker::trackNewestCoarse(
 
 		float levelCutoffRepeat=1;
 		// Calulate residual of transformation estimate
-		Vec6 resOld = calcRes(lvl, refToNew_current, aff_g2l_current, setting_coarseCutoffTH*levelCutoffRepeat);
+		Vec6 resOld = calcRes(lvl, refToNew_current, aff_g2l_current, globalSettings.setting_coarseCutoffTH*levelCutoffRepeat);
 
 		while(resOld[5] > 0.6 && (levelCutoffRepeat < 50 || resOld[5] > 0.99) ) // If too many high energy points
 		{
 			// Try again with lower high energy point threshold
 			levelCutoffRepeat*=2;
-			resOld = calcRes(lvl, refToNew_current, aff_g2l_current, setting_coarseCutoffTH*levelCutoffRepeat);
+			resOld = calcRes(lvl, refToNew_current, aff_g2l_current, globalSettings.setting_coarseCutoffTH*levelCutoffRepeat);
 
 			if(!setting_debugout_runquiet)
-				printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH*levelCutoffRepeat, resOld[5]);
+				printf("INCREASING cutoff to %f (ratio is %f)!\n", globalSettings.setting_coarseCutoffTH*levelCutoffRepeat, resOld[5]);
 		}
 
 		// Calculate H and b for Gauss Newton Optimization
@@ -730,7 +731,7 @@ bool CoarseTracker::trackNewestCoarse(
 			SE3 refToNew_new;
 			AffLight aff_g2l_new = aff_g2l_current;
 			double incNorm;
-			if(dso::setting_useIMU && imuIntegration.isCoarseInitialized())
+			if(setting_useIMU && imuIntegration.isCoarseInitialized())
 			{
 				// imu!: The idea of the integration of the IMU (and GTSAM) into the coarse tracking is to replace the line
 				// Vec8 inc = Hl.ldlt().solve(-b);
@@ -761,17 +762,17 @@ bool CoarseTracker::trackNewestCoarse(
 				// inc = [w1, w2, w3, d1, d2, d3, a, b]
 				Vec8 inc = Hl.ldlt().solve(-b);
 
-				if(setting_affineOptModeA < 0 && setting_affineOptModeB < 0)	// fix a, b
+				if(globalSettings.setting_affineOptModeA < 0 && globalSettings.setting_affineOptModeB < 0)	// fix a, b
 				{
 					inc.head<6>() = Hl.topLeftCorner<6,6>().ldlt().solve(-b.head<6>());
 					inc.tail<2>().setZero();
 				}
-				if(!(setting_affineOptModeA < 0) && setting_affineOptModeB < 0)	// fix b
+				if(!(globalSettings.setting_affineOptModeA < 0) && globalSettings.setting_affineOptModeB < 0)	// fix b
 				{
 					inc.head<7>() = Hl.topLeftCorner<7,7>().ldlt().solve(-b.head<7>());
 					inc.tail<1>().setZero();
 				}
-				if(setting_affineOptModeA < 0 && !(setting_affineOptModeB < 0))	// fix a
+				if(globalSettings.setting_affineOptModeA < 0 && !(globalSettings.setting_affineOptModeB < 0))	// fix a
 				{
 					Mat88 HlStitch = Hl;
 					Vec8 bStitch = b;
@@ -807,7 +808,7 @@ bool CoarseTracker::trackNewestCoarse(
 			}
 
 			// Cacluate residual for new pose
-			Vec6 resNew = calcRes(lvl, refToNew_new, aff_g2l_new, setting_coarseCutoffTH*levelCutoffRepeat);
+			Vec6 resNew = calcRes(lvl, refToNew_new, aff_g2l_new, globalSettings.setting_coarseCutoffTH*levelCutoffRepeat);
 
 			// Accept if residual energy per point lowers
 			bool accept = (resNew[0] / resNew[1]) < (resOld[0] / resOld[1]);
@@ -835,7 +836,7 @@ bool CoarseTracker::trackNewestCoarse(
 				refToNew_current = refToNew_new;
 				
 				// imu!: Calculate the update with IMU factors
-				if(dso::setting_useIMU)
+				if(setting_useIMU)
 					imuIntegration.acceptCoarseUpdate();
 
 				lambda *= 0.5;
@@ -880,23 +881,23 @@ bool CoarseTracker::trackNewestCoarse(
 	// Set tracking as bad if any of the final values are too large or small
 	bool trackingGood = true;
 
-	if((setting_affineOptModeA != 0 && (fabsf(aff_g2l_out.a) > 1.2))
-	|| (setting_affineOptModeB != 0 && (fabsf(aff_g2l_out.b) > 200)))
+	if((globalSettings.setting_affineOptModeA != 0 && (fabsf(aff_g2l_out.a) > 1.2))
+	|| (globalSettings.setting_affineOptModeB != 0 && (fabsf(aff_g2l_out.b) > 200)))
 		trackingGood = false;
 
 	Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l, aff_g2l_out).cast<float>();
 
-	if((setting_affineOptModeA == 0 && (fabsf(logf((float)relAff[0])) > 1.5))
-	|| (setting_affineOptModeB == 0 && (fabsf((float)relAff[1]) > 200)))
+	if((globalSettings.setting_affineOptModeA == 0 && (fabsf(logf((float)relAff[0])) > 1.5))
+	|| (globalSettings.setting_affineOptModeB == 0 && (fabsf((float)relAff[1]) > 200)))
 		trackingGood = false;
 
-	if(setting_affineOptModeA < 0) aff_g2l_out.a=0;
-	if(setting_affineOptModeB < 0) aff_g2l_out.b=0;
+	if(globalSettings.setting_affineOptModeA < 0) aff_g2l_out.a=0;
+	if(globalSettings.setting_affineOptModeB < 0) aff_g2l_out.b=0;
 
 	// imu!: Add visual to coarse graph of last level is zero
 	if(lastLvl == 0)
 	{
-		if(dso::setting_useIMU)
+		if(setting_useIMU)
 			imuIntegration.addVisualToCoarseGraph(H, b, trackingGood);
 	}
 
@@ -914,7 +915,7 @@ bool CoarseTracker::trackNewestCoarse(
 void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::vector<IOWrap::Output3DWrapper*> &wraps) const
 {
 	dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMap");
-	if(wraps.empty() && !setting_debugSaveImages)
+	if(wraps.empty() && !globalSettings.setting_debugSaveImages)
 	{
 		return;
 	}
@@ -999,12 +1000,12 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 					//mf.at(idx) = makeJet3B(id);
 				}
 			}
-		//IOWrap::displayImage("coarseDepth LVL0", &mf, 0);
+
 
 		for(IOWrap::Output3DWrapper* ow : wraps)
 			ow->pushDepthImage(&mf);
 
-		if(setting_debugSaveImages)
+		if(globalSettings.setting_debugSaveImages)
 		{
 			char buf[1000];
 			snprintf(buf, 1000, "images_out/predicted_%05d_%05d.png", lastRef->shell->id, refFrameID);
@@ -1034,7 +1035,8 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*
  * @param ww 
  * @param hh 
  */
-CoarseDistanceMap::CoarseDistanceMap(int ww, int hh)
+CoarseDistanceMap::CoarseDistanceMap(int ww, int hh, GlobalSettings& globalSettings_):
+globalSettings(globalSettings_)
 {
 	wG0 = ww;
 	hG0 = hh;
@@ -1043,7 +1045,7 @@ CoarseDistanceMap::CoarseDistanceMap(int ww, int hh)
 	bfsList1 = new Eigen::Vector2i[ww*hh/4];
 	bfsList2 = new Eigen::Vector2i[ww*hh/4];
 
-	int fac = 1 << (pyrLevelsUsed-1);
+	int fac = 1 << (globalSettings.pyrLevelsUsed-1);
 
 
 	coarseProjectionGrid = new PointFrameResidual*[2048*(ww*hh/(fac*fac))];
@@ -1249,7 +1251,7 @@ void CoarseDistanceMap::makeK(CalibHessian* HCalib)
 	cx[0] = HCalib->cxl();
 	cy[0] = HCalib->cyl();
 
-	for (int level = 1; level < pyrLevelsUsed; ++ level)
+	for (int level = 1; level < globalSettings.pyrLevelsUsed; ++ level)
 	{
 		w[level] = w[0] >> level;
 		h[level] = h[0] >> level;
@@ -1259,7 +1261,7 @@ void CoarseDistanceMap::makeK(CalibHessian* HCalib)
 		cy[level] = (cy[0] + 0.5) / ((int)1<<level) - 0.5;
 	}
 
-	for (int level = 0; level < pyrLevelsUsed; ++ level)
+	for (int level = 0; level < globalSettings.pyrLevelsUsed; ++ level)
 	{
 		K[level]  << fx[level], 0.0, cx[level], 
 					0.0, fy[level], cy[level], 

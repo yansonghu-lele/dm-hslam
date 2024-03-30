@@ -43,8 +43,8 @@ namespace dso
  * @param type 		Pyramid level point is detected in
  * @param HCalib 
  */
-ImmaturePoint::ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_, float type, CalibHessian* HCalib)
-: u(u_), v(v_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
+ImmaturePoint::ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_, float type, CalibHessian* HCalib, GlobalSettings& globalSettings_)
+: globalSettings(globalSettings_), u(u_), v(v_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
 {
 	wG0 = ww;
 	hG0 = hh;
@@ -76,11 +76,11 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_
 
 		gradH += ptc.tail<2>() * ptc.tail<2>().transpose(); // 2 by 2 matrix of summed dx^2 + dy^2 values
 		// Weights for gradient-dependent weighting
-		weights[idx] = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + ptc.tail<2>().squaredNorm()));
+		weights[idx] = sqrtf(globalSettings.setting_outlierTHSumComponent / (globalSettings.setting_outlierTHSumComponent + ptc.tail<2>().squaredNorm()));
 	}
 
-	energyTH = PATTERNNUM*setting_outlierTH;
-	energyTH *= setting_overallEnergyTHWeight*setting_overallEnergyTHWeight;
+	energyTH = PATTERNNUM*globalSettings.setting_outlierTH;
+	energyTH *= globalSettings.setting_overallEnergyTHWeight*globalSettings.setting_overallEnergyTHWeight;
 
 	idepth_GT=0;
 	quality=10000;
@@ -118,7 +118,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	if(lastTraceStatus == ImmaturePointStatus::IPS_OOB) return lastTraceStatus;
 
 	debugPrint = false;
-	float maxPixSearch = (wG0+hG0)*setting_maxPixSearch;
+	float maxPixSearch = (wG0+hG0)*globalSettings.setting_maxPixSearch;
 
 	if(debugPrint)
 		printf("trace pt (%.1f %.1f) from frame %d to %d. Range %f -> %f. t %f %f %f!\n",
@@ -185,7 +185,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		// ============== check their distance. everything below 2px is OK (-> skip). ===================
 		dist = (uMin-uMax)*(uMin-uMax) + (vMin-vMax)*(vMin-vMax);
 		dist = sqrtf(dist);
-		if(dist < setting_trace_slackInterval) // Tracing is not needed if the distance between max and min is low
+		if(dist < globalSettings.setting_trace_slackInterval) // Tracing is not needed if the distance between max and min is low
 		{
 			if(debugPrint)
 				printf("TOO CERTAIN ALREADY (dist %f)!\n", dist);
@@ -232,14 +232,14 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 
 	// ============== compute error-bounds on result in pixel. if the new interval is not at least 1/2 of the old, SKIP ===================
-	float dx = setting_trace_stepsize*(uMax-uMin);
-	float dy = setting_trace_stepsize*(vMax-vMin);
+	float dx = globalSettings.setting_trace_stepsize*(uMax-uMin);
+	float dy = globalSettings.setting_trace_stepsize*(vMax-vMin);
 
 	float a_err = (Vec2f(dx,dy).transpose() * gradH * Vec2f(dx,dy));
 	float b_err = (Vec2f(dy,-dx).transpose() * gradH * Vec2f(dy,-dx)); // Perpendicular to a going clockwise
 	float errorInPixel = 0.2f + 0.2f * (a_err+b_err) / a_err;
 
-	if(errorInPixel*setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max))
+	if(errorInPixel*globalSettings.setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max))
 	{
 		if(debugPrint)
 			printf("NO SIGNIFICANT IMPROVMENT (%f)!\n", errorInPixel);
@@ -271,7 +271,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		dist = maxPixSearch;
 	}
 
-	int numSteps = 1.9999f + dist / setting_trace_stepsize;
+	int numSteps = 1.9999f + dist / globalSettings.setting_trace_stepsize;
 
 	// Add some randomness
 	float randShift = uMin*1000-floorf(uMin*1000);
@@ -307,7 +307,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 			if(!std::isfinite(hitColor)) {energy+=1e5; continue;}
 			float residual = hitColor - (float)(hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
-			float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+			float hw = fabs(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabs(residual);
 			energy += hw *residual*residual*(2-hw);
 		}
 
@@ -329,7 +329,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	float secondBest=1e10;
 	for(int i=0;i<numSteps;i++)
 	{
-		if((i < bestIdx-setting_minTraceTestRadius || i > bestIdx+setting_minTraceTestRadius) && errors[i] < secondBest)
+		if((i < bestIdx-globalSettings.setting_minTraceTestRadius || i > bestIdx+globalSettings.setting_minTraceTestRadius) && errors[i] < secondBest)
 			secondBest = errors[i];
 	}
 	float newQuality = secondBest / bestEnergy;
@@ -338,9 +338,9 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	// ============== do Gauss Newton optimization ===================
 	float uBak=bestU, vBak=bestV, gnstepsize=1, stepBack=0;
-	if(setting_trace_GNIterations>0) bestEnergy = 1e5;
+	if(globalSettings.setting_trace_GNIterations>0) bestEnergy = 1e5;
 	int gnStepsGood=0, gnStepsBad=0;
-	for(int it=0;it<setting_trace_GNIterations;it++)
+	for(int it=0;it<globalSettings.setting_trace_GNIterations;it++)
 	{
 		float H=1, b=0, energy=0;
 		for(int idx=0;idx<PATTERNNUM;idx++)
@@ -361,7 +361,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			if(!std::isfinite((float)hitColor[0])) {energy+=1e5; continue;}
 			float residual = hitColor[0] - (hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
 			float dResdDist = dx*hitColor[1] + dy*hitColor[2]; // Calculate derivative for GN
-			float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+			float hw = fabs(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabs(residual);
 
 			H += hw*dResdDist*dResdDist; 
 			b += hw*residual*dResdDist;
@@ -407,12 +407,12 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 						uBak, vBak, bestU, bestV);
 		}
 
-		if(fabsf(stepBack) < setting_trace_GNThreshold) break;
+		if(fabsf(stepBack) < globalSettings.setting_trace_GNThreshold) break;
 	}
 
 
 	// ============== detect energy-based outlier. ===================
-	if(!(bestEnergy < energyTH*setting_trace_extraSlackOnTH))
+	if(!(bestEnergy < energyTH*globalSettings.setting_trace_extraSlackOnTH))
 	{
 		if(debugPrint)
 			printf("OUTLIER!\n");
@@ -499,7 +499,7 @@ float ImmaturePoint::calcResidual(
 
 		float residual = hitColor[0] - (affLL[0] * color[idx] + affLL[1]);
 
-		float hw = fabsf(residual) < setting_huberTH ? 1 : setting_huberTH / fabsf(residual);
+		float hw = fabsf(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabsf(residual);
 		energyLeft += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
 	}
 
@@ -567,7 +567,7 @@ double ImmaturePoint::linearizeResidual(
 		// Calculate residual
 		float residual = hitColor[0] - (affLL[0] * color[idx] + affLL[1]);
 		// Huber loss
-		float hw = fabsf(residual) < setting_huberTH ? 1 : setting_huberTH / fabsf(residual);
+		float hw = fabsf(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabsf(residual);
 		energyLeft += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
 
 		// depth derivatives.

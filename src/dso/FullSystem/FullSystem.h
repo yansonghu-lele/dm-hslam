@@ -163,7 +163,8 @@ public:
 	FullSystem(bool linearizeOperationPassed, 
 				const dso::Global_Calib& globalCalib,
 				const dmvio::IMUCalibration& imuCalibration,
-               dmvio::IMUSettings& imuSettings);
+               dmvio::IMUSettings& imuSettings,
+			   GlobalSettings& globalSettings_);
 	virtual ~FullSystem();
 
 	// adds a new frame, and creates point & residual structs.
@@ -194,6 +195,8 @@ public:
     void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
 
 private:
+	GlobalSettings& globalSettings;
+
     dmvio::IMUIntegration imuIntegration;
     bool imuUsedBefore = false;
     dmvio::BAGTSAMIntegration* baIntegration = nullptr;

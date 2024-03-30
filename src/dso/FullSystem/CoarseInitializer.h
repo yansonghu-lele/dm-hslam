@@ -82,7 +82,7 @@ public:
 class CoarseInitializer {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    CoarseInitializer(int ww, int hh);
+    CoarseInitializer(int ww, int hh, GlobalSettings& globalSettings_);
 	~CoarseInitializer();
 
 
@@ -103,6 +103,8 @@ public:
 
 
 private:
+	GlobalSettings& globalSettings;
+
 	int wG0;
 	int hG0;
 	Mat33 K[PYR_LEVELS];

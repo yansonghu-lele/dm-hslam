@@ -43,7 +43,7 @@ using namespace dso;
  * @param argv          cmd line string input
  * @param settingsUtil  Class that handles settings
  */
-void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsUtil)
+void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsUtil, dso::GlobalSettings& globalSettings)
 {
     cxxopts::ParseResult result = settingsUtil.cmd_options->parse(argc, argv);
 
@@ -85,17 +85,17 @@ void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsU
     if(mode == 1)
     {
         printf("PHOTOMETRIC MODE WITHOUT CALIBRATION!\n");
-        setting_photometricCalibration = 0;
-        setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
-        setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
+        globalSettings.setting_photometricCalibration = 0;
+        globalSettings.setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
+        globalSettings.setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
     }
     if(mode == 2)
     {
         printf("PHOTOMETRIC MODE WITH PERFECT IMAGES!\n");
-        setting_photometricCalibration = 0;
-        setting_affineOptModeA = -1; //-1: fix. >=0: optimize (with prior, if > 0).
-        setting_affineOptModeB = -1; //-1: fix. >=0: optimize (with prior, if > 0).
-        setting_minGradHistAdd = 0.005;
+        globalSettings.setting_photometricCalibration = 0;
+        globalSettings.setting_affineOptModeA = -1; //-1: fix. >=0: optimize (with prior, if > 0).
+        globalSettings.setting_affineOptModeB = -1; //-1: fix. >=0: optimize (with prior, if > 0).
+        globalSettings.setting_minGradHistAdd = 0.005;
     }
     if(mode == 3)
     {
@@ -104,8 +104,8 @@ void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsU
         // This mode uses vignette (and response), but still fully optimizes brightness changes, hence it is
         // appropriate for sensors without exposure time but with a calibrated vignette.
         printf("PHOTOMETRIC MODE WITH CALIBRATION, BUT NO OR INACCURATE EXPOSURE!\n");
-        setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
-        setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
+        globalSettings.setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
+        globalSettings.setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
     }
 
     if(settingsFile!=""){
@@ -120,7 +120,7 @@ void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsU
  * 
  * @param set 
  */
-void MainSettings::registerArgs(SettingsUtil& set)
+void MainSettings::registerArgs(SettingsUtil& set, dso::GlobalSettings& globalSettings)
 {
     // The DM-VIO settings can also be set with commandline arguments (and also with the yaml settings file)
     set.registerArg("vignette", vignette, "V", "Photometric calibration vignette file path", "");
@@ -132,27 +132,27 @@ void MainSettings::registerArgs(SettingsUtil& set)
 
     // These are mostly the original DSO commandline arguments which also work for DM-VIO
     set.registerArg("quiet", setting_debugout_runquiet, "q", "Turn console text output off", setting_debugout_runquiet ? "1" : "0");
-    set.registerArg("nolog", setting_logStuff, "n", "Turn logging off", setting_logStuff ? "1" : "0");
-    set.registerArg("nogui", setting_disableAllDisplay, "g", "Turn gui output off", setting_disableAllDisplay ? "1" : "0");
-    set.registerArg("outPC", setting_outputPC, "p", "Output point cloud", setting_outputPC ? "1" : "0");
+    set.registerArg("nolog", globalSettings.setting_logStuff, "n", "Turn logging off", globalSettings.setting_logStuff ? "1" : "0");
+    set.registerArg("nogui", globalSettings.setting_disableAllDisplay, "g", "Turn gui output off", globalSettings.setting_disableAllDisplay ? "1" : "0");
+    set.registerArg("outPC", globalSettings.setting_outputPC, "p", "Output point cloud", globalSettings.setting_outputPC ? "1" : "0");
     set.registerArg("useimu", setting_useIMU, "u", "Turn IMU on or off", setting_useIMU ? "1" : "0");
-    set.registerArg("save", setting_debugSaveImages, "a", "Save data", setting_debugSaveImages ? "1" : "0");
+    set.registerArg("save", globalSettings.setting_debugSaveImages, "a", "Save data", globalSettings.setting_debugSaveImages ? "1" : "0");
     set.registerArg("mode", mode, "m", "Photometric mode (1=full, 2=no calibration, 3=Synthetic, 4=none)", "0");
-    set.registerArg("nomt", settings_no_multiThreading, "M", "Turn multithreading off", "0");
+    set.registerArg("nomt", globalSettings.settings_no_multiThreading, "M", "Turn multithreading off", "0");
     set.registerArg("settingsFile", settingsFile, "F", "Settings file", "");
 
     // Register global settings
     // Mainly changed using the settings file
-    set.registerArg("setting_minOptIterations", setting_minOptIterations);
-    set.registerArg("setting_maxOptIterations", setting_maxOptIterations);
-    set.registerArg("setting_minIdepth", setting_minIdepth);
-    set.registerArg("setting_solverMode", setting_solverMode);
-    set.registerArg("setting_weightZeroPriorDSOInitY", setting_weightZeroPriorDSOInitY);
-    set.registerArg("setting_weightZeroPriorDSOInitX", setting_weightZeroPriorDSOInitX);
-    set.registerArg("setting_forceNoKFTranslationThresh", setting_forceNoKFTranslationThresh);
-    set.registerArg("setting_minFramesBetweenKeyframes", setting_minFramesBetweenKeyframes);
-    set.registerArg("setting_desiredImmatureDensity", setting_desiredImmatureDensity);
-    set.registerArg("setting_desiredPointDensity", setting_desiredPointDensity);
-    set.registerArg("setting_minFrames", setting_minFrames);
-    set.registerArg("setting_maxFrames", setting_maxFrames);
+    set.registerArg("setting_minOptIterations", globalSettings.setting_minOptIterations);
+    set.registerArg("setting_maxOptIterations", globalSettings.setting_maxOptIterations);
+    set.registerArg("setting_minIdepth", globalSettings.setting_minIdepth);
+    set.registerArg("setting_solverMode", globalSettings.setting_solverMode);
+    set.registerArg("setting_weightZeroPriorDSOInitY", globalSettings.setting_weightZeroPriorDSOInitY);
+    set.registerArg("setting_weightZeroPriorDSOInitX", globalSettings.setting_weightZeroPriorDSOInitX);
+    set.registerArg("setting_forceNoKFTranslationThresh", globalSettings.setting_forceNoKFTranslationThresh);
+    set.registerArg("setting_minFramesBetweenKeyframes", globalSettings.setting_minFramesBetweenKeyframes);
+    set.registerArg("setting_desiredImmatureDensity", globalSettings.setting_desiredImmatureDensity);
+    set.registerArg("setting_desiredPointDensity", globalSettings.setting_desiredPointDensity);
+    set.registerArg("setting_minFrames", globalSettings.setting_minFrames);
+    set.registerArg("setting_maxFrames", globalSettings.setting_maxFrames);
 }

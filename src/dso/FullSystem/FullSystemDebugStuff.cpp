@@ -53,8 +53,8 @@ namespace dso
 	void FullSystem::debugPlotTracking()
 	{
 		// Shows the points of each active frame in each active frame
-		if(setting_disableAllDisplay) return;
-		if(!setting_render_plotTrackingFull) return;
+		if(globalSettings.setting_disableAllDisplay) return;
+		if(!globalSettings.setting_render_plotTrackingFull) return;
 		int wh = hG[0]*wG[0];
 
 		int idx=0;
@@ -98,22 +98,22 @@ namespace dso
 
 			char buf[100];
 			snprintf(buf, 100, "IMG %d", idx);
-			IOWrap::displayImageStitch(buf, images);
+			if(!globalSettings.setting_disableAllDisplay) IOWrap::displayImageStitch(buf, images);
 			idx++;
 		}
-		IOWrap::waitKey(0);
+		if(!globalSettings.setting_disableAllDisplay) IOWrap::waitKey(0);
 	}
 
 
 	void FullSystem::debugPlot(std::string name)
 	{
         dmvio::TimeMeasurement timeMeasurement("debugPlot");
-		if(setting_disableAllDisplay) return;
-		if(!setting_render_renderWindowFrames) return;
+		if(globalSettings.setting_disableAllDisplay) return;
+		if(!globalSettings.setting_render_renderWindowFrames) return;
 		std::vector<MinimalImageB3* > images;
 
 		float minID=0, maxID=0;
-		if((int)(freeDebugParam5+0.5f) == 7 || (setting_debugSaveImages&&false))
+		if((int)(freeDebugParam5+0.5f) == 7 || (globalSettings.setting_debugSaveImages&&false))
 		{
 			std::vector<float> allID;
 			for(unsigned int f=0;f<frameHessians.size();f++)
@@ -300,15 +300,17 @@ namespace dso
 				}
 			}
 		}
-		IOWrap::displayImageStitch(name.c_str(), images);
-		IOWrap::waitKey(5);
+		if(!globalSettings.setting_disableAllDisplay) {
+			IOWrap::displayImageStitch(name.c_str(), images);
+			IOWrap::waitKey(5);
+		}
 
 		for(unsigned int i=0;i<images.size();i++)
 			delete images[i];
 
 
 
-		if((setting_debugSaveImages&&false))
+		if((globalSettings.setting_debugSaveImages&&false))
 		{
 			for(unsigned int f=0;f<frameHessians.size();f++)
 			{

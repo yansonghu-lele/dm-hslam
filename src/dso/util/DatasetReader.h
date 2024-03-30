@@ -126,7 +126,7 @@ public:
 	 * @param vignetteFile 		Path to photometric vignette correction file
 	 * @param use16BitPassed 	16 or 8 bit images
 	 */
-	ImageFolderReader(std::string path, std::string calibFile, std::string gammaFile, std::string vignetteFile, bool use16BitPassed, bool useColourPassed)
+	ImageFolderReader(std::string path, std::string calibFile, std::string gammaFile, std::string vignetteFile, bool use16BitPassed, bool useColourPassed, GlobalSettings& globalSettings)
 	{
 		this->path = path;
 		this->calibfile = calibFile;
@@ -171,7 +171,7 @@ public:
 		else
 			getdir (path, files);
 
-		undistort = Undistort::getUndistorterForFile(calibFile, gammaFile, vignetteFile);
+		undistort = Undistort::getUndistorterForFile(calibFile, gammaFile, vignetteFile, globalSettings);
 
 		widthOrg = undistort->getOriginalSize()[0];
 		heightOrg = undistort->getOriginalSize()[1];
@@ -237,12 +237,12 @@ public:
 	 * Wrapper for getCalibMono and setGlobalCalib
 	 * 
 	 */
-	void setGlobalCalibration(Global_Calib& globalCalibSettings)
+	void setGlobalCalibration(Global_Calib& globalCalibSettings, GlobalSettings& globalSettings)
 	{
 		int w_out, h_out;
 		Eigen::Matrix3f K;
 		getCalibMono(K, w_out, h_out);
-		globalCalibSettings.setGlobalCalib(w_out, h_out, K);
+		globalCalibSettings.setGlobalCalib(w_out, h_out, K, globalSettings);
 	}
 
 	/**

@@ -135,19 +135,19 @@ void FullSystem::setNewFrameEnergyTH()
 	}
 
 
-	int nthIdx = setting_frameEnergyTHN*allResVec.size();
+	int nthIdx = globalSettings.setting_frameEnergyTHN*allResVec.size();
 
 	assert(nthIdx < (int)allResVec.size());
-	assert(setting_frameEnergyTHN < 1);
+	assert(globalSettings.setting_frameEnergyTHN < 1);
 
 	std::nth_element(allResVec.begin(), allResVec.begin()+nthIdx, allResVec.end());
 	float nthElement = sqrtf(allResVec[nthIdx]);
 
 
-    newFrame->frameEnergyTH = nthElement*setting_frameEnergyTHFacMedian;
-	newFrame->frameEnergyTH = 26.0f*setting_frameEnergyTHConstWeight + newFrame->frameEnergyTH*(1-setting_frameEnergyTHConstWeight);
+    newFrame->frameEnergyTH = nthElement*globalSettings.setting_frameEnergyTHFacMedian;
+	newFrame->frameEnergyTH = 26.0f*globalSettings.setting_frameEnergyTHConstWeight + newFrame->frameEnergyTH*(1-globalSettings.setting_frameEnergyTHConstWeight);
 	newFrame->frameEnergyTH = newFrame->frameEnergyTH*newFrame->frameEnergyTH;
-	newFrame->frameEnergyTH *= setting_overallEnergyTHWeight*setting_overallEnergyTHWeight;
+	newFrame->frameEnergyTH *= globalSettings.setting_overallEnergyTHWeight*globalSettings.setting_overallEnergyTHWeight;
 
 	// imu!: Used to enforce a maximum energy threshold.
 	if(setting_useIMU)
@@ -183,7 +183,7 @@ Vec3 FullSystem::linearizeAll(bool fixLinearization)
 	for(int i=0;i<NUM_THREADS;i++) toRemove[i].clear();
 
 	// Linearize all of the residuals
-	if(!settings_no_multiThreading)
+	if(!globalSettings.settings_no_multiThreading)
 	{
 		treadReduce.reduce(boost::bind(&FullSystem::linearizeAll_Reductor, this, fixLinearization, toRemove, _1, _2, _3, _4), 0, activeResiduals.size(), 0);
 		lastEnergyP = treadReduce.stats[0];
@@ -269,7 +269,7 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 
 	float sumNID=0;
 
-	if(setting_solverMode & SOLVER_MOMENTUM)
+	if(globalSettings.setting_solverMode & SOLVER_MOMENTUM)
 	{
 		Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
 		for(FrameHessian* fh : frameHessians)
@@ -349,7 +349,7 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
  */
 void FullSystem::backupState(bool backupLastStep)
 {
-	if(setting_solverMode & SOLVER_MOMENTUM)
+	if(globalSettings.setting_solverMode & SOLVER_MOMENTUM)
 	{
 		if(backupLastStep)
 		{
@@ -426,7 +426,7 @@ void FullSystem::loadSateBackup()
  */
 double FullSystem::calcMEnergy(bool useNewValues)
 {
-	if(setting_forceAceptStep) return 0;
+	if(globalSettings.setting_forceAceptStep) return 0;
 
 	// calculate (x-x0)^T * [2b + H * (x-x0)] for everything saved in L.
 	//ef->makeIDX();
@@ -500,7 +500,7 @@ float FullSystem::optimize(int mnumOptIts)
 	double lastEnergyM = calcMEnergy(false);
 
 	// Set new states
-	if(!settings_no_multiThreading)
+	if(!globalSettings.settings_no_multiThreading)
 		treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0, activeResiduals.size(), 50);
 	else
 		applyRes_Reductor(true,0,activeResiduals.size(),0,0);
@@ -551,7 +551,7 @@ float FullSystem::optimize(int mnumOptIts)
 		double incDirChange = (1e-20 + previousX.dot(ef->lastX)) / (1e-20 + previousX.norm() * ef->lastX.norm());
 		previousX = ef->lastX;
 
-		if(std::isfinite(incDirChange) && (setting_solverMode & SOLVER_STEPMOMENTUM))
+		if(std::isfinite(incDirChange) && (globalSettings.setting_solverMode & SOLVER_STEPMOMENTUM))
 		{
 			float newStepsize = exp(incDirChange*1.4);
 			if(incDirChange<0 && stepsize>1) stepsize=1;
@@ -591,10 +591,10 @@ float FullSystem::optimize(int mnumOptIts)
             printOptRes(newEnergy, newEnergyL, newEnergyM , 0, 0, frameHessians.back()->aff_g2l().a, frameHessians.back()->aff_g2l().b);
         }
 
-		if(setting_forceAceptStep || (newEnergy[0] +  newEnergy[1] +  newEnergyL + newEnergyM / dynamicGTSAMWeight <
+		if(globalSettings.setting_forceAceptStep || (newEnergy[0] +  newEnergy[1] +  newEnergyL + newEnergyM / dynamicGTSAMWeight <
 				lastEnergy[0] + lastEnergy[1] + lastEnergyL + lastEnergyM / dynamicGTSAMWeight))
 		{
-			if(!settings_no_multiThreading)
+			if(!globalSettings.settings_no_multiThreading)
 				treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0, activeResiduals.size(), 50);
 			else
 				applyRes_Reductor(true,0,activeResiduals.size(),0,0);
@@ -625,10 +625,10 @@ float FullSystem::optimize(int mnumOptIts)
 		}
 		numIterations++;
 
-		if(canbreak && iteration >= setting_minOptIterations) break;
+		if(canbreak && iteration >= globalSettings.setting_minOptIterations) break;
 	}
 
-    if(!setting_debugout_runquiet)
+    if(!globalSettings.setting_debugout_runquiet)
     {
         std::cout << "Num BA Iterations done: " << numIterations << "\n";
     }
@@ -716,7 +716,7 @@ void FullSystem::solveSystem(int iteration, double lambda)
  */
 double FullSystem::calcLEnergy()
 {
-	if(setting_forceAceptStep) return 0;
+	if(globalSettings.setting_forceAceptStep) return 0;
 
 	double Ef = ef->calcLEnergyF_MT();
 	return Ef;

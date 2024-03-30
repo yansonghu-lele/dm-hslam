@@ -103,12 +103,12 @@ class EFPoint
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	EFPoint(PointHessian* d, EFFrame* host_) : data(d),host(host_)
+	EFPoint(PointHessian* d, EFFrame* host_, float setting_idepthFixPrior, int setting_solverMode) : data(d),host(host_)
 	{
-		takeData();
+		takeData(setting_idepthFixPrior, setting_solverMode);
 		stateFlag=EFPointStatus::PS_GOOD;
 	}
-	void takeData();
+	void takeData(float setting_idepthFixPrior, int setting_solverMode);
 
 	PointHessian* data;
 

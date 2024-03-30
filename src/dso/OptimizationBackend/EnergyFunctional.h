@@ -29,6 +29,7 @@
  
 #include "util/NumType.h"
 #include "util/IndexThreadReduce.h"
+#include "util/settings.h"
 #include "vector"
 #include <math.h>
 #include "map"
@@ -75,7 +76,7 @@ public:
 	friend class AccumulatedSCHessian;
 	friend class AccumulatedSCHessianSSE;
 
-    EnergyFunctional(dmvio::BAGTSAMIntegration &gtsamIntegration);
+    EnergyFunctional(dmvio::BAGTSAMIntegration &gtsamIntegration, GlobalSettings& globalSettings_);
 	~EnergyFunctional();
 
 
@@ -130,6 +131,7 @@ public:
 	  > connectivityMap;
 
 private:
+	GlobalSettings& globalSettings;
 
 	VecX getStitchedDeltaF() const;
 

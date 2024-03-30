@@ -42,9 +42,9 @@ namespace IOWrap
 
 
 
-PangolinDSOViewer::PangolinDSOViewer(int w_, int h_, bool startRunThread, std::shared_ptr<dmvio::SettingsUtil>
+PangolinDSOViewer::PangolinDSOViewer(int w_, int h_, GlobalSettings& globalSettings_, bool startRunThread, std::shared_ptr<dmvio::SettingsUtil>
         settingsUtilPassed, std::shared_ptr<double> normalizeCamSize)
-        : HCalib(0), settingsUtil(std::move(settingsUtilPassed)), normalizeCamSize(normalizeCamSize)
+        : globalSettings(globalSettings_), HCalib(0), settingsUtil(std::move(settingsUtilPassed)), normalizeCamSize(normalizeCamSize)
 {
 	this->w = w_;
 	this->h = h_;
@@ -73,7 +73,7 @@ PangolinDSOViewer::PangolinDSOViewer(int w_, int h_, bool startRunThread, std::s
 	}
 
 	needReset = false;
-	active_frame_IDs.resize(setting_maxFrames+1, -1);
+	active_frame_IDs.resize(globalSettings.setting_maxFrames+1, -1);
 
 
     if(startRunThread)
@@ -163,11 +163,11 @@ void PangolinDSOViewer::run()
 	pangolin::Var<bool> settings_resetButton("ui.Reset",false,false);
 
 
-	pangolin::Var<int> settings_nPts("ui.activePoints",setting_desiredPointDensity, 50,5000, false);
-	pangolin::Var<int> settings_nCandidates("ui.pointCandidates",setting_desiredImmatureDensity, 50,5000, false);
-	pangolin::Var<int> settings_nMaxFrames("ui.maxFrames",setting_maxFrames, 4,10, false);
-	pangolin::Var<double> settings_kfFrequency("ui.kfFrequency",setting_kfGlobalWeight,0.1,3, false);
-	pangolin::Var<double> settings_gradHistAdd("ui.minGradAdd",setting_minGradHistAdd,0,1, false);
+	pangolin::Var<int> settings_nPts("ui.activePoints",globalSettings.setting_desiredPointDensity, 50,5000, false);
+	pangolin::Var<int> settings_nCandidates("ui.pointCandidates",globalSettings.setting_desiredImmatureDensity, 50,5000, false);
+	pangolin::Var<int> settings_nMaxFrames("ui.maxFrames",globalSettings.setting_maxFrames, 4,10, false);
+	pangolin::Var<double> settings_kfFrequency("ui.kfFrequency",globalSettings.setting_kfGlobalWeight,0.1,3, false);
+	pangolin::Var<double> settings_gradHistAdd("ui.minGradAdd",globalSettings.setting_minGradHistAdd,0,1, false);
 
 	pangolin::Var<double> settings_trackFps("ui.Track fps",0,0,0,false);
 	pangolin::Var<double> settings_mapFps("ui.KF fps",0,0,0,false);
@@ -351,10 +351,10 @@ void PangolinDSOViewer::run()
 		setting_render_displayVideo =  settings_showLiveVideo.Get();
 		setting_render_displayResidual = settings_showLiveResidual.Get();
 
-		setting_render_renderWindowFrames = settings_showFramesWindow.Get();
-		setting_render_plotTrackingFull = settings_showFullTracking.Get();
-		setting_render_displayCoarseTrackingFull = settings_showCoarseTracking.Get();
-		setting_render_displayImmatureTracking = settings_showImmatureTracking.Get();
+		globalSettings.setting_render_renderWindowFrames = settings_showFramesWindow.Get();
+		globalSettings.setting_render_plotTrackingFull = settings_showFullTracking.Get();
+		globalSettings.setting_render_displayCoarseTrackingFull = settings_showCoarseTracking.Get();
+		globalSettings.setting_render_displayImmatureTracking = settings_showImmatureTracking.Get();
 
 
 	    this->settings_absVarTH = settings_absVarTH.Get();
@@ -362,11 +362,11 @@ void PangolinDSOViewer::run()
 	    this->settings_minRelBS = settings_minRelBS.Get();
 	    this->settings_sparsity = settings_sparsity.Get();
 
-	    setting_desiredPointDensity = settings_nPts.Get();
-	    setting_desiredImmatureDensity = settings_nCandidates.Get();
-	    setting_maxFrames = settings_nMaxFrames.Get();
-	    setting_kfGlobalWeight = settings_kfFrequency.Get();
-	    setting_minGradHistAdd = settings_gradHistAdd.Get();
+	    globalSettings.setting_desiredPointDensity = settings_nPts.Get();
+	    globalSettings.setting_desiredImmatureDensity = settings_nCandidates.Get();
+	    globalSettings.setting_maxFrames = settings_nMaxFrames.Get();
+	    globalSettings.setting_kfGlobalWeight = settings_kfFrequency.Get();
+	    globalSettings.setting_minGradHistAdd = settings_gradHistAdd.Get();
 
         if(settingsUtil)
         {
@@ -528,7 +528,7 @@ void PangolinDSOViewer::drawConstraints()
 void PangolinDSOViewer::publishGraph(const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>> &connectivity)
 {
     if(!setting_render_display3D) return;
-    if(setting_disableAllDisplay) return;
+    if(globalSettings.setting_disableAllDisplay) return;
 
 	model3DMutex.lock();
     connections.resize(connectivity.size());
@@ -575,7 +575,7 @@ void PangolinDSOViewer::publishKeyframes(
 		CalibHessian* HCalib)
 {
 	if(!setting_render_display3D) return;
-    if(setting_disableAllDisplay) return;
+    if(globalSettings.setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(model3DMutex);
 
@@ -603,7 +603,7 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 		CalibHessian* HCalib)
 {
     if(!setting_render_display3D) return;
-    if(setting_disableAllDisplay) return;
+    if(globalSettings.setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(model3DMutex);
 	struct timeval time_now;
@@ -624,7 +624,7 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 {
 	if(!setting_render_displayVideo) return;
-    if(setting_disableAllDisplay) return;
+    if(globalSettings.setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
@@ -653,7 +653,7 @@ void PangolinDSOViewer::pushDepthImage(MinimalImageB3* image)
 {
 
     if(!setting_render_displayDepth) return;
-    if(setting_disableAllDisplay) return;
+    if(globalSettings.setting_disableAllDisplay) return;
 
 	boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
@@ -670,7 +670,7 @@ void PangolinDSOViewer::pushDepthImage(MinimalImageB3* image)
 void PangolinDSOViewer::publishTransformDSOToIMU(const dmvio::TransformDSOToIMU& transformDSOToIMUPassed)
 {
     if(!setting_render_display3D) return;
-    if(setting_disableAllDisplay) return;
+    if(globalSettings.setting_disableAllDisplay) return;
 
     boost::unique_lock<boost::mutex> lk(model3DMutex);
     transformDSOToIMU = std::make_unique<dmvio::TransformDSOToIMU>(transformDSOToIMUPassed, std::make_shared<bool>(false),

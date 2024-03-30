@@ -110,6 +110,8 @@ struct FrameFramePrecalc
 
 struct FrameHessian
 {
+	GlobalSettings& globalSettings;
+
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	EFFrame* efFrame;
 
@@ -236,7 +238,7 @@ struct FrameHessian
 	{
 		assert(efFrame==0);
 		release(); instanceCounter--;
-		for(int i=0;i<pyrLevelsUsed;i++)
+		for(int i=0;i<globalSettings.pyrLevelsUsed;i++)
 		{
 			delete[] dIp[i];
 			delete[]  absSquaredGrad[i];
@@ -248,9 +250,10 @@ struct FrameHessian
 		if(debugImage != 0) delete debugImage;
 	};
 
-	explicit inline FrameHessian(int (&wG_)[PYR_LEVELS], int (&hG_)[PYR_LEVELS]):
+	explicit inline FrameHessian(int (&wG_)[PYR_LEVELS], int (&hG_)[PYR_LEVELS], GlobalSettings& globalSettings_):
 		ab_exposure(0.0),
-		idx(0)
+		idx(0),
+		globalSettings(globalSettings_)
 	{
 		std::copy(std::begin(wG_), std::end(wG_), std::begin(wG));
 		std::copy(std::begin(hG_), std::end(hG_), std::begin(hG));
@@ -276,33 +279,33 @@ struct FrameHessian
 		Vec10 p =  Vec10::Zero();
 		if(frameID==0)
 		{
-			p.head<3>() = Vec3::Constant(setting_initialTransPrior);
-			p.segment<3>(3) = Vec3::Constant(setting_initialRotPrior);
-			if(setting_solverMode & SOLVER_REMOVE_POSEPRIOR) p.head<6>().setZero();
+			p.head<3>() = Vec3::Constant(globalSettings.setting_initialTransPrior);
+			p.segment<3>(3) = Vec3::Constant(globalSettings.setting_initialRotPrior);
+			if(globalSettings.setting_solverMode & SOLVER_REMOVE_POSEPRIOR) p.head<6>().setZero();
 
-			p[6] = setting_initialAffAPrior;
-			p[7] = setting_initialAffBPrior;
+			p[6] = globalSettings.setting_initialAffAPrior;
+			p[7] = globalSettings.setting_initialAffBPrior;
 		}
 		else
 		{
-			if(setting_affineOptModeA < 0)
-				p[6] = setting_initialAffAPrior;
+			if(globalSettings.setting_affineOptModeA < 0)
+				p[6] = globalSettings.setting_initialAffAPrior;
 			else
-				p[6] = setting_affineOptModeA;
+				p[6] = globalSettings.setting_affineOptModeA;
 
-			if(setting_affineOptModeB < 0)
-				p[7] = setting_initialAffBPrior;
+			if(globalSettings.setting_affineOptModeB < 0)
+				p[7] = globalSettings.setting_initialAffBPrior;
 			else
-				p[7] = setting_affineOptModeB;
+				p[7] = globalSettings.setting_affineOptModeB;
 		}
-		p[8] = setting_initialAffAPrior;
-		p[9] = setting_initialAffBPrior;
+		p[8] = globalSettings.setting_initialAffAPrior;
+		p[9] = globalSettings.setting_initialAffBPrior;
 
         if(addCamPrior)
         {
-            p.head<3>() = Vec3::Constant(setting_initialTransPrior);
-            p.segment<3>(3) = Vec3::Constant(setting_initialRotPrior);
-            if(setting_solverMode & SOLVER_REMOVE_POSEPRIOR) p.head<6>().setZero();
+            p.head<3>() = Vec3::Constant(globalSettings.setting_initialTransPrior);
+            p.segment<3>(3) = Vec3::Constant(globalSettings.setting_initialRotPrior);
+            if(globalSettings.setting_solverMode & SOLVER_REMOVE_POSEPRIOR) p.head<6>().setZero();
         }
 
 		return p;
@@ -438,6 +441,9 @@ struct CalibHessian
 struct PointHessian
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+	GlobalSettings& globalSettings;
+
 	static int instanceCounter;
 	static unsigned long totalInstantCounter;
 	unsigned long point_id;
@@ -510,7 +516,7 @@ struct PointHessian
 
 
 	void release();
-	PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib);
+	PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib, GlobalSettings& globalSettings_);
     inline ~PointHessian() {assert(efPoint==0); release(); instanceCounter--;}
 
 
@@ -523,9 +529,9 @@ struct PointHessian
 			if(r->state_state != ResState::IN) continue;
 			for(const FrameHessian* k : toMarg) if(r->target == k) visInToMarg++;
 		}
-		if((int)residuals.size() >= setting_minGoodActiveResForMarg &&
-				numGoodResiduals > setting_minGoodResForMarg+10 &&
-				(int)residuals.size()-visInToMarg < setting_minGoodActiveResForMarg)
+		if((int)residuals.size() >= globalSettings.setting_minGoodActiveResForMarg &&
+				numGoodResiduals > globalSettings.setting_minGoodResForMarg+10 &&
+				(int)residuals.size()-visInToMarg < globalSettings.setting_minGoodActiveResForMarg)
 			return true;
 
 
@@ -537,8 +543,8 @@ struct PointHessian
 
 	inline bool isInlierNew()
 	{
-		return (int)residuals.size() >= setting_minGoodActiveResForMarg
-                    && numGoodResiduals >= setting_minGoodResForMarg;
+		return (int)residuals.size() >= globalSettings.setting_minGoodActiveResForMarg
+                    && numGoodResiduals >= globalSettings.setting_minGoodResForMarg;
 	}
 };
 

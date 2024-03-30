@@ -73,11 +73,11 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 {
     dmvio::TimeMeasurement timeMeasurement("flagFramesForMarginalization");
 
-	if(setting_minFrameAge > setting_maxFrames)
+	if(globalSettings.setting_minFrameAge > globalSettings.setting_maxFrames)
 	{
-		for(int i=setting_maxFrames;i<(int)frameHessians.size();i++)
+		for(int i=globalSettings.setting_maxFrames;i<(int)frameHessians.size();i++)
 		{
-			FrameHessian* fh = frameHessians[i-setting_maxFrames];
+			FrameHessian* fh = frameHessians[i-globalSettings.setting_maxFrames];
 			fh->flaggedForMarginalization = true;
 		}
 		return;
@@ -97,8 +97,8 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 				frameHessians.back()->aff_g2l(), fh->aff_g2l());
 
 
-		if( (in < setting_minPointsRemaining *(in+out) || fabs(logf((float)refToFh[0])) > setting_maxLogAffFacInWindow)
-				&& ((int)frameHessians.size())-flagged > setting_minFrames)
+		if( (in < globalSettings.setting_minPointsRemaining *(in+out) || fabs(logf((float)refToFh[0])) > globalSettings.setting_maxLogAffFacInWindow)
+				&& ((int)frameHessians.size())-flagged > globalSettings.setting_minFrames)
 		{
 //			printf("MARGINALIZE frame %d, as only %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
 //					fh->frameID, in, in+out,
@@ -123,7 +123,7 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 	// Marginalize one if active window size is too large
 	// Chose frame to be marginalized using the distance score
 	// The distance score tries to keep keyframes well distributed in 3D space
-	if((int)frameHessians.size()-flagged >= setting_maxFrames)
+	if((int)frameHessians.size()-flagged >= globalSettings.setting_maxFrames)
 	{
 		double smallestScore = 1;
 		FrameHessian* toMarginalize=0;
@@ -132,14 +132,14 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 
 		for(FrameHessian* fh : frameHessians)
 		{
-			if(fh->frameID > latest->frameID-setting_minFrameAge || fh->frameID == 0) continue;
+			if(fh->frameID > latest->frameID-globalSettings.setting_minFrameAge || fh->frameID == 0) continue;
 			//if(fh==frameHessians.front() == 0) continue;
 
 			// Calculate distance score
 			double distScore = 0;
 			for(FrameFramePrecalc &ffh : fh->targetPrecalc)
 			{
-				if(ffh.target->frameID > latest->frameID-setting_minFrameAge+1 || ffh.target == ffh.host) continue;
+				if(ffh.target->frameID > latest->frameID-globalSettings.setting_minFrameAge+1 || ffh.target == ffh.host) continue;
 				distScore += 1/(1e-5+ffh.distanceLL);
 			}
 			distScore *= -sqrtf(fh->targetPrecalc.back().distanceLL);
@@ -233,7 +233,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 	auto frameID = frame->frameID;
 
 	// Only marginalized points are included in the final output point cloud
-	if (setting_outputPC){
+	if (globalSettings.setting_outputPC){
 		float fxi = 1 / Hcalib.fxl();
 		float fyi = 1 / Hcalib.fyl();
 		float cxi = -Hcalib.cxl() / Hcalib.fxl();
@@ -271,7 +271,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 
 	// Culling the connectivity map is incompatible with viewing full constraints in GUI
 	// Culled connectivity map information is unneeded for operation and culling results in performance improvement
-	if (setting_disableAllDisplay){
+	if (globalSettings.setting_disableAllDisplay){
 		int numDel = 0;
 		for(auto it = ef->connectivityMap.begin(); it != ef->connectivityMap.end();)
 		{

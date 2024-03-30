@@ -41,7 +41,8 @@ namespace dso
  * @param rawPoint 
  * @param Hcalib 
  */
-PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib)
+PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib, GlobalSettings& globalSettings_):
+globalSettings(globalSettings_)
 {
 	instanceCounter++;
 	point_id = totalInstantCounter;
@@ -159,7 +160,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 {
 	// dIp contains (color, dx, dy)
 	// absSquaredGrad contains the pixel gradient
-	for(int i=0;i<pyrLevelsUsed;i++)
+	for(int i=0;i<globalSettings.pyrLevelsUsed;i++)
 	{
 		dIp[i] = new Eigen::Vector3f[wG[i]*hG[i]];
 		std::fill(dIp[i], dIp[i]+wG[i]*hG[i], Eigen::Vector3f(0,0,0));
@@ -174,7 +175,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 	for(int i=0;i<w*h;i++)
 		dI[i][0] = color[i];
 
-	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		int wl = wG[lvl], hl = hG[lvl];
 
@@ -224,7 +225,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 			// Absolute max value for gradient is 32512.5
 			dabs_l[idx] = dx*dx+dy*dy;
 
-			if(setting_gammaWeightsPixelSelect==1 && HCalib!=0)
+			if(globalSettings.setting_gammaWeightsPixelSelect==1 && HCalib!=0)
 			{
 				float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
 				// convert to gradient of original color space (before removing response) by correcting gamma

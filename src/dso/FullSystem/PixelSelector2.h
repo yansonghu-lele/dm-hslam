@@ -29,6 +29,7 @@
 #pragma once
  
 #include "util/NumType.h"
+#include "util/settings.h"
 
 // Because histogram is only used to calculate quartiles
 // Number of bins only affects quartile resolution
@@ -52,7 +53,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	int makeMaps( const FrameHessian* const fh, float* map_out, float density, int recursionsLeft=1, float thFactor=1);
 
-	PixelSelector(int w0, int h0, int w2, int w3);
+	PixelSelector(int w0, int h0, int w1, int w2, GlobalSettings& globalSettings);
 	~PixelSelector();
 
 	void makeThresTable(const FrameHessian* const fh);
@@ -63,6 +64,8 @@ public:
 private:
 	Eigen::Vector3i select(const FrameHessian* const fh,
 			float* map_out, int pot, float thFactor=1);
+
+	GlobalSettings& globalSettings;
 
 	unsigned char* randomPattern;
 

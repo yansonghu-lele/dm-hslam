@@ -28,6 +28,7 @@
 #define DMVIO_MAINSETTINGS_H
 
 #include <util/SettingsUtil.h>
+#include "dso/util/settings.h"
 
 
 
@@ -39,10 +40,10 @@ class MainSettings
 {
 public:
     // Parse all commandline arguments. Unknown arguments will be forwarded to settingsUtil.
-    void parseArguments(int argc, char** argv, SettingsUtil& settingsUtil);
+    void parseArguments(int argc, char** argv, SettingsUtil& settingsUtil, dso::GlobalSettings& globalSettings);
 
     // Register args for these settings and for global DSO settings.
-    void registerArgs(dmvio::SettingsUtil& set);
+    void registerArgs(dmvio::SettingsUtil& set, dso::GlobalSettings& globalSettings);
 
     std::string vignette = "";
     std::string gammaCalib = "";

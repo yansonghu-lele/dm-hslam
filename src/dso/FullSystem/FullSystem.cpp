@@ -85,8 +85,9 @@ boost::mutex FrameShell::shellPoseMutex{};
 FullSystem::FullSystem(bool linearizeOperationPassed, 
 						const dso::Global_Calib& globalCalib,
 						const dmvio::IMUCalibration& imuCalibration,
-                       dmvio::IMUSettings& imuSettings)
-    : linearizeOperation(linearizeOperationPassed), 
+                       dmvio::IMUSettings& imuSettings,
+					   GlobalSettings& globalSettings_)
+    : globalSettings(globalSettings_), linearizeOperation(linearizeOperationPassed), 
 	Hcalib(globalCalib),
 	imuIntegration(&Hcalib, imuCalibration, imuSettings, linearizeOperation),
     secondKeyframeDone(false), gravityInit(imuSettings.numMeasurementsGravityInit, imuCalibration),
@@ -96,7 +97,7 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
     baIntegration = imuIntegration.getBAGTSAMIntegration().get();
 
 	int retstat =0;
-	if(setting_logStuff)
+	if(globalSettings.setting_logStuff)
 	{
 		retstat += system("rm -rf logs");
 		retstat += system("mkdir logs");
@@ -160,11 +161,11 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
 
 	selectionMap = new float[wG[0]*hG[0]];
 
-	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (wG[0], hG[0]);
-	coarseTracker = new CoarseTracker(wG[0], hG[0], imuIntegration);
-	coarseTracker_forNewKF = new CoarseTracker(wG[0], hG[0], imuIntegration);
-	coarseInitializer = std::make_unique<CoarseInitializer> (wG[0], hG[0]);
-	pixelSelector = std::make_unique<PixelSelector> (wG[0], hG[0], wG[1], wG[2]);
+	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (wG[0], hG[0], globalSettings_);
+	coarseTracker = new CoarseTracker(wG[0], hG[0], imuIntegration, globalSettings_);
+	coarseTracker_forNewKF = new CoarseTracker(wG[0], hG[0], imuIntegration, globalSettings_);
+	coarseInitializer = std::make_unique<CoarseInitializer> (wG[0], hG[0], globalSettings_);
+	pixelSelector = std::make_unique<PixelSelector> (wG[0], hG[0], wG[1], wG[2], globalSettings_);
 
 	statistics_lastNumOptIts=0;
 	statistics_numDroppedPoints=0;
@@ -181,7 +182,7 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
 	initialized=false;
 
 
-	ef = new EnergyFunctional(*baIntegration);
+	ef = new EnergyFunctional(*baIntegration, globalSettings);
 	ef->red = &this->treadReduce;
 
 	isLost=false;
@@ -210,7 +211,7 @@ FullSystem::~FullSystem()
 {
 	blockUntilMappingIsFinished();
 
-	if(setting_logStuff)
+	if(globalSettings.setting_logStuff)
 	{
 		calibLog->close(); delete calibLog;
 		numsLog->close(); delete numsLog;
@@ -520,7 +521,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		// Tracking is done by the coarseTracker class
 		bool trackingIsGood = coarseTracker->trackNewestCoarse(
 				fh, lastF_2_fh_this, aff_g2l_this,
-				pyrLevelsUsed-1,
+				globalSettings.pyrLevelsUsed-1,
 				achievedRes);	// in each level this has to be at least as good as the last try.
 		
 		tryIterations++;
@@ -541,7 +542,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		if(i != 0)
 		{
 			printf("RE-TRACK ATTEMPT %u with initOption %u and start-lvl %u (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
-					i, i, pyrLevelsUsed-1,
+					i, i, globalSettings.pyrLevelsUsed-1,
 					aff_g2l_this.a,
 					aff_g2l_this.b,
 					achievedRes[0],
@@ -580,7 +581,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		}
 
 		// Stop testing other tracks if result is good enough
-        if(haveOneGood &&  achievedRes[0] < lastCoarseRMSE[0]*setting_reTrackThreshold)
+        if(haveOneGood &&  achievedRes[0] < lastCoarseRMSE[0]*globalSettings.setting_reTrackThreshold)
             break;
 	}
 
@@ -620,7 +621,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
         printf("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
 
 
-	if(setting_logStuff)
+	if(globalSettings.setting_logStuff)
 	{
 		(*coarseTrackingLog) << std::setprecision(16)
 						<< fh->shell->id << " "
@@ -729,22 +730,22 @@ void FullSystem::activatePointsMT()
 
 	// ============== Update variables for desired point density ===================
 	// Change the currentMinActDist in order to achieve the desired point number
-    if(ef->nPoints < setting_desiredPointDensity*0.66)
+    if(ef->nPoints < globalSettings.setting_desiredPointDensity*0.66)
 		currentMinActDist -= 0.8;
-	if(ef->nPoints < setting_desiredPointDensity*0.8)
+	if(ef->nPoints < globalSettings.setting_desiredPointDensity*0.8)
 		currentMinActDist -= 0.5;
-	else if(ef->nPoints < setting_desiredPointDensity*0.9)
+	else if(ef->nPoints < globalSettings.setting_desiredPointDensity*0.9)
 		currentMinActDist -= 0.2;
-	else if(ef->nPoints < setting_desiredPointDensity)
+	else if(ef->nPoints < globalSettings.setting_desiredPointDensity)
 		currentMinActDist -= 0.1;
 
-	if(ef->nPoints > setting_desiredPointDensity*1.5)
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity*1.5)
 		currentMinActDist += 0.8;
-	if(ef->nPoints > setting_desiredPointDensity*1.3)
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity*1.3)
 		currentMinActDist += 0.5;
-	if(ef->nPoints > setting_desiredPointDensity*1.15)
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity*1.15)
 		currentMinActDist += 0.2;
-	if(ef->nPoints > setting_desiredPointDensity)
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity)
 		currentMinActDist += 0.1;
 
 	// Max and min currentMinActDist values
@@ -753,7 +754,7 @@ void FullSystem::activatePointsMT()
 
     if(!setting_debugout_runquiet)
         printf("SPARSITY:  MinActDist %f (need %d points, have %d points)!\n",
-                currentMinActDist, (int)(setting_desiredPointDensity), ef->nPoints);
+                currentMinActDist, (int)(globalSettings.setting_desiredPointDensity), ef->nPoints);
 
 	// ============== Loop through all of the immature points in active frames ===================
 	FrameHessian* newestHs = frameHessians.back();
@@ -794,7 +795,7 @@ void FullSystem::activatePointsMT()
 					|| ph->lastTraceStatus == IPS_BADCONDITION
 					|| ph->lastTraceStatus == IPS_OOB )
 							&& ph->lastTracePixelInterval < 8
-							&& ph->quality > setting_minTraceQuality
+							&& ph->quality > globalSettings.setting_minTraceQuality
 							&& (ph->idepth_max+ph->idepth_min) > 0;
 
 			// if I cannot activate the point, skip it. Maybe also delete it.
@@ -845,7 +846,7 @@ void FullSystem::activatePointsMT()
 
 	// ============== Activate points in activation list ===================
 	// Activate points by optimizing them and converting them into PointHessians
-	if(!settings_no_multiThreading)
+	if(!globalSettings.settings_no_multiThreading)
 		treadReduce.reduce(boost::bind(&FullSystem::activatePointsMT_Reductor, this, &optimized, &toOptimize, _1, _2, _3, _4), 0, toOptimize.size(), 50);
 	else
 		activatePointsMT_Reductor(&optimized, &toOptimize, 0, toOptimize.size(), 0, 0);
@@ -910,7 +911,7 @@ void FullSystem::flagPointsForRemoval()
 	std::vector<FrameHessian*> fhsToKeepPoints;
 	std::vector<FrameHessian*> fhsToMargPoints;
 
-	//if(setting_margPointVisWindow>0)
+	//if(globalSettings.setting_margPointVisWindow>0)
 	{
 		for(int i=((int)frameHessians.size())-1;i>=0 && i >= ((int)frameHessians.size());i--)
 			if(!frameHessians[i]->flaggedForMarginalization) fhsToKeepPoints.push_back(frameHessians[i]);
@@ -931,7 +932,7 @@ void FullSystem::flagPointsForRemoval()
 			if(ph==0) continue;
 
 			// Remove points that have invalid depths
-			if(ph->idepth_scaled < setting_minIdepth || ph->residuals.size()==0)
+			if(ph->idepth_scaled < globalSettings.setting_minIdepth || ph->residuals.size()==0)
 			{
 				host->pointHessiansOut.push_back(ph);
 				ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
@@ -962,7 +963,7 @@ void FullSystem::flagPointsForRemoval()
 						}
 					}
 
-                    if(ph->idepth_hessian > setting_minIdepthH_marg)
+                    if(ph->idepth_hessian > globalSettings.setting_minIdepthH_marg)
 					{
 						flag_inin++;
 						ph->efPoint->stateFlag = EFPointStatus::PS_MARGINALIZE;
@@ -1025,7 +1026,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 	dmvio::TimeMeasurement measureInit("initObjectsAndMakeImage");
 	// =========================== Add new frame into allFrameHistory =========================
 	// Initialize variables
-	FrameHessian* fh = new FrameHessian(wG, hG);
+	FrameHessian* fh = new FrameHessian(wG, hG, globalSettings);
 	FrameShell* shell = new FrameShell();
 	shell->camToWorld = SE3();
 	shell->aff_g2l = AffLight(0,0);
@@ -1136,7 +1137,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			CoarseTracker* tmp = coarseTracker; coarseTracker=coarseTracker_forNewKF; coarseTracker_forNewKF=tmp;
 
 			// imu!: Set up the imu optimzation
-			if(dso::setting_useIMU)
+			if(setting_useIMU)
 			{
 			    // BA for new keyframe has finished and we have a new tracking reference.
                 if(!setting_debugout_runquiet)
@@ -1157,7 +1158,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
         SE3 *referenceToFramePassed = 0;
 
 	// imu!: Add imu data
-        if(dso::setting_useIMU)
+        if(setting_useIMU)
         {
 			SE3 referenceToFrame = imuIntegration.addIMUData(*imuData, fh->shell->id,
                                                                 fh->shell->timestamp, trackingRefChanged, lastFrameId);
@@ -1201,14 +1202,14 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 		bool needToMakeKF = false;
 
 		// Decide if keyframe or non-keyframe needs to be made
-		// If setting_keyframesPerSecond is set, the keyframe is made at a specific frequency
+		// If globalSettings.setting_keyframesPerSecond is set, the keyframe is made at a specific frequency
 		// Otherwise, the keyframe is made depending on specific conditions
 
-		if(setting_keyframesPerSecond > 0) // fixed keyframe rate
+		if(globalSettings.setting_keyframesPerSecond > 0) // fixed keyframe rate
 		{
 			// Make keyframe at a set frequency
 			needToMakeKF = allFrameHistory.size()== 1 ||
-					(fh->shell->timestamp - allKeyFramesHistory.back()->timestamp) > 0.95f/setting_keyframesPerSecond;
+					(fh->shell->timestamp - allKeyFramesHistory.back()->timestamp) > 0.95f/globalSettings.setting_keyframesPerSecond;
 		}
 		else // makes keyframe under specific conditions
 		{
@@ -1223,12 +1224,12 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			// 5. If max time between keyframes is surpassed.
 			// 6. The IMU system needs a keyframe.
 			needToMakeKF = allFrameHistory.size()== 1 ||
-					setting_kfGlobalWeight*setting_maxShiftWeightT *  sqrtf((double)tres[1]) / (wG[0]+hG[0]) + 			// Translation flow
-					setting_kfGlobalWeight*setting_maxShiftWeightR *  sqrtf((double)tres[2]) / (wG[0]+hG[0]) + 			// Rotation flow
-					setting_kfGlobalWeight*setting_maxShiftWeightRT * sqrtf((double)tres[3]) / (wG[0]+hG[0]) + 			// Overal flow
-					setting_kfGlobalWeight*setting_maxAffineWeight * fabs(logf((float)refToFh[0])) > 1 || 				// Exposure changes
+					globalSettings.setting_kfGlobalWeight*globalSettings.setting_maxShiftWeightT *  sqrtf((double)tres[1]) / (wG[0]+hG[0]) + 			// Translation flow
+					globalSettings.setting_kfGlobalWeight*globalSettings.setting_maxShiftWeightR *  sqrtf((double)tres[2]) / (wG[0]+hG[0]) + 			// Rotation flow
+					globalSettings.setting_kfGlobalWeight*globalSettings.setting_maxShiftWeightRT * sqrtf((double)tres[3]) / (wG[0]+hG[0]) + 			// Overal flow
+					globalSettings.setting_kfGlobalWeight*globalSettings.setting_maxAffineWeight * fabs(logf((float)refToFh[0])) > 1 || 				// Exposure changes
 					2*coarseTracker->firstCoarseRMSE < tres[0] ||														// Residual value
-                    (setting_maxTimeBetweenKeyframes > 0 && timeSinceLastKeyframe > setting_maxTimeBetweenKeyframes) || // Time between keyframes
+                    (globalSettings.setting_maxTimeBetweenKeyframes > 0 && timeSinceLastKeyframe > globalSettings.setting_maxTimeBetweenKeyframes) || // Time between keyframes
                     forceKF;																							// IMU system needs keyframe
 
 			if(needToMakeKF && !setting_debugout_runquiet)
@@ -1239,7 +1240,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 
 		// Do not make keyframe if translation is too low
 		double transNorm = fh->shell->camToTrackingRef.translation().norm() * imuIntegration.getCoarseScale();
-		if(imuIntegration.isCoarseInitialized() && transNorm < setting_forceNoKFTranslationThresh)
+		if(imuIntegration.isCoarseInitialized() && transNorm < globalSettings.setting_forceNoKFTranslationThresh)
         {
 		    forceNoKF = true;
         }
@@ -1257,15 +1258,15 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			// (because some of these KFs do not end up getting created).
             int framesBetweenKFs = fh->shell->id - prevKFId - 1;
 
-            // Enforce setting_minFramesBetweenKeyframes.
-            if(framesBetweenKFs < (int) setting_minFramesBetweenKeyframes) // if integer value is smaller we just skip.
+            // Enforce globalSettings.setting_minFramesBetweenKeyframes.
+            if(framesBetweenKFs < (int) globalSettings.setting_minFramesBetweenKeyframes) // if integer value is smaller we just skip.
             {
                 if(!setting_debugout_runquiet) std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
                 needToMakeKF = false;
             }
-			else if(framesBetweenKFs < setting_minFramesBetweenKeyframes) // Enforce it for non-integer values.
+			else if(framesBetweenKFs < globalSettings.setting_minFramesBetweenKeyframes) // Enforce it for non-integer values.
             {
-                double fractionalPart = setting_minFramesBetweenKeyframes - (int) setting_minFramesBetweenKeyframes;
+                double fractionalPart = globalSettings.setting_minFramesBetweenKeyframes - (int) globalSettings.setting_minFramesBetweenKeyframes;
                 framesBetweenKFsRest += fractionalPart;
                 if(framesBetweenKFsRest >= 1.0)
                 {
@@ -1349,20 +1350,25 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 
 	if(linearizeOperation) // play as fast as possible
 	{
-		if(setting_goStepByStep && lastRefStopID != coarseTracker->refFrameID)
+		if(globalSettings.setting_goStepByStep && lastRefStopID != coarseTracker->refFrameID)
 		{
 			MinimalImageF3 img(wG[0], hG[0], fh->dI);
-			IOWrap::displayImage("frameToTrack", &img);
-			while(true)
-			{
-				char k=IOWrap::waitKey(0);
-				if(k==' ') break;
-				handleKey( k );
+			if (!globalSettings.setting_disableAllDisplay){
+				IOWrap::displayImage("frameToTrack", &img);
+				while(true)
+				{
+					char k=IOWrap::waitKey(0);
+					if(k==' ') break;
+					globalSettings.handleKey( k );
+				}
 			}
 			lastRefStopID = coarseTracker->refFrameID;
 		}
-		else handleKey( IOWrap::waitKey(1) );
-
+		else{
+			if(!globalSettings.setting_disableAllDisplay){
+				globalSettings.handleKey( IOWrap::waitKey(1) );
+			}
+		}
 		// Saves the frame as a keyframe or treats it as a non-keyframe
 		if(needKF)
 		{
@@ -1454,7 +1460,7 @@ void FullSystem::mappingLoop()
 		{
 			if(setting_useIMU && needNewKFAfter == fh->shell->id)
 			{
-                if(!dso::setting_debugout_runquiet)
+                if(!setting_debugout_runquiet)
                 {
                     std::cout << "WARNING: Prepared keyframe got skipped!" << std::endl;
                 }
@@ -1483,7 +1489,7 @@ void FullSystem::mappingLoop()
 		else // Do mapping
 		{
 		    bool createKF = setting_useIMU ? needNewKFAfter==fh->shell->id : needNewKFAfter >= frameHessians.back()->shell->id;
-			if(setting_realTimeMaxKF || createKF)
+			if(globalSettings.setting_realTimeMaxKF || createKF)
 			{
                 if(setting_useIMU)
                 {
@@ -1588,7 +1594,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 		if(fh1 == fh) continue;
 		for(PointHessian* ph : fh1->pointHessians)
 		{
-			PointFrameResidual* r = new PointFrameResidual(wG[0], hG[0], ph, fh1, fh);
+			PointFrameResidual* r = new PointFrameResidual(wG[0], hG[0], ph, fh1, fh, std::addressof(globalSettings));
 			r->setState(ResState::IN);
 			ph->residuals.push_back(r);
 			ef->insertResidual(r);
@@ -1614,23 +1620,23 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 
 	// =========================== OPTIMIZE ALL!!!!! =========================
 	fh->frameEnergyTH = frameHessians.back()->frameEnergyTH;
-	float rmse = optimize(setting_maxOptIterations);
+	float rmse = optimize(globalSettings.setting_maxOptIterations);
 
 
 	// =========================== Figure Out if INITIALIZATION FAILED =========================
 	if(allKeyFramesHistory.size() <= 4)
 	{
-		if(allKeyFramesHistory.size()==2 && rmse > 20*benchmark_initializerSlackFactor)
+		if(allKeyFramesHistory.size()==2 && rmse > 20*globalSettings.benchmark_initializerSlackFactor)
 		{
 			printf("I THINK INITIALIZATINO FAILED! Resetting.\n");
 			initFailed=true;
 		}
-		if(allKeyFramesHistory.size()==3 && rmse > 13*benchmark_initializerSlackFactor)
+		if(allKeyFramesHistory.size()==3 && rmse > 13*globalSettings.benchmark_initializerSlackFactor)
 		{
 			printf("I THINK INITIALIZATINO FAILED! Resetting.\n");
 			initFailed=true;
 		}
-		if(allKeyFramesHistory.size()==4 && rmse > 9*benchmark_initializerSlackFactor)
+		if(allKeyFramesHistory.size()==4 && rmse > 9*globalSettings.benchmark_initializerSlackFactor)
 		{
 			printf("I THINK INITIALIZATINO FAILED! Resetting.\n");
 			initFailed=true;
@@ -1779,23 +1785,23 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     firstToNew.translation() /= rescaleFactor;
 
 	// randomly sub-select the points
-	float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
+	float keepPercentage = globalSettings.setting_desiredPointDensity / coarseInitializer->numPoints[0];
 
     if(!setting_debugout_runquiet)
         printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100*keepPercentage,
-                (int)(setting_desiredPointDensity), coarseInitializer->numPoints[0] );
+                (int)(globalSettings.setting_desiredPointDensity), coarseInitializer->numPoints[0] );
 
 	for(int i=0;i<coarseInitializer->numPoints[0];i++)
 	{
 		if(rand()/(float)RAND_MAX > keepPercentage) continue;
 
 		Pnt* point = coarseInitializer->points[0]+i;
-		ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f, wG[0], hG[0], firstFrame,point->my_type, &Hcalib);
+		ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f, wG[0], hG[0], firstFrame,point->my_type, &Hcalib, globalSettings);
 
 		if(!std::isfinite(pt->energyTH)) { delete pt; continue; }
 
 		pt->idepth_max=pt->idepth_min=1;
-		PointHessian* ph = new PointHessian(pt, &Hcalib);
+		PointHessian* ph = new PointHessian(pt, &Hcalib, globalSettings);
 		delete pt;
 		if(!std::isfinite(ph->energyTH)) {delete ph; continue;}
 
@@ -1845,8 +1851,8 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
 {
     dmvio::TimeMeasurement timeMeasurement("makeNewTraces");
 
-	// int numPointsTotal = makePixelStatus(newFrame->dI, selectionMap, wG[0], hG[0], setting_desiredDensity);
-	int numPointsTotal = pixelSelector->makeMaps(newFrame, selectionMap,setting_desiredImmatureDensity);
+	// int numPointsTotal = makePixelStatus(newFrame->dI, selectionMap, wG[0], hG[0], globalSettings.setting_desiredDensity);
+	int numPointsTotal = pixelSelector->makeMaps(newFrame, selectionMap,globalSettings.setting_desiredImmatureDensity);
 
 	newFrame->pointHessians.reserve(numPointsTotal*1.2f);
 	//fh->pointHessiansInactive.reserve(numPointsTotal*1.2f);
@@ -1860,7 +1866,7 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
 		int i = x+y*wG[0];
 		if(selectionMap[i]==0) continue;
 
-		ImmaturePoint* impt = new ImmaturePoint(x, y, wG[0], hG[0], newFrame, selectionMap[i], &Hcalib);
+		ImmaturePoint* impt = new ImmaturePoint(x, y, wG[0], hG[0], newFrame, selectionMap[i], &Hcalib, globalSettings);
 		if(!std::isfinite(impt->energyTH)) delete impt;
 		else newFrame->immaturePoints.push_back(impt);
 
@@ -1909,7 +1915,7 @@ void FullSystem::printLogLine()
                 frameHessians.back()->shell->id - frameHessians.front()->shell->id,
                 (int)frameHessians.size());
 
-	if(!setting_logStuff) return;
+	if(!globalSettings.setting_logStuff) return;
 
 	if(numsLog != 0)
 	{
@@ -1941,7 +1947,7 @@ void FullSystem::printLogLine()
 void FullSystem::printEigenValLine()
 {
     dmvio::TimeMeasurement timeMeasurementMargFrames("printEigenValLine");
-	if(!setting_logStuff) return;
+	if(!globalSettings.setting_logStuff) return;
 	if(ef->lastHS.rows() < 12) return;
 
 	MatXX Hp = ef->lastHS.bottomRightCorner(ef->lastHS.cols()-CPARS,ef->lastHS.cols()-CPARS);
@@ -1976,7 +1982,7 @@ void FullSystem::printEigenValLine()
 	std::sort(eigenP.data(), eigenP.data()+eigenP.size());
 	std::sort(eigenA.data(), eigenA.data()+eigenA.size());
 
-	int nz = std::max(100,setting_maxFrames*10);
+	int nz = std::max(100,globalSettings.setting_maxFrames*10);
 
 	if(eigenAllLog != 0)
 	{
@@ -2026,7 +2032,7 @@ void FullSystem::printEigenValLine()
  */
 void FullSystem::printFrameLifetimes()
 {
-	if(!setting_logStuff) return;
+	if(!globalSettings.setting_logStuff) return;
 
 	boost::unique_lock<boost::mutex> lock(trackMutex);
 

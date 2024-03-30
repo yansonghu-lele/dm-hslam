@@ -57,10 +57,10 @@ namespace dso
  * @param ww 
  * @param hh 
  */
-CoarseInitializer::CoarseInitializer(int ww, int hh)
-		: thisToNext_aff(0, 0), thisToNext(SE3())
+CoarseInitializer::CoarseInitializer(int ww, int hh, GlobalSettings& globalSettings_)
+		: thisToNext_aff(0, 0), thisToNext(SE3()), globalSettings(globalSettings_)
 {
-	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		points[lvl] = 0;
 		numPoints[lvl] = 0;
@@ -89,7 +89,7 @@ CoarseInitializer::CoarseInitializer(int ww, int hh)
  */
 CoarseInitializer::~CoarseInitializer()
 {
-	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		if(points[lvl] != 0) delete[] points[lvl];
 	}
@@ -126,7 +126,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	{
 		// Set all the points to default values
 		thisToNext.translation().setZero();
-		for(int lvl=0;lvl<pyrLevelsUsed;lvl++)
+		for(int lvl=0;lvl<globalSettings.pyrLevelsUsed;lvl++)
 		{
 			int npts = numPoints[lvl];
 			Pnt* ptsl = points[lvl];
@@ -149,10 +149,10 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 
 	Vec3f latestRes = Vec3f::Zero();
-	for(int lvl=pyrLevelsUsed-1; lvl>=0; lvl--)
+	for(int lvl=globalSettings.pyrLevelsUsed-1; lvl>=0; lvl--)
 	{
 		// Applys the valid values calculated from the level above to the current level
-		if(lvl<pyrLevelsUsed-1)
+		if(lvl<globalSettings.pyrLevelsUsed-1)
 			propagateDown(lvl+1);
 
 		Mat88f H,Hsc; Vec8f b,bsc;
@@ -295,7 +295,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 	thisToNext = refToNew_current;
 	thisToNext_aff = refToNew_aff_current;
 
-	for(int i=0;i<pyrLevelsUsed-1;i++)
+	for(int i=0;i<globalSettings.pyrLevelsUsed-1;i++)
 		propagateUp(i);
 
 	frameID++;
@@ -356,7 +356,6 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 			iRImg.setPixel9(point->u+0.5f,point->v+0.5f,makeRainbow3B(point->iR*fac));
 	}
 
-	//IOWrap::displayImage("idepth-R", &iRImg, 1);
 	for(IOWrap::Output3DWrapper* ow : wraps)
 		ow->pushDepthImage(&iRImg);
 }
@@ -479,7 +478,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 				float residual = hitColor[0] - r2new_aff[0] * rlR - r2new_aff[1];
 
 				// Huber loss
-				float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+				float hw = fabs(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabs(residual);
 				energy += hw * residual * residual * (2 - hw);
 
 
@@ -661,11 +660,11 @@ Vec3f CoarseInitializer::calcResAndGS(
 
 	// Add zero prior to translation.
 	// setting_weightZeroPriorDSOInitY is the squared weight of the prior residual.
-	H_out(1, 1) += setting_weightZeroPriorDSOInitY;
-	b_out(1) += setting_weightZeroPriorDSOInitY * refToNew.translation().y();
+	H_out(1, 1) += globalSettings.setting_weightZeroPriorDSOInitY;
+	b_out(1) += globalSettings.setting_weightZeroPriorDSOInitY * refToNew.translation().y();
 
-	H_out(0, 0) += setting_weightZeroPriorDSOInitX;
-	b_out(0) += setting_weightZeroPriorDSOInitX * refToNew.translation().x();
+	H_out(0, 0) += globalSettings.setting_weightZeroPriorDSOInitX;
+	b_out(0) += globalSettings.setting_weightZeroPriorDSOInitX * refToNew.translation().x();
 
 
 	double A = 0;
@@ -781,7 +780,7 @@ void CoarseInitializer::optReg(int lvl)
  */
 void CoarseInitializer::propagateUp(int srcLvl)
 {
-	assert(srcLvl+1<pyrLevelsUsed);
+	assert(srcLvl+1<globalSettings.pyrLevelsUsed);
 	// set idepth of target
 
 	int nptss= numPoints[srcLvl];
@@ -869,7 +868,7 @@ void CoarseInitializer::propagateDown(int srcLvl)
 
 void CoarseInitializer::makeGradients(Eigen::Vector3f** data)
 {
-	for(int lvl=1; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=1; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		int lvlm1 = lvl-1;
 		int wl = w[lvl], hl = h[lvl], wlm1 = w[lvlm1];
@@ -905,14 +904,14 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 	makeK(HCalib);
 	firstFrame = newFrameHessian;
 
-	PixelSelector sel(w[0],h[0],w[1],w[2]);
+	PixelSelector sel(w[0],h[0],w[1],w[2],globalSettings);
 
 	// Stores positiions where points were selected to be
 	float* statusMap = new float[w[0]*h[0]];
 	bool* statusMapB = new bool[w[0]*h[0]];
 	float densities[] = {0.03,0.05,0.15,0.5,1};
 
-	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
+	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		// Select positions for points in first frame
 		sel.currentPotential = 3;
@@ -920,7 +919,7 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 		if(lvl == 0)
 			npts = sel.makeMaps(firstFrame, statusMap, densities[lvl]*w[0]*h[0], 1, 2);
 		else
-			npts = makePixelStatus(firstFrame->dIp[lvl], statusMapB, w[lvl], h[lvl], densities[lvl]*w[0]*h[0]);
+			npts = makePixelStatus(firstFrame->dIp[lvl], statusMapB, w[lvl], h[lvl], densities[lvl]*w[0]*h[0], globalSettings);
 
 
 		if(points[lvl] != 0) delete[] points[lvl];
@@ -964,7 +963,7 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 				pl[nl].outlierTH = PATTERNNUM*gth*gth;
 */
 
-				pl[nl].outlierTH = PATTERNNUM*setting_outlierTH;
+				pl[nl].outlierTH = PATTERNNUM*globalSettings.setting_outlierTH;
 
 				nl++;
 				assert(nl <= npts);
@@ -983,7 +982,7 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 	snapped = false;
 	frameID = snappedAt = 0;
 
-	for(int i=0;i<pyrLevelsUsed;i++)
+	for(int i=0;i<globalSettings.pyrLevelsUsed;i++)
 		dGrads[i].setZero();
 }
 
@@ -1002,7 +1001,7 @@ void CoarseInitializer::resetPoints(int lvl)
 		pts[i].energy.setZero();
 		pts[i].idepth_new = pts[i].idepth;
 
-		if(lvl==pyrLevelsUsed-1 && !pts[i].isGood)  // Set the values of bad point using it's neighbours
+		if(lvl==globalSettings.pyrLevelsUsed-1 && !pts[i].isGood)  // Set the values of bad point using it's neighbours
 		{
 			float snd=0, sn=0;
 			for(int n = 0;n<10;n++)
@@ -1099,7 +1098,7 @@ void CoarseInitializer::makeK(CalibHessian* HCalib)
 	cx[0] = HCalib->cxl();
 	cy[0] = HCalib->cyl();
 
-	for (int level = 1; level < pyrLevelsUsed; ++ level)
+	for (int level = 1; level < globalSettings.pyrLevelsUsed; ++ level)
 	{
 		w[level] = w[0] >> level;
 		h[level] = h[0] >> level;
@@ -1109,7 +1108,7 @@ void CoarseInitializer::makeK(CalibHessian* HCalib)
 		cy[level] = (cy[0] + 0.5) / ((int)1<<level) - 0.5;
 	}
 
-	for (int level = 0; level < pyrLevelsUsed; ++ level)
+	for (int level = 0; level < globalSettings.pyrLevelsUsed; ++ level)
 	{
 		K[level] << fx[level], 0.0, cx[level], 
 					0.0, fy[level], cy[level], 
@@ -1144,7 +1143,7 @@ void CoarseInitializer::makeNN()
 	FLANNPointcloud pcs[PYR_LEVELS];
 	KDTree* indexes[PYR_LEVELS];
 
-	for(int i=0;i<pyrLevelsUsed;i++)
+	for(int i=0;i<globalSettings.pyrLevelsUsed;i++)
 	{
 		pcs[i] = FLANNPointcloud(numPoints[i], points[i]);
 		indexes[i] = new KDTree(2, pcs[i], nanoflann::KDTreeSingleIndexAdaptorParams(5) );
@@ -1154,7 +1153,7 @@ void CoarseInitializer::makeNN()
 	const int nn=10;
 
 	// find NN & parents
-	for(int lvl=0;lvl<pyrLevelsUsed;lvl++)
+	for(int lvl=0;lvl<globalSettings.pyrLevelsUsed;lvl++)
 	{
 		Pnt* pts = points[lvl];
 		int npts = numPoints[lvl];
@@ -1192,7 +1191,7 @@ void CoarseInitializer::makeNN()
 				pts[i].neighboursDist[k] *= 10/sumDF;
 
 			// Find parent and parent distance
-			if(lvl < pyrLevelsUsed-1 )
+			if(lvl < globalSettings.pyrLevelsUsed-1 )
 			{
 				resultSet1.init(ret_index, ret_dist);
 				pt = pt*0.5f-Vec2f(0.25f,0.25f);
@@ -1212,7 +1211,7 @@ void CoarseInitializer::makeNN()
 	}
 	// done.
 
-	for(int i=0;i<pyrLevelsUsed;i++)
+	for(int i=0;i<globalSettings.pyrLevelsUsed;i++)
 		delete indexes[i];
 }
 }
