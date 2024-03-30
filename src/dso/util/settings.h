@@ -217,9 +217,9 @@ struct GlobalSettings{
 
     bool setting_fullResetRequested = false;
 
-    bool setting_debugout_runquiet = false;
-
     int setting_sparsityFactor = 5;	// not actually a setting, only some legacy stuff for coarse initializer.
+
+    bool global_Pause = false;
 
     void handleKey(char k);
 };

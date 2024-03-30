@@ -237,12 +237,12 @@ public:
 	 * Wrapper for getCalibMono and setGlobalCalib
 	 * 
 	 */
-	void setGlobalCalibration(Global_Calib& globalCalibSettings, GlobalSettings& globalSettings)
+	void setGlobalCalibration(Global_Calib& globalCalibSettings, int& pyrLevelsUsed)
 	{
 		int w_out, h_out;
 		Eigen::Matrix3f K;
 		getCalibMono(K, w_out, h_out);
-		globalCalibSettings.setGlobalCalib(w_out, h_out, K, globalSettings);
+		globalCalibSettings.setGlobalCalib(w_out, h_out, K, pyrLevelsUsed);
 	}
 
 	/**

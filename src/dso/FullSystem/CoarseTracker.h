@@ -138,7 +138,7 @@ class CoarseDistanceMap {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-	CoarseDistanceMap(int w, int h, GlobalSettings& globalSettings_);
+	CoarseDistanceMap(int w, int h, int pyrLevelsUsed_);
 	~CoarseDistanceMap();
 
 	void makeDistanceMap(
@@ -172,7 +172,7 @@ public:
 
 
 private:
-	GlobalSettings& globalSettings;
+	int pyrLevelsUsed;
 
 	PointFrameResidual** coarseProjectionGrid;
 	int* coarseProjectionGridNum;

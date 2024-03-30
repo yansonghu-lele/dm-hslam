@@ -208,46 +208,46 @@ inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h,
  * @param THFac 			Multiplier for minimum gradient threshold
  * @return int 				Number of output points
  */
-inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, float desiredDensity, GlobalSettings& globalSettings, int recsLeft=5, float THFac = 0.5)
+inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, float desiredDensity, int& setting_sparsityFactor, int recsLeft=5, float THFac = 0.5)
 {
-	if(globalSettings.setting_sparsityFactor < 1) globalSettings.setting_sparsityFactor = 1;
+	if(setting_sparsityFactor < 1) setting_sparsityFactor = 1;
 
 	int numGoodPoints;
 
 	// Uses faster template version if setting_sparsityFactor is betweeen 1 and 11
-	if(globalSettings.setting_sparsityFactor==1) numGoodPoints = gridMaxSelection<1>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==2) numGoodPoints = gridMaxSelection<2>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==3) numGoodPoints = gridMaxSelection<3>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==4) numGoodPoints = gridMaxSelection<4>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==5) numGoodPoints = gridMaxSelection<5>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==6) numGoodPoints = gridMaxSelection<6>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==7) numGoodPoints = gridMaxSelection<7>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==8) numGoodPoints = gridMaxSelection<8>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==9) numGoodPoints = gridMaxSelection<9>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==10) numGoodPoints = gridMaxSelection<10>(grads, map, w, h, THFac);
-	else if(globalSettings.setting_sparsityFactor==11) numGoodPoints = gridMaxSelection<11>(grads, map, w, h, THFac);
-	else numGoodPoints = gridMaxSelection(grads, map, w, h, globalSettings.setting_sparsityFactor, THFac);
+	if(setting_sparsityFactor==1) numGoodPoints = gridMaxSelection<1>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==2) numGoodPoints = gridMaxSelection<2>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==3) numGoodPoints = gridMaxSelection<3>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==4) numGoodPoints = gridMaxSelection<4>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==5) numGoodPoints = gridMaxSelection<5>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==6) numGoodPoints = gridMaxSelection<6>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==7) numGoodPoints = gridMaxSelection<7>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==8) numGoodPoints = gridMaxSelection<8>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==9) numGoodPoints = gridMaxSelection<9>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==10) numGoodPoints = gridMaxSelection<10>(grads, map, w, h, THFac);
+	else if(setting_sparsityFactor==11) numGoodPoints = gridMaxSelection<11>(grads, map, w, h, THFac);
+	else numGoodPoints = gridMaxSelection(grads, map, w, h, setting_sparsityFactor, THFac);
 
-	// Number of points is approximately proportional to globalSettings.setting_sparsityFactor^2.
+	// Number of points is approximately proportional to setting_sparsityFactor^2.
 
 	float quotia = numGoodPoints / (float)(desiredDensity);
-	int newSparsity = (globalSettings.setting_sparsityFactor * sqrtf(quotia))+0.7f;
+	int newSparsity = (setting_sparsityFactor * sqrtf(quotia))+0.7f;
 	if(newSparsity < 1) newSparsity=1;
 
 	float oldTHFac = THFac;
-	if(newSparsity==1 && globalSettings.setting_sparsityFactor==1) THFac = 0.5; 
+	if(newSparsity==1 && setting_sparsityFactor==1) THFac = 0.5; 
 
-	if((abs(newSparsity-globalSettings.setting_sparsityFactor) < 1 && THFac==oldTHFac) ||
+	if((abs(newSparsity-setting_sparsityFactor) < 1 && THFac==oldTHFac) ||
 			( quotia > 0.8 &&  1.0f / quotia > 0.8) || recsLeft == 0)
 	{
-		globalSettings.setting_sparsityFactor = newSparsity;
+		setting_sparsityFactor = newSparsity;
 		return numGoodPoints;
 	}
 	else
 	{
 		// Redo function if points to too far from quotia
-		globalSettings.setting_sparsityFactor = newSparsity;
-		return makePixelStatus(grads, map, w,h, desiredDensity, globalSettings, recsLeft-1, THFac);
+		setting_sparsityFactor = newSparsity;
+		return makePixelStatus(grads, map, w,h, desiredDensity, setting_sparsityFactor, recsLeft-1, THFac);
 	}
 }
 

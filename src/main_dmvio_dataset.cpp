@@ -200,6 +200,11 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     dmvio::IMUData skippedIMUData;
     for(int ii = 0; ii < (int) idsToPlay.size(); ii++) // loop through all images
     {
+        while (globalSettings.global_Pause && linearizeOperation)
+        {
+            usleep(5000);
+        }
+
         if(!fullSystem->initialized)    // if not initialized: reset start time.
         {
             gettimeofday(&tv_start, NULL);
@@ -429,7 +434,7 @@ int main(int argc, char** argv)
     // Create image reader
     ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit, useColour, globalSettings);
     reader->loadIMUData(imuFile);
-    reader->setGlobalCalibration(globalCalib, globalSettings);
+    reader->setGlobalCalibration(globalCalib, globalSettings.pyrLevelsUsed);
 
     // Main operationing loop
     if(!globalSettings.setting_disableAllDisplay)

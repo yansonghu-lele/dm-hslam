@@ -101,7 +101,9 @@ void dmvio::IMUInitializer::setState(std::unique_ptr<IMUInitializerState>&& newS
     {
         // Change state, the caller is responsible for making sure we have a lock.
         currentState = std::move(newState);
-        std::cout << "Switching to initializer state: " << *currentState << std::endl;
+        if(!dso::setting_debugout_runquiet){
+            std::cout << "Switching to initializer state: " << *currentState << std::endl;
+        }
     }
 }
 

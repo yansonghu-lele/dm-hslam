@@ -161,7 +161,7 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
 
 	selectionMap = new float[wG[0]*hG[0]];
 
-	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (wG[0], hG[0], globalSettings_);
+	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (wG[0], hG[0], globalSettings_.pyrLevelsUsed);
 	coarseTracker = new CoarseTracker(wG[0], hG[0], imuIntegration, globalSettings_);
 	coarseTracker_forNewKF = new CoarseTracker(wG[0], hG[0], imuIntegration, globalSettings_);
 	coarseInitializer = std::make_unique<CoarseInitializer> (wG[0], hG[0], globalSettings_);
@@ -1851,7 +1851,6 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
 {
     dmvio::TimeMeasurement timeMeasurement("makeNewTraces");
 
-	// int numPointsTotal = makePixelStatus(newFrame->dI, selectionMap, wG[0], hG[0], globalSettings.setting_desiredDensity);
 	int numPointsTotal = pixelSelector->makeMaps(newFrame, selectionMap,globalSettings.setting_desiredImmatureDensity);
 
 	newFrame->pointHessians.reserve(numPointsTotal*1.2f);

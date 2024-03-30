@@ -272,7 +272,7 @@ int main(int argc, char** argv)
     globalCalibSettings.setGlobalCalib(
             (int) undistorter->getSize()[0],
             (int) undistorter->getSize()[1],
-            undistorter->getK().cast<float>(), globalSettings);
+            undistorter->getK().cast<float>(), globalSettings.pyrLevelsUsed);
 
     if(mainSettings.imuCalibFile != "")
     {

@@ -53,21 +53,21 @@ namespace dso
 		}
 	}
 
-	void Global_Calib::setGlobalCalib(int w, int h,const Eigen::Matrix3f &K, GlobalSettings& globalSettings)
+	void Global_Calib::setGlobalCalib(int w, int h,const Eigen::Matrix3f &K, int& pyrLevelsUsed)
 	{
 		int wlvl=w;
 		int hlvl=h;
-		globalSettings.pyrLevelsUsed=1;
+		pyrLevelsUsed=1;
 
 		// Determine number of image pyramid levels to use
-		while(wlvl%2==0 && hlvl%2==0 && wlvl*hlvl > 5000 && globalSettings.pyrLevelsUsed < PYR_LEVELS)
+		while(wlvl%2==0 && hlvl%2==0 && wlvl*hlvl > 5000 && pyrLevelsUsed < PYR_LEVELS)
 		{
 			wlvl /=2;
 			hlvl /=2;
-			globalSettings.pyrLevelsUsed++;
+			pyrLevelsUsed++;
 		}
 		printf("using pyramid levels 0 to %d. coarsest resolution: %d x %d!\n",
-				globalSettings.pyrLevelsUsed-1, wlvl, hlvl);
+				pyrLevelsUsed-1, wlvl, hlvl);
 
 		if(wlvl>100 && hlvl > 100)
 		{
@@ -75,7 +75,7 @@ namespace dso
 					"using not enough pyramid levels.\n"
 					"Consider scaling to a resolution that is a multiple of a power of 2.\n");
 		}
-		if(globalSettings.pyrLevelsUsed < 3)
+		if(pyrLevelsUsed < 3)
 		{
 			printf("\n\n===============WARNING!===================\n "
 					"I need higher resolution.\n"
@@ -96,7 +96,7 @@ namespace dso
 		cxiG[0] = KiG[0](0,2);
 		cyiG[0] = KiG[0](1,2);
 
-		for (int level = 1; level < globalSettings.pyrLevelsUsed; ++ level)
+		for (int level = 1; level < pyrLevelsUsed; ++ level)
 		{
 			wG[level] = w >> level;
 			hG[level] = h >> level;

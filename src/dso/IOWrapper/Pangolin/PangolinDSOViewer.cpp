@@ -152,6 +152,7 @@ void PangolinDSOViewer::run()
 	pangolin::Var<bool> settings_showFullTracking("ui.BD-FullTracking",false,true);
 	pangolin::Var<bool> settings_showCoarseTracking("ui.BD-CoarseTracking",false,true);
 	pangolin::Var<bool> settings_showImmatureTracking("ui.BD-ImmatureTracking",false,true);
+	pangolin::Var<bool> settings_showFramebyFrame("ui.BD-FramebyFrame",false,true);
 
 
 	pangolin::Var<int> settings_sparsity("ui.sparsity",1,1,20,false);
@@ -161,6 +162,7 @@ void PangolinDSOViewer::run()
 
 
 	pangolin::Var<bool> settings_resetButton("ui.Reset",false,false);
+	pangolin::Var<bool> settings_pauseButton("ui.Pause",false,false);
 
 
 	pangolin::Var<int> settings_nPts("ui.activePoints",globalSettings.setting_desiredPointDensity, 50,5000, false);
@@ -174,6 +176,7 @@ void PangolinDSOViewer::run()
 
     pangolin::Var<double> settings_Scale("ui.Scale", 1, 0, 0, false);
     pangolin::Var<std::string> setting_SystemStatus("ui.Status", "");
+
 
 
     if(settingsUtil)
@@ -355,6 +358,7 @@ void PangolinDSOViewer::run()
 		globalSettings.setting_render_plotTrackingFull = settings_showFullTracking.Get();
 		globalSettings.setting_render_displayCoarseTrackingFull = settings_showCoarseTracking.Get();
 		globalSettings.setting_render_displayImmatureTracking = settings_showImmatureTracking.Get();
+		globalSettings.setting_goStepByStep = settings_showFramebyFrame.Get();
 
 
 	    this->settings_absVarTH = settings_absVarTH.Get();
@@ -380,6 +384,15 @@ void PangolinDSOViewer::run()
 	    	settings_resetButton.Reset();
 	    	setting_fullResetRequested = true;
 	    }
+
+
+		if(settings_pauseButton.Get())
+	    {
+	    	printf("PAUSE OR UNPAUSE!\n");
+	    	settings_pauseButton.Reset();
+	    	globalSettings.global_Pause = !globalSettings.global_Pause;
+	    }
+
 
 		// Swap frames and Process Events
 		pangolin::FinishFrame();

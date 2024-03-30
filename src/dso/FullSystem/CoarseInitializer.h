@@ -124,6 +124,10 @@ private:
 	bool snapped;
 	int snappedAt;
 
+	// For legacy pixel selector
+	int pixelSelectorSparsity = 5;
+
+
 	// pyramid images & levels on all levels
 	Eigen::Vector3f* dINew[PYR_LEVELS];
 	Eigen::Vector3f* dIFist[PYR_LEVELS];

@@ -69,6 +69,8 @@ CoarseInitializer::CoarseInitializer(int ww, int hh, GlobalSettings& globalSetti
 	wG0 = ww;
 	hG0 = hh;
 
+	pixelSelectorSparsity = globalSettings.setting_sparsityFactor;
+
 	JbBuffer = new Vec10f[ww*hh];
 	JbBuffer_new = new Vec10f[ww*hh];
 
@@ -919,7 +921,7 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 		if(lvl == 0)
 			npts = sel.makeMaps(firstFrame, statusMap, densities[lvl]*w[0]*h[0], 1, 2);
 		else
-			npts = makePixelStatus(firstFrame->dIp[lvl], statusMapB, w[lvl], h[lvl], densities[lvl]*w[0]*h[0], globalSettings);
+			npts = makePixelStatus(firstFrame->dIp[lvl], statusMapB, w[lvl], h[lvl], densities[lvl]*w[0]*h[0], pixelSelectorSparsity);
 
 
 		if(points[lvl] != 0) delete[] points[lvl];

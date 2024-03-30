@@ -628,7 +628,7 @@ float FullSystem::optimize(int mnumOptIts)
 		if(canbreak && iteration >= globalSettings.setting_minOptIterations) break;
 	}
 
-    if(!globalSettings.setting_debugout_runquiet)
+    if(!setting_debugout_runquiet)
     {
         std::cout << "Num BA Iterations done: " << numIterations << "\n";
     }

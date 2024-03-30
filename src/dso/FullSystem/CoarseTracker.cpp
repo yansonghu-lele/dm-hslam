@@ -1035,8 +1035,8 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*
  * @param ww 
  * @param hh 
  */
-CoarseDistanceMap::CoarseDistanceMap(int ww, int hh, GlobalSettings& globalSettings_):
-globalSettings(globalSettings_)
+CoarseDistanceMap::CoarseDistanceMap(int ww, int hh, int pyrLevelsUsed_):
+pyrLevelsUsed(pyrLevelsUsed_)
 {
 	wG0 = ww;
 	hG0 = hh;
@@ -1045,7 +1045,7 @@ globalSettings(globalSettings_)
 	bfsList1 = new Eigen::Vector2i[ww*hh/4];
 	bfsList2 = new Eigen::Vector2i[ww*hh/4];
 
-	int fac = 1 << (globalSettings.pyrLevelsUsed-1);
+	int fac = 1 << (pyrLevelsUsed-1);
 
 
 	coarseProjectionGrid = new PointFrameResidual*[2048*(ww*hh/(fac*fac))];
@@ -1251,7 +1251,7 @@ void CoarseDistanceMap::makeK(CalibHessian* HCalib)
 	cx[0] = HCalib->cxl();
 	cy[0] = HCalib->cyl();
 
-	for (int level = 1; level < globalSettings.pyrLevelsUsed; ++ level)
+	for (int level = 1; level < pyrLevelsUsed; ++ level)
 	{
 		w[level] = w[0] >> level;
 		h[level] = h[0] >> level;
@@ -1261,7 +1261,7 @@ void CoarseDistanceMap::makeK(CalibHessian* HCalib)
 		cy[level] = (cy[0] + 0.5) / ((int)1<<level) - 0.5;
 	}
 
-	for (int level = 0; level < globalSettings.pyrLevelsUsed; ++ level)
+	for (int level = 0; level < pyrLevelsUsed; ++ level)
 	{
 		K[level]  << fx[level], 0.0, cx[level], 
 					0.0, fy[level], cy[level], 

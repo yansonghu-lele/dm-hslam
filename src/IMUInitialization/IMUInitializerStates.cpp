@@ -263,8 +263,10 @@ dmvio::PGBAState::postBAInit(int keyframeId, gtsam::NonlinearFactor::shared_ptr 
         auto&& bias = optimizedValues->at<gtsam::imuBias::ConstantBias>(logic.pgba->getBiasKey());
         if(!variances.indetermined)
         {
-            std::cout << "PGBA: " << logic.transformDSOToIMUAfterPGBA->getScale() << " var: " << variances.scaleVariance
-                      << " " << variances.biasCovariance.diagonal().transpose() << std::endl;
+            if(!dso::setting_debugout_runquiet){
+                std::cout << "PGBA: " << logic.transformDSOToIMUAfterPGBA->getScale() << " var: " << variances.scaleVariance
+                          << " " << variances.biasCovariance.diagonal().transpose() << std::endl;
+            }
             logic.latestBias = bias;
         }
 
@@ -356,8 +358,10 @@ void RealtimePGBAState::threadRun()
         auto&& bias = optimizedValues->at<gtsam::imuBias::ConstantBias>(logic.pgba->getBiasKey());
         if(!variances.indetermined)
         {
-            std::cout << "PGBA: " << logic.transformDSOToIMUAfterPGBA->getScale() << " var: " << variances.scaleVariance
-                      << " " << variances.biasCovariance.diagonal().transpose() << std::endl;
+            if(!dso::setting_debugout_runquiet){
+                std::cout << "PGBA: " << logic.transformDSOToIMUAfterPGBA->getScale() << " var: " << variances.scaleVariance
+                          << " " << variances.biasCovariance.diagonal().transpose() << std::endl;
+            }
             logic.latestBias = bias;
         }
 
@@ -565,7 +569,9 @@ std::unique_ptr<IMUInitializerState> dmvio::PotentialMarginalizationReplacementS
                                                       fejVals->fejValues);
         if(!reallyChanged)
         {
-            std::cout << "IMUInitialization (switch): Found out that second threshold was not met!" << std::endl;
+            if(!dso::setting_debugout_runquiet){
+                std::cout << "IMUInitialization (switch): Found out that second threshold was not met!" << std::endl;
+            }
             logic.pgba->optimizationResultNotUsed();
             return nullptr;
         }
