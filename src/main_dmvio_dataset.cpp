@@ -405,12 +405,14 @@ int main(int argc, char** argv)
     mainSettings.registerArgs(*settingsUtil, globalSettings);
     imuSettings.registerArgs(*settingsUtil);
     imuCalibration.registerArgs(*settingsUtil);
-    imuSettings.setting_thOptIterations = globalSettings.setting_thOptIterations;
+    // This is the only config setting shared between the imu and base versions
+    imuSettings.imusetting_thOptIterations = globalSettings.setting_thOptIterations;
 
     // This call will parse all commandline arguments and potentially also read a settings yaml file if passed
     mainSettings.parseArguments(argc, argv, *settingsUtil, globalSettings);
 
     // Load imu calibration
+    // IMU calibration is optional but recommended
     if(mainSettings.imuCalibFile != "")
     {
         imuCalibration.loadFromFile(mainSettings.imuCalibFile);
@@ -433,7 +435,11 @@ int main(int argc, char** argv)
     boost::thread exThread = boost::thread(exitThread);
 
     // Create image reader
-    ImageFolderReader* reader = new ImageFolderReader(source, mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, use16Bit, useColour, globalSettings);
+    ImageFolderReader* reader = new ImageFolderReader(source, use16Bit, useColour);
+    if (reader->readCalib(mainSettings.calib, mainSettings.gammaCalib, mainSettings.vignette, globalSettings)==0){
+        delete reader;
+        return 0;
+    }
     reader->loadIMUData(imuFile);
     reader->setGlobalCalibration(globalCalib, globalSettings.pyrLevelsUsed);
 

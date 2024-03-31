@@ -49,7 +49,7 @@ public:
     bool setting_useIMU = true; // Use IMU data (false will disable all IMU integration).
     bool setting_useGTSAMIntegration = true; // Use the GTSAM integration for integrating addtional factors to the BA. Needed when useIMU==true).
 
-    float setting_thOptIterations=1.2; // factor on break threshold for GN iteration (larger = break earlier)
+    float imusetting_thOptIterations=1.2; // factor on break threshold for GN iteration (larger = break earlier)
 
     IMUInitSettings initSettings; // settings for the IMU initializer.
     double maxTimeBetweenInitFrames = 100000.0; // Maximum time between the first 2 frames for DSO.
@@ -122,7 +122,7 @@ public:
 
     IMUCalibration(std::string settingsFilename);
     IMUCalibration(const Sophus::SE3d& tCamImu);
-    void loadFromFile(std::string settingsFilename);
+    int loadFromFile(std::string settingsFilename);
     void saveToFile(std::string filename); // Save T_cam_imu to as a camchain.yaml.
 
     // The noise values are registered as settings so they can be set from commandline and from the settings yaml.

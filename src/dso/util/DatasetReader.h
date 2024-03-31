@@ -126,12 +126,17 @@ public:
 	 * @param vignetteFile 		Path to photometric vignette correction file
 	 * @param use16BitPassed 	16 or 8 bit images
 	 */
-	ImageFolderReader(std::string path, std::string calibFile, std::string gammaFile, std::string vignetteFile, bool use16BitPassed, bool useColourPassed, GlobalSettings& globalSettings)
+	ImageFolderReader(const std::string& path, bool use16BitPassed, bool useColourPassed):
+	width(0), height(0), widthOrg(0), heightOrg(0), calibfile(""), isZipped(0)
 	{
 		this->path = path;
-		this->calibfile = calibFile;
 		use16Bit = use16BitPassed;
 		useColour = useColourPassed;
+	}
+
+	int readCalib(std::string calibFile, std::string gammaFile, std::string vignetteFile, GlobalSettings& globalSettings)
+	{
+		this->calibfile = calibFile;
 
 #if HAS_ZIPLIB
 		ziparchive=0;
@@ -173,6 +178,8 @@ public:
 
 		undistort = Undistort::getUndistorterForFile(calibFile, gammaFile, vignetteFile, globalSettings);
 
+		if(undistort ==0) return 0;
+
 		widthOrg = undistort->getOriginalSize()[0];
 		heightOrg = undistort->getOriginalSize()[1];
 		width=undistort->getSize()[0];
@@ -181,6 +188,7 @@ public:
 		// Load timestamps if possible.
 		loadTimestamps();
 		printf("ImageFolderReader: got %d files in %s!\n", (int)files.size(), path.c_str());
+		return 1;
 	}
 
 	/**

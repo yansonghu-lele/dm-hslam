@@ -379,7 +379,7 @@ bool dmvio::BAIMULogic::postSolve(gtsam::Values::shared_ptr values, gtsam::Value
     for(auto&& pair : accums)
     {
         double val = std::sqrt(pair.second.getMean());
-        double thresh = thresholds[pair.first] * imuSettings.setting_thOptIterations;
+        double thresh = thresholds[pair.first] * imuSettings.imusetting_thOptIterations;
         canBreak = canBreak && val < thresh;
     }
     return canBreak && !dontBreak;

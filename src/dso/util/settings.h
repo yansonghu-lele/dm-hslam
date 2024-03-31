@@ -224,8 +224,6 @@ struct GlobalSettings{
     void handleKey(char k);
 };
 
-
-
 extern bool setting_debugout_runquiet;
 extern bool setting_fullResetRequested;
 

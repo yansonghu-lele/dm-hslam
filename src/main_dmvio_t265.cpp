@@ -225,6 +225,9 @@ int main(int argc, char** argv)
     // This call will parse all commandline arguments and potentially also read a settings yaml file if passed.
     mainSettings.parseArguments(argc, argv, *settingsUtil,globalSettings);
 
+    // This is the only config setting shared between the imu and base versions
+    imuSettings.imusetting_thOptIterations = globalSettings.setting_thOptIterations;
+
     // Print settings to commandline and file.
     std::cout << "Settings:\n";
     settingsUtil->printAllSettings(std::cout);

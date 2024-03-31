@@ -64,11 +64,11 @@ void IMUCalibration::registerArgs(dmvio::SettingsUtil& set)
     set.registerArg("integration_sigma", integration_sigma);
 }
 
-void IMUCalibration::loadFromFile(std::string settingsFilename)
+int IMUCalibration::loadFromFile(std::string settingsFilename)
 {
     if(settingsFilename == "")
     {
-        return;
+        return 0;
     }
 
     std::cout << "Loading IMU parameter file at: " << settingsFilename << std::endl;
@@ -94,6 +94,8 @@ void IMUCalibration::loadFromFile(std::string settingsFilename)
 
     std::cout << "Used noise values: " << sigma_between_b_a << " " << sigma_between_b_g << " " << accel_sigma << " "
               << gyro_sigma << std::endl;
+
+    return 1;
 }
 
 void IMUCalibration::saveToFile(std::string filename)
