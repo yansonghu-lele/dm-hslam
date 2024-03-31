@@ -112,7 +112,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     int linc = 1;
     if(reverse)
     {
-        assert(!setting_useIMU);    // Reverse is not supported with IMU data at the moment
+        assert(!imuSettings.setting_useIMU);    // Reverse is not supported with IMU data at the moment
         printf("REVERSE!!!");
         lstart = end - 1;
         if(lstart >= reader->getNumImages())
@@ -250,7 +250,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         // Send image and IMU data into the system
         // THIS IS WHERE THE SYSTEM IS ACTUALLY RAN
         std::unique_ptr<dmvio::IMUData> imuData;
-        if(setting_useIMU)
+        if(imuSettings.setting_useIMU)
         {
             imuData = std::make_unique<dmvio::IMUData>(reader->getIMUData(i));
         }
@@ -388,10 +388,6 @@ int main(int argc, char** argv)
     // Hanlde settings and command inputs
     auto settingsUtil = std::make_shared<dmvio::SettingsUtil>();
 
-    // Create Settings files.
-    imuSettings.registerArgs(*settingsUtil);
-    imuCalibration.registerArgs(*settingsUtil);
-
     // Dataset specific arguments
     // cmd line handling is done by cxxopt
     settingsUtil->registerArg("files", source, "f", "Inputted file directory in alphabetical order", "");
@@ -404,7 +400,12 @@ int main(int argc, char** argv)
     settingsUtil->registerArg("use16Bit", use16Bit, "b", "16 Bit image input", use16Bit ? "1" : "0");
     settingsUtil->registerArg("useColour", useColour, "c", "Colour image input", useColour ? "1" : "0");
     settingsUtil->registerArg("maxPreloadImages", maxPreloadImages);
+
+    // Create Settings files.
     mainSettings.registerArgs(*settingsUtil, globalSettings);
+    imuSettings.registerArgs(*settingsUtil);
+    imuCalibration.registerArgs(*settingsUtil);
+    imuSettings.setting_thOptIterations = globalSettings.setting_thOptIterations;
 
     // This call will parse all commandline arguments and potentially also read a settings yaml file if passed
     mainSettings.parseArguments(argc, argv, *settingsUtil, globalSettings);

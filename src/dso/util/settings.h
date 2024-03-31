@@ -225,11 +225,8 @@ struct GlobalSettings{
 };
 
 
-extern bool setting_useIMU; 
-extern bool setting_useGTSAMIntegration;
 
 extern bool setting_debugout_runquiet;
-extern float setting_thOptIterations;
 extern bool setting_fullResetRequested;
 
 extern float freeDebugParam1;

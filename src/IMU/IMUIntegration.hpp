@@ -66,6 +66,9 @@ namespace dmvio
 class IMUIntegration : public PreintegrationProviderBA
 {
 public:
+    bool setting_useIMU;
+    bool setting_useGTSAMIntegration;
+
     // linearizeOperation is true in non-realtime mode (means that there is only a single thread used).
     // Note that a reference to imuSettings is kept, so it needs to stay alive.
     IMUIntegration(dso::CalibHessian* HCalib, const IMUCalibration& imuCalibrationPassed,

@@ -179,7 +179,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 	assert((int)frame->pointHessians.size()==0);
 
 	// This actually does the marginalization math!!!
-	ef->marginalizeFrame(frame->efFrame);
+	ef->marginalizeFrame(frame->efFrame, imuIntegration.setting_useGTSAMIntegration);
 
 	dmvio::TimeMeasurement timeMeasurementEnd("marginalizeFrameOverhead");
 

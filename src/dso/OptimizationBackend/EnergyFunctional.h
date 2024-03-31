@@ -85,15 +85,15 @@ public:
 	EFPoint* insertPoint(PointHessian* ph);
 
 	void dropResidual(EFResidual* r);
-	void marginalizeFrame(EFFrame* fh);
+	void marginalizeFrame(EFFrame* fh, const bool& setting_useGTSAMIntegration);
 	void removePoint(EFPoint* ph);
 
 
 
 	void marginalizePointsF();
 	void dropPointsF();
-	void solveSystemF(int iteration, double lambda, CalibHessian* HCalib);
-	double calcMEnergyF(bool useNewValues);
+	void solveSystemF(int iteration, double lambda, CalibHessian* HCalib, const bool& setting_useGTSAMIntegration);
+	double calcMEnergyF(bool useNewValues, const bool& setting_useGTSAMIntegration);
 	double calcLEnergyF_MT();
 
 

@@ -110,7 +110,7 @@ public:
     // Note that this can be after the tracking reference has already changed
     // e.g. the order can be: BA finished (finishKeyframeOptimization) -> tracking reference changed ->
     // -> in other thread marginalization and post BA stuff -> finishKeyframeOperations())
-    void finishKeyframeOperations(int keyframeId);
+    void finishKeyframeOperations(int keyframeId, bool& setting_useIMU, bool& setting_useGTSAMIntegration);
 
     // Called before finishKeyframeOptimization (and before the IMU init might be called).
     void postOptimization(int keyframeId);

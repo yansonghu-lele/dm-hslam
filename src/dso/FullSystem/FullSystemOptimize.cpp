@@ -150,7 +150,7 @@ void FullSystem::setNewFrameEnergyTH()
 	newFrame->frameEnergyTH *= globalSettings.setting_overallEnergyTHWeight*globalSettings.setting_overallEnergyTHWeight;
 
 	// imu!: Used to enforce a maximum energy threshold.
-	if(setting_useIMU)
+	if(imuIntegration.setting_useIMU)
     {
 	    imuIntegration.newFrameEnergyTH(newFrame->frameEnergyTH);
     }
@@ -324,18 +324,18 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 
     if(!setting_debugout_runquiet)
         printf("STEPS: A %.1f; B %.1f; R %.1f; T %.1f. \t",
-                sqrtf(sumA) / (0.0005*setting_thOptIterations),
-                sqrtf(sumB) / (0.00005*setting_thOptIterations),
-                sqrtf(sumR) / (0.00005*setting_thOptIterations),
-                sqrtf(sumT)*sumNID / (0.00005*setting_thOptIterations));
+                sqrtf(sumA) / (0.0005*globalSettings.setting_thOptIterations),
+                sqrtf(sumB) / (0.00005*globalSettings.setting_thOptIterations),
+                sqrtf(sumR) / (0.00005*globalSettings.setting_thOptIterations),
+                sqrtf(sumT)*sumNID / (0.00005*globalSettings.setting_thOptIterations));
 
 	EFDeltaValid=false;
 	setPrecalcValues();
 
-	return sqrtf(sumA) < 0.0005*setting_thOptIterations &&
-			sqrtf(sumB) < 0.00005*setting_thOptIterations &&
-			sqrtf(sumR) < 0.00005*setting_thOptIterations &&
-			sqrtf(sumT)*sumNID < 0.00005*setting_thOptIterations;
+	return sqrtf(sumA) < 0.0005*globalSettings.setting_thOptIterations &&
+			sqrtf(sumB) < 0.00005*globalSettings.setting_thOptIterations &&
+			sqrtf(sumR) < 0.00005*globalSettings.setting_thOptIterations &&
+			sqrtf(sumT)*sumNID < 0.00005*globalSettings.setting_thOptIterations;
 //
 //	printf("mean steps: %f %f %f!\n",
 //			meanStepC, meanStepP, meanStepD);
@@ -432,7 +432,7 @@ double FullSystem::calcMEnergy(bool useNewValues)
 	//ef->makeIDX();
 	//ef->setDeltaF(&Hcalib);
 
-	return ef->calcMEnergyF(useNewValues);
+	return ef->calcMEnergyF(useNewValues, imuIntegration.setting_useGTSAMIntegration);
 
 }
 
@@ -607,7 +607,7 @@ float FullSystem::optimize(int mnumOptIts)
             lambda = std::max(lambda, minLambda);
 
 			// imu!: Accept the update to the bundle adjustment
-			if(setting_useGTSAMIntegration)
+			if(imuIntegration.setting_useGTSAMIntegration)
 			{
 				baIntegration->acceptBAUpdate(lastEnergy[0]);
 			}
@@ -705,7 +705,7 @@ void FullSystem::solveSystem(int iteration, double lambda)
 			ef->lastNullspaces_affA,
 			ef->lastNullspaces_affB);
 
-	ef->solveSystemF(iteration, lambda,&Hcalib);
+	ef->solveSystemF(iteration, lambda,&Hcalib,imuIntegration.setting_useGTSAMIntegration);
 }
 
 

@@ -88,7 +88,7 @@ class IMUInitSettings
 {
 public:
     void registerArgs(dmvio::SettingsUtil& set, std::string prefix = "init_");
-
+    
     // For available options see enum InitTransitionMode in file IMUInitializerTransitions.
     int transitionModel = 2;
 

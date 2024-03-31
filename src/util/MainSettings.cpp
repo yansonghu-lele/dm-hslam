@@ -135,7 +135,6 @@ void MainSettings::registerArgs(SettingsUtil& set, dso::GlobalSettings& globalSe
     set.registerArg("nolog", globalSettings.setting_logStuff, "n", "Turn logging off", globalSettings.setting_logStuff ? "1" : "0");
     set.registerArg("nogui", globalSettings.setting_disableAllDisplay, "g", "Turn gui output off", globalSettings.setting_disableAllDisplay ? "1" : "0");
     set.registerArg("outPC", globalSettings.setting_outputPC, "p", "Output point cloud", globalSettings.setting_outputPC ? "1" : "0");
-    set.registerArg("useimu", setting_useIMU, "u", "Turn IMU on or off", setting_useIMU ? "1" : "0");
     set.registerArg("save", globalSettings.setting_debugSaveImages, "a", "Save data", globalSettings.setting_debugSaveImages ? "1" : "0");
     set.registerArg("mode", mode, "m", "Photometric mode (1=full, 2=no calibration, 3=Synthetic, 4=none)", "0");
     set.registerArg("nomt", globalSettings.settings_no_multiThreading, "M", "Turn multithreading off", "0");

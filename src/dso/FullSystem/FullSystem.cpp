@@ -93,7 +93,6 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
     secondKeyframeDone(false), gravityInit(imuSettings.numMeasurementsGravityInit, imuCalibration),
     shellPoseMutex(FrameShell::shellPoseMutex)
 {
-    setting_useGTSAMIntegration = setting_useIMU;
     baIntegration = imuIntegration.getBAGTSAMIntegration().get();
 
 	int retstat =0;
@@ -531,7 +530,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
         {
 		    trackingGoodRet = true;
         }
-		if(!trackingIsGood && setting_useIMU)
+		if(!trackingIsGood && imuIntegration.setting_useIMU)
 		{
 			std::cout << "WARNING: Coarse tracker thinks that tracking was not good!" << std::endl;
 
@@ -1057,7 +1056,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 
 			coarseInitializer->setFirst(&Hcalib, fh);
 		// imu!: Start calculating gravity
-            if(setting_useIMU)
+            if(imuIntegration.setting_useIMU)
             {
                 gravityInit.addMeasure(*imuData, Sophus::SE3d());
             }
@@ -1072,7 +1071,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			bool initDone = coarseInitializer->trackFrame(fh, outputWrapper);
 			
 			// imu!: Add initial data to imu optimization
-			if(setting_useIMU)
+			if(imuIntegration.setting_useIMU)
 			{
                 imuIntegration.addIMUDataToBA(*imuData);
 				Sophus::SE3d imuToWorld = gravityInit.addMeasure(*imuData, Sophus::SE3d());
@@ -1088,7 +1087,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
                 initializeFromInitializer(fh);
 
 		// imu!: Set GT data
-                if(setting_useIMU && linearizeOperation)
+                if(imuIntegration.setting_useIMU && linearizeOperation)
                 {
                     imuIntegration.setGTData(gtData, fh->shell->id);
                 }
@@ -1137,7 +1136,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			CoarseTracker* tmp = coarseTracker; coarseTracker=coarseTracker_forNewKF; coarseTracker_forNewKF=tmp;
 
 			// imu!: Set up the imu optimzation
-			if(setting_useIMU)
+			if(imuIntegration.setting_useIMU)
 			{
 			    // BA for new keyframe has finished and we have a new tracking reference.
                 if(!setting_debugout_runquiet)
@@ -1158,7 +1157,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
         SE3 *referenceToFramePassed = 0;
 
 	// imu!: Add imu data
-        if(setting_useIMU)
+        if(imuIntegration.setting_useIMU)
         {
 			SE3 referenceToFrame = imuIntegration.addIMUData(*imuData, fh->shell->id,
                                                                 fh->shell->timestamp, trackingRefChanged, lastFrameId);
@@ -1184,7 +1183,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 		// Case if tracking failed
 		if(!std::isfinite((double)tres[0]) || !std::isfinite((double)tres[1]) || !std::isfinite((double)tres[2]) || !std::isfinite((double)tres[3]))
         {
-            if(setting_useIMU)
+            if(imuIntegration.setting_useIMU)
             {
                 // If completely Nan, don't force noKF!
                 forceNoKF = false;
@@ -1278,12 +1277,12 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
         }
 
 	// imu!: Finish handling the imu data
-        if(setting_useIMU)
+        if(imuIntegration.setting_useIMU)
         {
             imuIntegration.finishCoarseTracking(*(fh->shell), needToMakeKF);
         }
 
-        if(needToMakeKF && setting_useIMU && linearizeOperation)
+        if(needToMakeKF && imuIntegration.setting_useIMU && linearizeOperation)
         {
             imuIntegration.setGTData(gtData, fh->shell->id);
         }
@@ -1318,14 +1317,14 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 	// creates a keyframe nevertheless: if it is the second tracked frame (so it will become the third keyframe in total)
 	// There are also some cases where needKF is true but the mapper does not create a keyframe.
 
-	bool alreadyPreparedKF = setting_useIMU && imuIntegration.getPreparedKeyframe() != -1 && !linearizeOperation;
+	bool alreadyPreparedKF = imuIntegration.setting_useIMU && imuIntegration.getPreparedKeyframe() != -1 && !linearizeOperation;
 
     if(!setting_debugout_runquiet)
     {
         std::cout << "Frame history size: " << allFrameHistory.size() << std::endl;
     }
 
-    if((needKF || (!secondKeyframeDone && !linearizeOperation)) && setting_useIMU && !alreadyPreparedKF)
+    if((needKF || (!secondKeyframeDone && !linearizeOperation)) && imuIntegration.setting_useIMU && !alreadyPreparedKF)
     {
         // imu!: PrepareKeyframe tells the IMU-Integration that this frame will become a keyframe. -> don' marginalize it during addIMUData.
         // Also resets the IMU preintegration for the BA.
@@ -1372,7 +1371,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 		// Saves the frame as a keyframe or treats it as a non-keyframe
 		if(needKF)
 		{
-            if(setting_useIMU)
+            if(imuIntegration.setting_useIMU)
             {
 		// imu!: Create keyframe in imu framework
                 imuIntegration.keyframeCreated(fh->shell->id);
@@ -1393,7 +1392,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 			needKF = true;
 		}
 
-		if(setting_useIMU)
+		if(imuIntegration.setting_useIMU)
         {
             if(needKF) needNewKFAfter=imuIntegration.getPreparedKeyframe();
         }else
@@ -1441,7 +1440,7 @@ void FullSystem::mappingLoop()
         // Guaranteed to make a KF for the very first two tracked frames.
 		if(allKeyFramesHistory.size() <= 2)
 		{
-            if(setting_useIMU)
+            if(imuIntegration.setting_useIMU)
             {
                 imuIntegration.keyframeCreated(fh->shell->id);
             }
@@ -1458,7 +1457,7 @@ void FullSystem::mappingLoop()
 		// if there are other frames to track, do that first.
 		if(unmappedTrackedFrames.size() > 0)
 		{
-			if(setting_useIMU && needNewKFAfter == fh->shell->id)
+			if(imuIntegration.setting_useIMU && needNewKFAfter == fh->shell->id)
 			{
                 if(!setting_debugout_runquiet)
                 {
@@ -1488,10 +1487,10 @@ void FullSystem::mappingLoop()
 		}
 		else // Do mapping
 		{
-		    bool createKF = setting_useIMU ? needNewKFAfter==fh->shell->id : needNewKFAfter >= frameHessians.back()->shell->id;
+		    bool createKF = imuIntegration.setting_useIMU ? needNewKFAfter==fh->shell->id : needNewKFAfter >= frameHessians.back()->shell->id;
 			if(globalSettings.setting_realTimeMaxKF || createKF)
 			{
-                if(setting_useIMU)
+                if(imuIntegration.setting_useIMU)
                 {
 			// imu: Make keyframe for imu framework
                     imuIntegration.keyframeCreated(fh->shell->id);
@@ -1611,7 +1610,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 	activatePointsMT();
 	ef->makeIDX();
 
-    if(setting_useGTSAMIntegration)
+    if(imuIntegration.setting_useGTSAMIntegration)
     {
         // Adds new keyframe to the BA graph, together with matching factors (e.g. IMUFactors).
         baIntegration->addKeyframeToBA(fh->shell->id, fh->shell->camToWorld, ef->frames);
@@ -1648,7 +1647,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 	removeOutliers();
 
 	// imu!: Handle imu post optimization
-	if(setting_useIMU)
+	if(imuIntegration.setting_useIMU)
     {
 	    imuIntegration.postOptimization(fh->shell->id);
     }
@@ -1658,7 +1657,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
         dmvio::TimeMeasurement timeMeasurement2("makeKeyframeChangeTrackingRef");
 		boost::unique_lock<boost::mutex> crlock(coarseTrackerSwapMutex);
 
-        if(setting_useIMU)
+        if(imuIntegration.setting_useIMU)
         {
             imuReady = imuIntegration.finishKeyframeOptimization(fh->shell->id);
         }
@@ -1718,7 +1717,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
         {
 		    marginalizeFrame(frameHessians[i]);
 		    i=0;
-            if(setting_useGTSAMIntegration)
+            if(imuIntegration.setting_useGTSAMIntegration)
             {
                 baIntegration->updateBAOrdering(ef->frames);
             }
@@ -1728,12 +1727,12 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 	printLogLine();
 	printEigenValLine();
 
-    if(setting_useGTSAMIntegration)
+    if(imuIntegration.setting_useGTSAMIntegration)
     {
         baIntegration->updateBAValues(ef->frames);
     }
 
-    if(setting_useIMU)
+    if(imuIntegration.setting_useIMU)
     {
         imuIntegration.finishKeyframeOperations(fh->shell->id);
     }

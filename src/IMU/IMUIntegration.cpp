@@ -43,6 +43,9 @@ IMUIntegration::IMUIntegration(dso::CalibHessian* HCalib, const IMUCalibration& 
         : linearizeOperation(linearizeOperationPassed), preparedKeyframe(-1), preparedKFCreated(false),
           imuCalibration(imuCalibrationPassed), imuSettings(imuSettingsPassed)
 {
+    setting_useIMU = imuSettingsPassed.setting_useIMU;
+    setting_useGTSAMIntegration = setting_useIMU;
+
     // Create preintegrationParams
     double accelVar = imuCalibration.accel_sigma * imuCalibration.accel_sigma;
     double gyroVar = imuCalibration.gyro_sigma * imuCalibration.gyro_sigma;
@@ -131,7 +134,7 @@ void IMUIntegration::finishKeyframeOperations(int keyframeId)
         dmvio::TimeMeasurement timeMeasurement("IMUIntegration::finishKeyframeOperations");
 
         // Forward to baLogic which does the work.
-        baLogic->finishKeyframeOperations(keyframeId);
+        baLogic->finishKeyframeOperations(keyframeId, setting_useIMU, setting_useGTSAMIntegration);
     }
     if(imuInitializer)
     {

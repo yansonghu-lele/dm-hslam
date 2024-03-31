@@ -322,7 +322,7 @@ void EnergyFunctional::resubstituteFPt(
 }
 
 
-double EnergyFunctional::calcMEnergyF(bool useNewValues)
+double EnergyFunctional::calcMEnergyF(bool useNewValues, const bool& setting_useGTSAMIntegration)
 {
 
 	assert(EFDeltaValid);
@@ -520,7 +520,7 @@ void EnergyFunctional::dropResidual(EFResidual* r)
 	delete r;
 }
 
-void EnergyFunctional::marginalizeFrame(EFFrame* fh)
+void EnergyFunctional::marginalizeFrame(EFFrame* fh, const bool& setting_useGTSAMIntegration)
 {
     dmvio::TimeMeasurement timeMeasurement("EF-marginalizeFrame");
 	assert(EFDeltaValid);
@@ -566,7 +566,7 @@ void EnergyFunctional::marginalizeFrame(EFFrame* fh)
 
     }
 
-//    if(!setting_useGTSAMIntegration) // enable to remove the redundant visual only marginalization.
+//    if(!imuIntegration.setting_useGTSAMIntegration) // enable to remove the redundant visual only marginalization.
     if(true)
     {
         dmvio::TimeMeasurement measVis("VisualMarginalization");
@@ -840,7 +840,7 @@ void EnergyFunctional::orthogonalize(VecX* b, MatXX* H)
 }
 
 
-void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* HCalib)
+void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* HCalib, const bool& setting_useGTSAMIntegration)
 {
     if(globalSettings.setting_solverMode & SOLVER_USE_GN) lambda=0;
     if(globalSettings.setting_solverMode & SOLVER_FIX_LAMBDA) lambda = 1e-5;

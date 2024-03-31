@@ -731,7 +731,7 @@ bool CoarseTracker::trackNewestCoarse(
 			SE3 refToNew_new;
 			AffLight aff_g2l_new = aff_g2l_current;
 			double incNorm;
-			if(setting_useIMU && imuIntegration.isCoarseInitialized())
+			if(imuIntegration.setting_useIMU && imuIntegration.isCoarseInitialized())
 			{
 				// imu!: The idea of the integration of the IMU (and GTSAM) into the coarse tracking is to replace the line
 				// Vec8 inc = Hl.ldlt().solve(-b);
@@ -836,7 +836,7 @@ bool CoarseTracker::trackNewestCoarse(
 				refToNew_current = refToNew_new;
 				
 				// imu!: Calculate the update with IMU factors
-				if(setting_useIMU)
+				if(imuIntegration.setting_useIMU)
 					imuIntegration.acceptCoarseUpdate();
 
 				lambda *= 0.5;
@@ -897,7 +897,7 @@ bool CoarseTracker::trackNewestCoarse(
 	// imu!: Add visual to coarse graph of last level is zero
 	if(lastLvl == 0)
 	{
-		if(setting_useIMU)
+		if(imuIntegration.setting_useIMU)
 			imuIntegration.addVisualToCoarseGraph(H, b, trackingGood);
 	}
 

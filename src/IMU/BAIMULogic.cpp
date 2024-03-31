@@ -379,7 +379,7 @@ bool dmvio::BAIMULogic::postSolve(gtsam::Values::shared_ptr values, gtsam::Value
     for(auto&& pair : accums)
     {
         double val = std::sqrt(pair.second.getMean());
-        double thresh = thresholds[pair.first] * dso::setting_thOptIterations;
+        double thresh = thresholds[pair.first] * imuSettings.setting_thOptIterations;
         canBreak = canBreak && val < thresh;
     }
     return canBreak && !dontBreak;
@@ -418,7 +418,7 @@ void dmvio::BAIMULogic::acceptUpdate(gtsam::Values::shared_ptr values, gtsam::Va
 }
 
 // Signals that the BA and marginalization operations for this keyframe are finished (might be after the KF is already the new tracking ref)
-void dmvio::BAIMULogic::finishKeyframeOperations(int keyframeId)
+void dmvio::BAIMULogic::finishKeyframeOperations(int keyframeId, bool& setting_useIMU, bool& setting_useGTSAMIntegration)
 {
     if(disableFromKF > 0) return;
 
@@ -486,12 +486,12 @@ void dmvio::BAIMULogic::finishKeyframeOperations(int keyframeId)
             if(imuSettings.setting_visualOnlyAfterScaleFixing == 1)
             {
                 std::cout << "DISABLING IMU AND THE GTSAM INTEGRATION COMPLETELY!" << std::endl;
-                dso::setting_useIMU = false;
-                dso::setting_useGTSAMIntegration = false;
+                setting_useIMU = false;
+                setting_useGTSAMIntegration = false;
             }else if(imuSettings.setting_visualOnlyAfterScaleFixing == 2)
             {
                 std::cout << "DISABLING IMU COMPLETELY!" << std::endl;
-                dso::setting_useIMU = false;
+                setting_useIMU = false;
                 disableFromKF = keyframeId;
             }
         }

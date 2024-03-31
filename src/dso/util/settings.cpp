@@ -33,12 +33,7 @@
 
 namespace dso
 {
-
-bool setting_useIMU = true; // Use IMU data (false will disable all IMU integration).
-bool setting_useGTSAMIntegration = true; // Use the GTSAM integration for integrating addtional factors to the BA. Needed when useIMU==true).
-
 bool setting_debugout_runquiet = false;
-float setting_thOptIterations=1.2; // factor on break threshold for GN iteration (larger = break earlier)
 bool setting_fullResetRequested = false;
 
 void GlobalSettings::handleKey(char k)
