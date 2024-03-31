@@ -36,6 +36,7 @@ namespace dso
 bool setting_debugout_runquiet = false;
 bool setting_fullResetRequested = false;
 
+#ifdef GRAPHICAL_DEBUG
 void GlobalSettings::handleKey(char k)
 {
 	char kkk = k;
@@ -51,12 +52,15 @@ void GlobalSettings::handleKey(char k)
 		break;
 	}
 };
+#endif
 
+#ifdef GRAPHICAL_DEBUG
 float freeDebugParam1 = 1;
 float freeDebugParam2 = 1;
 float freeDebugParam3 = 1;
 float freeDebugParam4 = 1;
 float freeDebugParam5 = 1;
+#endif
 
 const int global_staticPattern[10][40][2] = {
 		{{0,0}, 	  {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100}, {-100,-100},	// .

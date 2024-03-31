@@ -148,12 +148,13 @@ void PangolinDSOViewer::run()
 	pangolin::Var<bool> settings_showLiveVideo("ui.showVideo",true,true);
     pangolin::Var<bool> settings_showLiveResidual("ui.showResidual",false,true);
 
+#ifdef GRAPHICAL_DEBUG
 	pangolin::Var<bool> settings_showFramesWindow("ui.BD-FramesWindow",false,true);
 	pangolin::Var<bool> settings_showFullTracking("ui.BD-FullTracking",false,true);
 	pangolin::Var<bool> settings_showCoarseTracking("ui.BD-CoarseTracking",false,true);
 	pangolin::Var<bool> settings_showImmatureTracking("ui.BD-ImmatureTracking",false,true);
 	pangolin::Var<bool> settings_showFramebyFrame("ui.BD-FramebyFrame",false,true);
-
+#endif
 
 	pangolin::Var<int> settings_sparsity("ui.sparsity",1,1,20,false);
 	pangolin::Var<double> settings_scaledVarTH("ui.relVarTH",0.001,1e-10,1e10, true);
@@ -162,7 +163,9 @@ void PangolinDSOViewer::run()
 
 
 	pangolin::Var<bool> settings_resetButton("ui.Reset",false,false);
+#ifdef GRAPHICAL_DEBUG
 	pangolin::Var<bool> settings_pauseButton("ui.Pause",false,false);
+#endif
 
 
 	pangolin::Var<int> settings_nPts("ui.activePoints",globalSettings.setting_desiredPointDensity, 50,5000, false);
@@ -355,12 +358,13 @@ void PangolinDSOViewer::run()
 		setting_render_displayVideo =  settings_showLiveVideo.Get();
 		setting_render_displayResidual = settings_showLiveResidual.Get();
 
+#ifdef GRAPHICAL_DEBUG
 		globalSettings.setting_render_renderWindowFrames = settings_showFramesWindow.Get();
 		globalSettings.setting_render_plotTrackingFull = settings_showFullTracking.Get();
 		globalSettings.setting_render_displayCoarseTrackingFull = settings_showCoarseTracking.Get();
 		globalSettings.setting_render_displayImmatureTracking = settings_showImmatureTracking.Get();
 		globalSettings.setting_goStepByStep = settings_showFramebyFrame.Get();
-
+#endif
 
 	    this->settings_absVarTH = settings_absVarTH.Get();
 	    this->settings_scaledVarTH = settings_scaledVarTH.Get();
@@ -387,13 +391,14 @@ void PangolinDSOViewer::run()
 	    	setting_fullResetRequested = true;
 	    }
 
-
+#ifdef GRAPHICAL_DEBUG
 		if(settings_pauseButton.Get())
 	    {
 	    	printf("PAUSE OR UNPAUSE!\n");
 	    	settings_pauseButton.Reset();
 	    	globalSettings.global_Pause = !globalSettings.global_Pause;
 	    }
+#endif
 
 
 		// Swap frames and Process Events

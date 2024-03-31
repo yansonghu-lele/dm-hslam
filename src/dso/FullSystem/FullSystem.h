@@ -179,7 +179,9 @@ public:
 	void printResult(std::string file, bool onlyLogKFPoses, bool saveMetricPoses, bool useCamToTrackingRef);
 	void printPC(std::string file);
 
+#ifdef GRAPHICAL_DEBUG
 	void debugPlot(std::string name);
+#endif
 
 	void printFrameLifetimes();
 	// contains pointers to active frames
@@ -251,7 +253,9 @@ private:
 
 	void printOptRes(const Vec3 &res, double resL, double resM, double resPrior, double LExact, float a, float b);
 
+#ifdef GRAPHICAL_DEBUG
 	void debugPlotTracking();
+#endif
 
 	std::vector<VecX> getNullspaces(
 			std::vector<VecX> &nullspaces_pose,

@@ -31,6 +31,8 @@
 #include <string>
 #include <cmath>
 
+// #define GRAPHICAL_DEBUG
+
 
 
 namespace dso
@@ -209,36 +211,44 @@ struct GlobalSettings{
 
     bool setting_goStepByStep = false;
 
-
+#ifdef GRAPHICAL_DEBUG
     bool setting_render_displayCoarseTrackingFull=false;
     bool setting_render_displayImmatureTracking=false;
-    bool setting_render_renderWindowFrames=true;
+    bool setting_render_renderWindowFrames=false;
     bool setting_render_plotTrackingFull = false;
+#endif
 
     bool no_CoarseInit_debugMessage = false; // Coarse Initilizer Debug messages
     bool no_CoarseTracker_debugMessage = false; // Coarse Tracker Debug messages
     bool no_FullSystem_debugMessage = false; // Fullsystem Debug messages 
     bool no_Optimize_debugMessage = false; // Optimizer Debug messages
-    bool no_Pixel_debugMessage = false; // Pixel Selector and Immature Point Debug messages
+    bool no_Immature_debugMessage = false; // Immature Point Debug messages
+    bool no_Pixel_debugMessage = false; // Pixel Selector Debug messages
     bool no_GT_debugMessage = false; // GT Distance Debug messages
 
     bool setting_fullResetRequested = false;
 
     int setting_sparsityFactor = 5;	// not actually a setting, only some legacy stuff for coarse initializer.
 
+#ifdef GRAPHICAL_DEBUG
     bool global_Pause = false;
+#endif
 
+#ifdef GRAPHICAL_DEBUG
     void handleKey(char k);
+#endif
 };
 
 extern bool setting_debugout_runquiet;
 extern bool setting_fullResetRequested;
 
+#ifdef GRAPHICAL_DEBUG
 extern float freeDebugParam1;
 extern float freeDebugParam2;
 extern float freeDebugParam3;
 extern float freeDebugParam4;
 extern float freeDebugParam5;
+#endif
 
 
 extern const int global_staticPattern[10][40][2];

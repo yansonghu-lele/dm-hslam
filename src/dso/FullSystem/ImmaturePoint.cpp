@@ -119,7 +119,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	float maxPixSearch = (wG0+hG0)*globalSettings.setting_maxPixSearch;
 
-	if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+	if(debugPrint && !globalSettings.no_Immature_debugMessage)
 		printf("trace pt (%.1f %.1f) from frame %d to %d. Range %f -> %f. t %f %f %f!\n",
 				u,v,
 				host->shell->id, frame->shell->id,
@@ -156,7 +156,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	if(!(uMin > boundU && vMin > boundV && uMin < wG0-boundU-1 && vMin < hG0-boundV-1)) // Pattern is OOB
 	{
-		if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+		if(debugPrint && !globalSettings.no_Immature_debugMessage)
 			printf("OOB uMin %f %f - %f %f %f (id %f-%f)!\n", u,v,uMin, vMin,  ptpMin[2], idepth_min, idepth_max);
 		lastTraceUV = Vec2f(-1,-1);
 		lastTracePixelInterval=0;
@@ -175,7 +175,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 		if(!(uMax > boundU && vMax > boundV && uMax < wG0-boundU-1 && vMax < hG0-boundV-1)) // Pattern is OOB
 		{
-			if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+			if(debugPrint && !globalSettings.no_Immature_debugMessage)
 				printf("OOB uMax  %f %f - %f %f!\n",u,v, uMax, vMax);
 			lastTraceUV = Vec2f(-1,-1);
 			lastTracePixelInterval=0;
@@ -187,7 +187,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		dist = sqrtf(dist);
 		if(dist < globalSettings.setting_trace_slackInterval) // Tracing is not needed if the distance between max and min is low
 		{
-			if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+			if(debugPrint && !globalSettings.no_Immature_debugMessage)
 				printf("TOO CERTAIN ALREADY (dist %f)!\n", dist);
 
 			lastTraceUV = Vec2f(uMax+uMin, vMax+vMin)*0.5; // Take average
@@ -214,7 +214,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 		if(!(uMax > boundU && vMax > boundV && uMax < wG0-boundU-1 && vMax < hG0-boundV-1)) // Pattern may still be OOB
 		{
-			if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+			if(debugPrint && !globalSettings.no_Immature_debugMessage)
 				printf("OOB uMax-coarse %f %f %f!\n", uMax, vMax,  ptpMax[2]);
 			lastTraceUV = Vec2f(-1,-1);
 			lastTracePixelInterval=0;
@@ -225,7 +225,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	if(!(idepth_min<0 || (ptpMin[2]>0.75 && ptpMin[2]<1.5))) // set OOB if scale is too big
 	{
-		if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+		if(debugPrint && !globalSettings.no_Immature_debugMessage)
 			printf("OOB SCALE %f %f %f!\n", uMax, vMax,  ptpMin[2]);
 		lastTraceUV = Vec2f(-1,-1);
 		lastTracePixelInterval=0;
@@ -243,7 +243,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	if(errorInPixel*globalSettings.setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max))
 	{
-		if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+		if(debugPrint && !globalSettings.no_Immature_debugMessage)
 			printf("NO SIGNIFICANT IMPROVMENT (%f)!\n", errorInPixel);
 		lastTraceUV = Vec2f(uMax+uMin, vMax+vMin)*0.5;
 		lastTracePixelInterval=dist;
@@ -257,7 +257,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	dx /= dist;
 	dy /= dist;
 
-	if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+	if(debugPrint && !globalSettings.no_Immature_debugMessage)
 		printf("trace pt (%.1f %.1f) from frame %d to %d. Range %f (%.1f %.1f) -> %f (%.1f %.1f)! ErrorInPixel %.1f!\n",
 				u,v,
 				host->shell->id, frame->shell->id,
@@ -313,7 +313,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			energy += hw *residual*residual*(2-hw);
 		}
 
-		if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+		if(debugPrint && !globalSettings.no_Immature_debugMessage)
 			printf("step %.1f %.1f (id %f): energy = %f!\n",
 					ptx, pty, 0.0f, energy);
 
@@ -352,7 +352,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
             if(posU < 0 || posV < 0 || posU >= wG0 - 1 || posV >= hG0 - 1) // Check if pattern is OOB
             {
-                if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+                if(debugPrint && !globalSettings.no_Immature_debugMessage)
 					printf("OOB uMax  %f %f - %f %f!\n", posU, posV, uMax, vMax);
                 lastTraceUV = Vec2f(-1,-1);
                 lastTracePixelInterval=0;
@@ -380,7 +380,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			stepBack*=0.5;
 			bestU = uBak + stepBack*dx;
 			bestV = vBak + stepBack*dy;
-			if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+			if(debugPrint && !globalSettings.no_Immature_debugMessage)
 				printf("GN BACK %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
 						it, energy, H, b, stepBack,
 						uBak, vBak, bestU, bestV);
@@ -404,7 +404,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			bestV += step*dy;
 			bestEnergy = energy;
 
-			if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+			if(debugPrint && !globalSettings.no_Immature_debugMessage)
 				printf("GN step %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
 						it, energy, H, b, step,
 						uBak, vBak, bestU, bestV);
@@ -417,7 +417,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	// ============== detect energy-based outlier. ===================
 	if(!(bestEnergy < energyTH*globalSettings.setting_trace_extraSlackOnTH))
 	{
-		if(debugPrint && !globalSettings.no_Pixel_debugMessage)
+		if(debugPrint && !globalSettings.no_Immature_debugMessage)
 			printf("OUTLIER!\n");
 
 		lastTracePixelInterval=0;
@@ -445,7 +445,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	if(!std::isfinite(idepth_min) || !std::isfinite(idepth_max) || (idepth_max<0))
 	{
-		if(!setting_debugout_runquiet && !globalSettings.no_Pixel_debugMessage)
+		if(!setting_debugout_runquiet && !globalSettings.no_Immature_debugMessage)
 			printf("CAUGHT INF / NAN minmax depth!\n");
 
 		lastTracePixelInterval=0;

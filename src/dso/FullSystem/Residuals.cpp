@@ -309,6 +309,7 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	return energyLeft;
 }
 
+#ifdef GRAPHICAL_DEBUG
 void PointFrameResidual::debugPlot()
 {
 	if(state_state==ResState::OOB) return;
@@ -334,6 +335,7 @@ void PointFrameResidual::debugPlot()
 			target->debugImage->setPixel1((float)projectedTo[i][0], (float)projectedTo[i][1],cT);
 	}
 }
+#endif
 
 /**
  * @brief Set the state and energy to the new values

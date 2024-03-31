@@ -200,10 +200,12 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
     dmvio::IMUData skippedIMUData;
     for(int ii = 0; ii < (int) idsToPlay.size(); ii++) // loop through all images
     {
+#ifdef GRAPHICAL_DEBUG
         while (globalSettings.global_Pause && linearizeOperation)
         {
             usleep(5000);
         }
+#endif
 
         if(!fullSystem->initialized)    // if not initialized: reset start time.
         {

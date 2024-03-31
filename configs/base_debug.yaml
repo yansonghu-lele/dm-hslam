@@ -3,6 +3,7 @@ no_CoarseTracker_debugMessage: true
 no_FullSystem_debugMessage: true
 no_Optimize_debugMessage: true
 no_Pixel_debugMessage: true
+no_Immature_debugMessage: true
 no_GT_debugMessage: true
 no_IMU_debugMessage: true
 no_IMUInit_debugMessage: true

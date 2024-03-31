@@ -161,6 +161,7 @@ void MainSettings::registerArgs(SettingsUtil& set, dso::GlobalSettings& globalSe
     set.registerArg("no_CoarseTracker_debugMessage", globalSettings.no_CoarseTracker_debugMessage);
     set.registerArg("no_FullSystem_debugMessage", globalSettings.no_FullSystem_debugMessage);
     set.registerArg("no_Optimize_debugMessage", globalSettings.no_Optimize_debugMessage);
+    set.registerArg("no_Immature_debugMessage", globalSettings.no_Immature_debugMessage);
     set.registerArg("no_Pixel_debugMessage", globalSettings.no_Pixel_debugMessage);
     set.registerArg("no_GT_debugMessage", globalSettings.no_GT_debugMessage);
 }

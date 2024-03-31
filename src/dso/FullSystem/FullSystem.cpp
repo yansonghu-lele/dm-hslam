@@ -540,20 +540,21 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 
 		if(i != 0)
 		{
-			printf("RE-TRACK ATTEMPT %u with initOption %u and start-lvl %u (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
-					i, i, globalSettings.pyrLevelsUsed-1,
-					aff_g2l_this.a,
-					aff_g2l_this.b,
-					achievedRes[0],
-					achievedRes[1],
-					achievedRes[2],
-					achievedRes[3],
-					achievedRes[4],
-					coarseTracker->lastResiduals[0],
-					coarseTracker->lastResiduals[1],
-					coarseTracker->lastResiduals[2],
-					coarseTracker->lastResiduals[3],
-					coarseTracker->lastResiduals[4]);
+			if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
+				printf("RE-TRACK ATTEMPT %u with initOption %u and start-lvl %u (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
+						i, i, globalSettings.pyrLevelsUsed-1,
+						aff_g2l_this.a,
+						aff_g2l_this.b,
+						achievedRes[0],
+						achievedRes[1],
+						achievedRes[2],
+						achievedRes[3],
+						achievedRes[4],
+						coarseTracker->lastResiduals[0],
+						coarseTracker->lastResiduals[1],
+						coarseTracker->lastResiduals[2],
+						coarseTracker->lastResiduals[3],
+						coarseTracker->lastResiduals[4]);
 		}
 
 		// ============== Update variables if there is a good track ===================
@@ -1353,6 +1354,8 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 
 	if(linearizeOperation) // play as fast as possible
 	{
+		
+#ifdef GRAPHICAL_DEBUG
 		if(globalSettings.setting_goStepByStep && lastRefStopID != coarseTracker->refFrameID)
 		{
 			MinimalImageF3 img(wG[0], hG[0], fh->dI);
@@ -1372,6 +1375,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 				globalSettings.handleKey( IOWrap::waitKey(1) );
 			}
 		}
+#endif
 		// Saves the frame as a keyframe or treats it as a non-keyframe
 		if(needKF)
 		{
@@ -1674,7 +1678,9 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
         coarseTracker_forNewKF->debugPlotIDepthMapFloat(outputWrapper);
 	}
 
+#ifdef GRAPHICAL_DEBUG
 	debugPlot("post Optimize");
+#endif
 
     for(auto* ow : outputWrapper)
     {

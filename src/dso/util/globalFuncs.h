@@ -358,7 +358,6 @@ EIGEN_ALWAYS_INLINE Eigen::Vector2f getInterpolatedElement42(const Eigen::Vector
 
 inline Vec3f makeRainbowf3F(float id)
 {
-	id *= freeDebugParam3;
 	if(id < 0)
 		return Vec3f(1,1,1);
 
@@ -375,7 +374,6 @@ inline Vec3f makeRainbowf3F(float id)
 
 inline Vec3b makeRainbow3B(float id)
 {
-	id *= freeDebugParam3;
 	if(!(id > 0))
 		return Vec3b(255,255,255);
 

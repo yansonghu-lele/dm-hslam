@@ -83,8 +83,6 @@ globalSettings(globalSettings_)
 
 	// Potential is the minimum block size for the selector
 	currentPotential=3;
-
-	debugPlot = false;
 }
 
 /**
@@ -223,8 +221,6 @@ int PixelSelector::makeMaps(
 		const FrameHessian* const fh,
 		float* map_out, float density, int recursionsLeft, float thFactor)
 {
-	debugPlot = globalSettings.setting_render_displayImmatureTracking;
-
 	float numHave = 0;
 	float numWant = density;
 	float quotia;
@@ -317,7 +313,8 @@ int PixelSelector::makeMaps(
 	int w = wG0;
 	int h = hG0;
 
-	if (debugPlot){
+#ifdef GRAPHICAL_DEBUG
+	if (globalSettings.setting_render_displayImmatureTracking){
 		MinimalImageB3 img(w,h);
 
 		for(int i=0;i<w*h;i++)
@@ -341,6 +338,7 @@ int PixelSelector::makeMaps(
 			}
 		if(!globalSettings.setting_disableAllDisplay) IOWrap::displayImage("Selector Pixels", &img);
 	}
+#endif
 
 	return numHaveSub;
 }

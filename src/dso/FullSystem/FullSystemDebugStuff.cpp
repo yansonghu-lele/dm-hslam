@@ -50,6 +50,7 @@
 
 namespace dso
 {
+#ifdef GRAPHICAL_DEBUG
 	void FullSystem::debugPlotTracking()
 	{
 		// Shows the points of each active frame in each active frame
@@ -98,13 +99,14 @@ namespace dso
 
 			char buf[100];
 			snprintf(buf, 100, "IMG %d", idx);
-			if(!globalSettings.setting_disableAllDisplay) IOWrap::displayImageStitch(buf, images);
+			if(!globalSettings.setting_disableAllDisplay) IOWrap::displayImageStitch(buf, images, globalSettings.setting_maxFrames);
 			idx++;
 		}
 		if(!globalSettings.setting_disableAllDisplay) IOWrap::waitKey(0);
 	}
+#endif
 
-
+#ifdef GRAPHICAL_DEBUG
 	void FullSystem::debugPlot(std::string name)
 	{
         dmvio::TimeMeasurement timeMeasurement("debugPlot");
@@ -301,7 +303,7 @@ namespace dso
 			}
 		}
 		if(!globalSettings.setting_disableAllDisplay) {
-			IOWrap::displayImageStitch(name.c_str(), images);
+			IOWrap::displayImageStitch(name.c_str(), images, globalSettings.setting_maxFrames);
 			IOWrap::waitKey(5);
 		}
 
@@ -343,4 +345,5 @@ namespace dso
 			}
 		}
 	}
+#endif
 }

@@ -38,10 +38,10 @@ void displayImage(const char* windowName, const MinimalImageF3* img, int autoSiz
 void displayImage(const char* windowName, const MinimalImageB16* img, int autoSize) {};
 
 
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*> images, int cc, int rc) {};
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageB3*> images, int cc, int rc) {};
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageF*> images, int cc, int rc) {};
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageF3*> images, int cc, int rc) {};
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*> images, int maxFrames, int cc, int rc) {};
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageB3*> images, int maxFrames, int cc, int rc) {};
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageF*> images, int maxFrames, int cc, int rc) {};
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageF3*> images, int maxFrames, nt cc, int rc) {};
 
 int waitKey(int milliseconds) {return 0;};
 void closeAllWindows() {};

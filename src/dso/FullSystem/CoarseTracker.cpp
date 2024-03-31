@@ -118,7 +118,7 @@ CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegrati
 
 	newFrame = 0;
 	lastRef = 0;
-	debugPlot = debugPrint = true;
+	debugPrint = true;
 	w[0]=h[0]=0;
 	refFrameID=-1;
 }
@@ -476,11 +476,14 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 
 
 	MinimalImageB3* resImage = 0;
-	if(debugPlot)
+
+#ifdef GRAPHICAL_DEBUG
+	if(globalSettings.setting_render_displayCoarseTrackingFull)
 	{
 		resImage = new MinimalImageB3(wl,hl);
 		resImage->setConst(Vec3b(255,255,255));
 	}
+#endif
 
 	int nl = pc_n[lvl];						// Number of points
 	float* lpc_u = pc_u[lvl];				// x coordinates of points
@@ -554,7 +557,9 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 		// Accumulate residuals
 		if(fabs(residual) > cutoffTH) // energy is too high
 		{
-			if(debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0,0,255));
+#ifdef GRAPHICAL_DEBUG
+			if(globalSettings.setting_render_displayCoarseTrackingFull) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0,0,255));
+#endif
 			// Add energy cutoff and note high energy point
 			E += maxEnergy;
 			numTermsInE++;
@@ -562,7 +567,9 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 		}
 		else // energy is within range
 		{
-			if(debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(residual+128,residual+128,residual+128));
+#ifdef GRAPHICAL_DEBUG
+			if(globalSettings.setting_render_displayCoarseTrackingFull) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(residual+128,residual+128,residual+128));
+#endif
 
 			E += hw*residual*residual*(2-hw); // Accumulate huber norm
 			numTermsInE++;
@@ -595,13 +602,14 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 	}
 	buf_warped_n = numTermsInWarped;
 
-
-	if(debugPlot&& !globalSettings.setting_disableAllDisplay)
+#ifdef GRAPHICAL_DEBUG
+	if(globalSettings.setting_render_displayCoarseTrackingFull&& !globalSettings.setting_disableAllDisplay)
 	{
 		IOWrap::displayImage("RES", resImage, 8);
 		IOWrap::waitKey(0);
 		delete resImage;
 	}
+#endif
 
 
 	Vec6 rs;
@@ -659,7 +667,6 @@ bool CoarseTracker::trackNewestCoarse(
 		Vec5 minResForAbort,
 		IOWrap::Output3DWrapper* wrap)
 {
-	debugPlot = globalSettings.setting_render_displayCoarseTrackingFull;
 	debugPrint = !setting_debugout_runquiet;
 
 	assert(coarsestLvl < 5 && coarsestLvl < globalSettings.pyrLevelsUsed);

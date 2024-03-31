@@ -100,7 +100,9 @@ public:
 	
 	void applyRes( bool copyJacobians);
 
+#ifdef GRAPHICAL_DEBUG
 	void debugPlot();
+#endif
 
 	void printRows(std::vector<VecX> &v, VecX &r, int nFrames, int nPoints, int M, int res);
 private:

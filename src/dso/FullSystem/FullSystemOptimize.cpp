@@ -511,7 +511,9 @@ float FullSystem::optimize(int mnumOptIts)
         printOptRes(lastEnergy, lastEnergyL, lastEnergyM, 0, 0, frameHessians.back()->aff_g2l().a, frameHessians.back()->aff_g2l().b);
     }
 
+#ifdef GRAPHICAL_DEBUG
 	debugPlotTracking();
+#endif
 
     double dynamicGTSAMWeight = 1.0;
     double minLambda = 1e-5;
@@ -685,7 +687,9 @@ float FullSystem::optimize(int mnumOptIts)
 	// imu!: Post optimization for BA
     baIntegration->postOptimization(ef->frames);
 
+#ifdef GRAPHICAL_DEBUG
 	debugPlotTracking();
+#endif
 
 	return statistics_lastFineTrackRMSE;
 }

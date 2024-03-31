@@ -57,8 +57,6 @@ public:
 	void makeThresTable(const FrameHessian* const fh);
 
 	int currentPotential;
-
-	bool debugPlot;
 private:
 	Eigen::Vector3i select(const FrameHessian* const fh,
 			float* map_out, int pot, float thFactor=1);

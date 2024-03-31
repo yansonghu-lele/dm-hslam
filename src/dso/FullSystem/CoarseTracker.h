@@ -64,7 +64,7 @@ public:
 	void makeK(
 			CalibHessian* HCalib);
 
-	bool debugPrint, debugPlot;
+	bool debugPrint;
 
 	int wG0;
 	int hG0;
