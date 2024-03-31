@@ -109,7 +109,7 @@ dmvio::IMUInitVariances dmvio::IMUInitializerLogic::performCoarseIMUInit(double 
         gtsam::Marginals marginals = coarseIMUOptimizer->getMarginals();
         variances = IMUInitVariances(marginals, gtsam::Symbol('s', 0), coarseIMUOptimizer->getBiasKey());
 
-        if(!dso::setting_debugout_runquiet){
+        if(!dso::setting_debugout_runquiet && !settings.no_IMUInit_debugMessage){
             std::cout << "CoarseIMUInit normalized error: " << result.normalizedError << " variance: " <<
                     variances.scaleVariance << " scale: " << transformDSOToIMU->getScale() << std::endl;
         }

@@ -77,7 +77,7 @@ CoarseInitializer::CoarseInitializer(int ww, int hh, GlobalSettings& globalSetti
 
 	frameID=-1;
 	fixAffine=true;
-	printDebug=false;
+	printDebug=!setting_debugout_runquiet;
 
 	wM.diagonal()[0] = wM.diagonal()[1] = wM.diagonal()[2] = SCALE_XI_ROT;
 	wM.diagonal()[3] = wM.diagonal()[4] = wM.diagonal()[5] = SCALE_XI_TRANS;
@@ -170,7 +170,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 		float eps = 1e-4;
 		int fails=0;
 
-		if(printDebug)
+		if(printDebug && !globalSettings.no_CoarseInit_debugMessage)
 		{
 			printf("lvl %d, it %d (l=%f) %s: %.3f+%.5f -> %.3f+%.5f (%.3f->%.3f) (|inc| = %f)! \t",
 					lvl, 0, lambda,
@@ -233,7 +233,7 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 
 			bool accept = eTotalOld > eTotalNew;
 
-			if(printDebug)
+			if(printDebug && !globalSettings.no_CoarseInit_debugMessage)
 			{
 				printf("lvl %d, it %d (l=%f) %s: %.5f + %.5f + %.5f -> %.5f + %.5f + %.5f (%.2f->%.2f) (|inc| = %f)! \t",
 						lvl, iteration, lambda,

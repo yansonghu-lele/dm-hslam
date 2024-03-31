@@ -76,7 +76,8 @@ globalSettings(globalSettings_)
         std::cout << "ERROR: Height or width seem to be not divisible by 16!" << std::endl;
         assert(0);
     }
-    if(!setting_debugout_runquiet) std::cout << "PixelSelector: Using block sizes: " << bW << ", " << bH << '\n';
+    if(!setting_debugout_runquiet && !globalSettings.no_Pixel_debugMessage)
+		std::cout << "PixelSelector: Using block sizes: " << bW << ", " << bH << '\n';
 
 	gradHistFrame = 0;
 
@@ -253,13 +254,12 @@ int PixelSelector::makeMaps(
 		if(idealPotential>=currentPotential)
 			idealPotential = currentPotential-1;
 
-#if DEBUG_MESSAGE_PIXELSELECTOR2
+	if(!setting_debugout_runquiet && !globalSettings.no_Pixel_debugMessage)
 		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
 				100*numHave/(float)(wG0*hG0),
 				100*numWant/(float)(wG0*hG0),
 				currentPotential,
 				idealPotential);
-#endif
 
 		currentPotential = idealPotential;
 		return makeMaps(fh,map_out, density, recursionsLeft-1, thFactor);
@@ -272,13 +272,13 @@ int PixelSelector::makeMaps(
 		if(idealPotential<=currentPotential)
 			idealPotential = currentPotential+1;
 
-#if DEBUG_MESSAGE_PIXELSELECTOR2
+	if(!setting_debugout_runquiet && !globalSettings.no_Pixel_debugMessage)
 		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
 				100*numHave/(float)(wG0*hG0),
 				100*numWant/(float)(wG0*hG0),
 				currentPotential,
 				idealPotential);
-#endif
+
 		currentPotential = idealPotential;
 		return makeMaps(fh,map_out, density, recursionsLeft-1, thFactor);
 	}
@@ -304,14 +304,13 @@ int PixelSelector::makeMaps(
 		}
 	}
 
-#if DEBUG_MESSAGE_PIXELSELECTOR2
-	printf("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
-			100*numHave/(float)(wG0*hG0),
-			100*numWant/(float)(wG0*hG0),
-			currentPotential,
-			idealPotential,
-			100*numHaveSub/(float)(wG0*hG0));
-#endif
+	if(!setting_debugout_runquiet && !globalSettings.no_Pixel_debugMessage)
+		printf("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
+				100*numHave/(float)(wG0*hG0),
+				100*numWant/(float)(wG0*hG0),
+				currentPotential,
+				idealPotential,
+				100*numHaveSub/(float)(wG0*hG0));
 
 	currentPotential = idealPotential;
 

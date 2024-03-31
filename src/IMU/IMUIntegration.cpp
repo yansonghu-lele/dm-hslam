@@ -111,7 +111,7 @@ IMUIntegration::IMUIntegration(dso::CalibHessian* HCalib, const IMUCalibration& 
 // return lastKeyframe to newKeyframe.
 Sophus::SE3d IMUIntegration::initCoarseGraph()
 {
-    if(!dso::setting_debugout_runquiet)
+    if(!dso::setting_debugout_runquiet && !imuSettings.no_IMU_debugMessage)
     {
         std::cout << "Prepared keyframe id: " << preparedKeyframe << std::endl;
     }
@@ -235,7 +235,7 @@ void IMUIntegration::prepareKeyframe(int frameId)
     // Make sure that the previous keyframe was finished!
     if(preparedKeyframe != -1 && !linearizeOperation)
     {
-        if(!dso::setting_debugout_runquiet)
+        if(!dso::setting_debugout_runquiet && !imuSettings.no_IMU_debugMessage)
         {
             std::cout << "Note: there is already a keyframe prepared! " << preparedKeyframe << std::endl;
         }

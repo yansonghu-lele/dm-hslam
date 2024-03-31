@@ -111,6 +111,8 @@ public:
     // Use the visual only system after scale has been fixed, which can be useful for debugging (only makes sense together with setting_scaleFixTH).
     // 1 means that also the gtsamIntegration is not used anymore, while 2 means that the gtsamIntegration is still used with IMUExtension removed.
     int setting_visualOnlyAfterScaleFixing = 0;
+
+    bool no_IMU_debugMessage = false;
 };
 
 // Contains IMU-Calibration and can read them from file.

@@ -322,7 +322,7 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 	sumT /= frameHessians.size();
 	sumNID /= numID;
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_Optimize_debugMessage)
         printf("STEPS: A %.1f; B %.1f; R %.1f; T %.1f. \t",
                 sqrtf(sumA) / (0.0005*globalSettings.setting_thOptIterations),
                 sqrtf(sumB) / (0.00005*globalSettings.setting_thOptIterations),
@@ -489,7 +489,7 @@ float FullSystem::optimize(int mnumOptIts)
 			numPoints++;
 		}
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_Optimize_debugMessage)
         printf("OPTIMIZE %d pts, %d active res, %d lin res!\n",ef->nPoints,(int)activeResiduals.size(), numLRes);
 
 
@@ -505,7 +505,7 @@ float FullSystem::optimize(int mnumOptIts)
 	else
 		applyRes_Reductor(true,0,activeResiduals.size(),0,0);
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_Optimize_debugMessage)
     {
         printf("Initial Error \t");
         printOptRes(lastEnergy, lastEnergyL, lastEnergyM, 0, 0, frameHessians.back()->aff_g2l().a, frameHessians.back()->aff_g2l().b);
@@ -538,7 +538,7 @@ float FullSystem::optimize(int mnumOptIts)
                                                                                                   (PATTERNNUM *
                                                                                                    ef->resInA))),
                                                                     frameHessians.back()->shell->trackingWasGood);
-            if(!setting_debugout_runquiet)
+            if(!setting_debugout_runquiet && !globalSettings.no_Optimize_debugMessage)
             {
                 std::cout << "Dynamic weight: " << dynamicGTSAMWeight << std::endl;
             }
@@ -579,7 +579,7 @@ float FullSystem::optimize(int mnumOptIts)
             dynamicGTSAMWeight = baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float)(lastEnergy[0] / (PATTERNNUM*ef->resInA))), frameHessians.back()->shell->trackingWasGood);
         }
 
-        if(!setting_debugout_runquiet)
+        if(!setting_debugout_runquiet && !globalSettings.no_Optimize_debugMessage)
         {
             printf("%s %d (L %.2f, dir %.2f, ss %.1f): \t",
 				(newEnergy[0] +  newEnergy[1] +  newEnergyL + newEnergyM / dynamicGTSAMWeight <
@@ -628,7 +628,7 @@ float FullSystem::optimize(int mnumOptIts)
 		if(canbreak && iteration >= globalSettings.setting_minOptIterations) break;
 	}
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_Optimize_debugMessage)
     {
         std::cout << "Num BA Iterations done: " << numIterations << "\n";
     }

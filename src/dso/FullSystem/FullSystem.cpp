@@ -616,7 +616,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 	if(coarseTracker->firstCoarseRMSE < 0)
 		coarseTracker->firstCoarseRMSE = achievedRes[0];
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         printf("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
 
 
@@ -672,7 +672,7 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
 
 		for(ImmaturePoint* ph : host->immaturePoints) // For all immature points in active host frame
 		{
-			ph->traceOn(fh, KRKi, Kt, aff, &Hcalib, false ); // trace the immature point
+			ph->traceOn(fh, KRKi, Kt, aff, &Hcalib, !setting_debugout_runquiet ); // trace the immature point
 
 			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_GOOD) trace_good++;
 			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_BADCONDITION) trace_badcondition++;
@@ -751,7 +751,7 @@ void FullSystem::activatePointsMT()
 	if(currentMinActDist < 0) currentMinActDist = 0;
 	if(currentMinActDist > 4) currentMinActDist = 4;
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         printf("SPARSITY:  MinActDist %f (need %d points, have %d points)!\n",
                 currentMinActDist, (int)(globalSettings.setting_desiredPointDensity), ef->nPoints);
 
@@ -1103,7 +1103,9 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
             {
                 // Maybe change first frame.
                 double timeBetweenFrames = fh->shell->timestamp - coarseInitializer->firstFrame->shell->timestamp;
-                if(!setting_debugout_runquiet) std::cout << "InitTimeBetweenFrames: " << timeBetweenFrames << std::endl;
+                if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage){
+					std::cout << "InitTimeBetweenFrames: " << timeBetweenFrames << std::endl;
+				}
 
 		// imu!: Time between frames cannot be too high or else the imu data will be inaccurate
                 if(timeBetweenFrames > imuIntegration.getImuSettings().maxTimeBetweenInitFrames)
@@ -1139,7 +1141,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			if(imuIntegration.setting_useIMU)
 			{
 			    // BA for new keyframe has finished and we have a new tracking reference.
-                if(!setting_debugout_runquiet)
+                if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
                 {
                     std::cout << "New ref frame id: " << coarseTracker->refFrameID << " prepared keyframe id: "
                               << imuIntegration.getPreparedKeyframe() << std::endl;
@@ -1231,7 +1233,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
                     (globalSettings.setting_maxTimeBetweenKeyframes > 0 && timeSinceLastKeyframe > globalSettings.setting_maxTimeBetweenKeyframes) || // Time between keyframes
                     forceKF;																							// IMU system needs keyframe
 
-			if(needToMakeKF && !setting_debugout_runquiet)
+			if(needToMakeKF && !setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
             {
                 std::cout << "Time since last keyframe: " << timeSinceLastKeyframe << std::endl;
             }
@@ -1260,7 +1262,8 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
             // Enforce globalSettings.setting_minFramesBetweenKeyframes.
             if(framesBetweenKFs < (int) globalSettings.setting_minFramesBetweenKeyframes) // if integer value is smaller we just skip.
             {
-                if(!setting_debugout_runquiet) std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
+                if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
+					std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
                 needToMakeKF = false;
             }
 			else if(framesBetweenKFs < globalSettings.setting_minFramesBetweenKeyframes) // Enforce it for non-integer values.
@@ -1269,7 +1272,8 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
                 framesBetweenKFsRest += fractionalPart;
                 if(framesBetweenKFsRest >= 1.0)
                 {
-                    if(!setting_debugout_runquiet) std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
+                    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
+						std::cout << "Skipping KF because of minFramesBetweenKeyframes." << std::endl;
                     needToMakeKF = false;
                     framesBetweenKFsRest--;
                 }
@@ -1319,7 +1323,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 
 	bool alreadyPreparedKF = imuIntegration.setting_useIMU && imuIntegration.getPreparedKeyframe() != -1 && !linearizeOperation;
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
     {
         std::cout << "Frame history size: " << allFrameHistory.size() << std::endl;
     }
@@ -1328,7 +1332,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
     {
         // imu!: PrepareKeyframe tells the IMU-Integration that this frame will become a keyframe. -> don' marginalize it during addIMUData.
         // Also resets the IMU preintegration for the BA.
-        if(!setting_debugout_runquiet)
+        if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         {
             std::cout << "Preparing keyframe: " << fh->shell->id << std::endl;
         }
@@ -1341,7 +1345,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
     }
 	else
 	{
-        if(!setting_debugout_runquiet)
+        if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         {
             std::cout << "Creating a non-keyframe: " << fh->shell->id << std::endl;
         }
@@ -1432,7 +1436,7 @@ void FullSystem::mappingLoop()
 		FrameHessian* fh = unmappedTrackedFrames.front();
 		unmappedTrackedFrames.pop_front();
 
-        if(!setting_debugout_runquiet)
+        if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         {
             std::cout << "Current mapping id: " << fh->shell->id << " create KF after: " << needNewKFAfter << std::endl;
         }
@@ -1459,7 +1463,7 @@ void FullSystem::mappingLoop()
 		{
 			if(imuIntegration.setting_useIMU && needNewKFAfter == fh->shell->id)
 			{
-                if(!setting_debugout_runquiet)
+                if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
                 {
                     std::cout << "WARNING: Prepared keyframe got skipped!" << std::endl;
                 }
@@ -1559,7 +1563,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 		fh->setEvalPT_scaled(fh->shell->camToWorld.inverse(),fh->shell->aff_g2l);
 		int prevKFId = fh->shell->trackingRef->id;
 		int framesBetweenKFs = fh->shell->id - prevKFId - 1;
-        if(!setting_debugout_runquiet)
+        if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         {
             std::cout << "Frames between KFs: " << framesBetweenKFs << std::endl;
         }
@@ -1780,13 +1784,14 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     float rescaleFactor = 1;
 	rescaleFactor = 1 / (sumID / numID);
     SE3 firstToNew = coarseInitializer->thisToNext;
-    if(!setting_debugout_runquiet) std::cout << "Scaling with rescaleFactor: " << rescaleFactor << std::endl;
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
+		std::cout << "Scaling with rescaleFactor: " << rescaleFactor << std::endl;
     firstToNew.translation() /= rescaleFactor;
 
 	// randomly sub-select the points
 	float keepPercentage = globalSettings.setting_desiredPointDensity / coarseInitializer->numPoints[0];
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100*keepPercentage,
                 (int)(globalSettings.setting_desiredPointDensity), coarseInitializer->numPoints[0] );
 
@@ -1834,7 +1839,8 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     imuIntegration.finishCoarseTracking(*(newFrame->shell), true);
 
     initialized=true;
-	if (!setting_debugout_runquiet) printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
+	if (!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
+		printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
 }
 
 
@@ -1899,7 +1905,7 @@ void FullSystem::printLogLine()
 	
 	if(frameHessians.size()==0) return;
 
-    if(!setting_debugout_runquiet)
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
         printf("LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%'d / %'d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
                 allKeyFramesHistory.back()->id,
                 statistics_lastFineTrackRMSE,

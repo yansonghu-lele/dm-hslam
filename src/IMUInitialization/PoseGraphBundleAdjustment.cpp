@@ -71,7 +71,7 @@ gtsam::Values dmvio::PoseGraphBundleAdjustment::optimize(gtsam::NonlinearFactor:
     if(!imuInitValues.empty())
     {
         transformDSOToIMU->updateWithValues(imuInitValues);
-        if(!dso::setting_debugout_runquiet){
+        if(!dso::setting_debugout_runquiet && !settings.no_PGBA_debugMessage){
             std::cout << "Updating transform with index " << transformDSOToIMU->getSymbolInd() << " to val: "
                     << transformDSOToIMU->getScale() << std::endl;
         }
@@ -98,7 +98,7 @@ gtsam::Values dmvio::PoseGraphBundleAdjustment::optimize(gtsam::NonlinearFactor:
     transformDSOToIMU->updateWithValues(newValues);
 
     double error = optimizer.error();
-    if(!dso::setting_debugout_runquiet){
+    if(!dso::setting_debugout_runquiet && !settings.no_PGBA_debugMessage){
         std::cout << "PGBA Error: " << error << std::endl;
     }
 
@@ -276,7 +276,7 @@ dmvio::PoseGraphBundleAdjustment::buildGraph(gtsam::NonlinearFactorGraph& graph,
 
     latestInd = preintegratedForKF.back().second;
 
-    if(!dso::setting_debugout_runquiet){
+    if(!dso::setting_debugout_runquiet && !settings.no_PGBA_debugMessage){
         std::cout << "PGBA: Built graph with " << numIMUFactors << " IMU factors " << "and " << numOptimizedPoses << " "
                                                                                                                     "poses."
                 << std::endl;

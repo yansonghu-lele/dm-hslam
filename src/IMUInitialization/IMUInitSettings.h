@@ -72,6 +72,9 @@ public:
 
     PoseTransformationFactor::ConversionType conversionType = PoseTransformationFactor::JACOBIAN_FACTOR;
     IMUTransformPriorSettings transformPriors;
+
+    // For debugging
+    bool no_PGBA_debugMessage = false;
 };
 
 class IMUThresholdSettings
@@ -122,6 +125,8 @@ public:
 
     // Setting for debugging. Do IMU initialization in separate thread, even if we are in non-realtime mode.
     bool multithreadedInitDespiteNonRT = false;
+
+    bool no_IMUInit_debugMessage = false;
 
 };
 

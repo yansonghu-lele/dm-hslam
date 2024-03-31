@@ -215,6 +215,13 @@ struct GlobalSettings{
     bool setting_render_renderWindowFrames=true;
     bool setting_render_plotTrackingFull = false;
 
+    bool no_CoarseInit_debugMessage = false; // Coarse Initilizer Debug messages
+    bool no_CoarseTracker_debugMessage = false; // Coarse Tracker Debug messages
+    bool no_FullSystem_debugMessage = false; // Fullsystem Debug messages 
+    bool no_Optimize_debugMessage = false; // Optimizer Debug messages
+    bool no_Pixel_debugMessage = false; // Pixel Selector and Immature Point Debug messages
+    bool no_GT_debugMessage = false; // GT Distance Debug messages
+
     bool setting_fullResetRequested = false;
 
     int setting_sparsityFactor = 5;	// not actually a setting, only some legacy stuff for coarse initializer.

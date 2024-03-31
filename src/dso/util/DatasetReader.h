@@ -351,7 +351,7 @@ public:
 	 * @param foundOut 
 	 * @return dmvio::GTData 
 	 */
-    dmvio::GTData getGTData(int id, bool &foundOut)
+    dmvio::GTData getGTData(int id, bool &foundOut, const bool& debug)
     {
         long long idReal = ids[id];
 		auto it = gtData.lower_bound(idReal); // Get GT value closest to idReal
@@ -378,7 +378,7 @@ public:
         }
 
 		double distSeconds = (double) dist * 1e-9;
-		if (!setting_debugout_runquiet) std::cout << "GTData distance (seconds): " << distSeconds << std::endl;
+		if (!setting_debugout_runquiet && debug) std::cout << "GTData distance (seconds): " << distSeconds << std::endl;
 
         if(distSeconds > 0.01)
         {

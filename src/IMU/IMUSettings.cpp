@@ -168,5 +168,7 @@ void IMUSettings::registerArgs(dmvio::SettingsUtil& set)
 
     set.registerArg("setting_visualOnlyAfterScaleFixing", setting_visualOnlyAfterScaleFixing);
 
+    set.registerArg("no_IMU_debugMessage", no_IMU_debugMessage);
+
     initSettings.registerArgs(set);
 }

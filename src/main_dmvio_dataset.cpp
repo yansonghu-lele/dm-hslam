@@ -244,7 +244,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         bool found = false;
         if(gtDataThere)
         {
-            data = reader->getGTData(i, found);
+            data = reader->getGTData(i, found, !globalSettings.no_GT_debugMessage);
         }
 
         // Send image and IMU data into the system

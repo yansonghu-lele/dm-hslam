@@ -35,6 +35,7 @@ void IMUInitSettings::registerArgs(dmvio::SettingsUtil& set, std::string prefix)
     set.registerArg(prefix + "scalePriorAfterInit", scalePriorAfterInit);
     set.registerArg(prefix + "disableVIOUntilFirstInit", disableVIOUntilFirstInit);
     set.registerArg(prefix + "multithreadedInitDespiteNonRT", multithreadedInitDespiteNonRT);
+    set.registerArg("no_IMUInit_debugMessage", no_IMUInit_debugMessage);
 
     transformPriors.registerArgs(set, prefix);
     coarseInitSettings.registerArgs(set, prefix);
@@ -75,6 +76,8 @@ void PGBASettings::registerArgs(dmvio::SettingsUtil& set, std::string prefix)
 
     set.registerArg(prefix + "prepareGraphAddFactors", prepareGraphAddFactors);
     set.registerArg(prefix + "prepareGraphAddDelValues", prepareGraphAddDelValues);
+
+    set.registerArg("no_PGBA_debugMessage", no_PGBA_debugMessage);
 
     transformPriors.registerArgs(set, prefix);
 }

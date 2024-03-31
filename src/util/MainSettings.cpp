@@ -154,4 +154,13 @@ void MainSettings::registerArgs(SettingsUtil& set, dso::GlobalSettings& globalSe
     set.registerArg("setting_desiredPointDensity", globalSettings.setting_desiredPointDensity);
     set.registerArg("setting_minFrames", globalSettings.setting_minFrames);
     set.registerArg("setting_maxFrames", globalSettings.setting_maxFrames);
+
+    // Debug message controller
+    // Turns off debug messages for functions in DSO
+    set.registerArg("no_CoarseInit_debugMessage", globalSettings.no_CoarseInit_debugMessage);
+    set.registerArg("no_CoarseTracker_debugMessage", globalSettings.no_CoarseTracker_debugMessage);
+    set.registerArg("no_FullSystem_debugMessage", globalSettings.no_FullSystem_debugMessage);
+    set.registerArg("no_Optimize_debugMessage", globalSettings.no_Optimize_debugMessage);
+    set.registerArg("no_Pixel_debugMessage", globalSettings.no_Pixel_debugMessage);
+    set.registerArg("no_GT_debugMessage", globalSettings.no_GT_debugMessage);
 }

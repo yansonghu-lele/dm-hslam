@@ -693,7 +693,7 @@ bool CoarseTracker::trackNewestCoarse(
 			levelCutoffRepeat*=2;
 			resOld = calcRes(lvl, refToNew_current, aff_g2l_current, globalSettings.setting_coarseCutoffTH*levelCutoffRepeat);
 
-			if(!setting_debugout_runquiet)
+			if(!setting_debugout_runquiet && !globalSettings.no_CoarseTracker_debugMessage)
 				printf("INCREASING cutoff to %f (ratio is %f)!\n", globalSettings.setting_coarseCutoffTH*levelCutoffRepeat, resOld[5]);
 		}
 
@@ -702,7 +702,7 @@ bool CoarseTracker::trackNewestCoarse(
 
 		float lambda = 0.01;
 
-		if(debugPrint)
+		if(debugPrint && !globalSettings.no_CoarseTracker_debugMessage)
 		{
 			Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l, aff_g2l_current).cast<float>();
 			printf("lvl%d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
@@ -813,7 +813,7 @@ bool CoarseTracker::trackNewestCoarse(
 			// Accept if residual energy per point lowers
 			bool accept = (resNew[0] / resNew[1]) < (resOld[0] / resOld[1]);
 
-			if(debugPrint)
+			if(debugPrint && !globalSettings.no_CoarseTracker_debugMessage)
 			{
 				Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l, aff_g2l_new).cast<float>();
 				printf("lvl %d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
@@ -851,7 +851,7 @@ bool CoarseTracker::trackNewestCoarse(
 
 			if(!(incNorm > 1e-3)) // break if increment is too small
 			{
-				if(debugPrint)
+				if(debugPrint && !globalSettings.no_CoarseTracker_debugMessage)
 					printf("inc too small, break!\n");
 				break;
 			}
@@ -870,7 +870,7 @@ bool CoarseTracker::trackNewestCoarse(
 		{
 			lvl++;
 			haveRepeated=true;
-			if(!setting_debugout_runquiet) printf("REPEAT LEVEL!\n");
+			if(!setting_debugout_runquiet && !globalSettings.no_CoarseTracker_debugMessage) printf("REPEAT LEVEL!\n");
 		}
 	}
 

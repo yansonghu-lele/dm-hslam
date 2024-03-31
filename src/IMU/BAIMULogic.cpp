@@ -397,7 +397,7 @@ void dmvio::BAIMULogic::acceptUpdate(gtsam::Values::shared_ptr values, gtsam::Va
     if(optimizeScale && !scaleFixed)
     {
         double newScale = transformDSOToIMU->getScale();
-        if(!dso::setting_debugout_runquiet)
+        if(!dso::setting_debugout_runquiet && !imuSettings.no_IMU_debugMessage)
         {
             std::cout << "Optimized scale: " << newScale << end;
         }

@@ -36,8 +36,6 @@
 // Fixed to 100 to get a resolution of 1%
 #define NUM_BINS 100
 
-#define DEBUG_MESSAGE_PIXELSELECTOR2 0
-
 
 
 namespace dso
