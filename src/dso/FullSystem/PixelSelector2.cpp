@@ -34,6 +34,7 @@
 #include "FullSystem/HessianBlocks.h"
 #include "util/globalFuncs.h"
 
+# include <stdint.h>
 
 
 namespace dso
@@ -81,6 +82,10 @@ globalSettings(globalSettings_)
 
 	gradHistFrame = 0;
 
+	// For historgram correction
+	gradHistInterceptA = (-0.5f)+sqrt(1.0f+4.0f*globalSettings.setting_GradHistCorrect)/2.0f;
+	gradHistInterceptB = globalSettings.setting_GradHistCorrect/gradHistInterceptA;
+
 	// Potential is the minimum block size for the selector
 	currentPotential=3;
 }
@@ -107,13 +112,27 @@ PixelSelector::~PixelSelector()
  */
 inline float computeHistQuantile(const std::array <int, NUM_BINS>& hist, const float& quantile, const int& num_vals)
 {
-	int th = num_vals*quantile+0.5f;
+	int th = num_vals*quantile;
 	for(int i=0;i<NUM_BINS;i++)
 	{
 		th -= hist[i];
-		if(th<0) return (i)/NUM_BINS;
+		if(th<0){
+			return (static_cast<float>(i)/NUM_BINS);
+		}
 	}
 	return 0.99f;
+}
+
+// Fast inverse square root
+float Q_rsqrt(float number)
+{
+	union {
+		float    f;
+		uint32_t i;
+	} conv = { .f = number };
+	conv.i  = 0x5f3759df - (conv.i >> 1);
+	conv.f *= 1.5F - (number * 0.5F * conv.f * conv.f);
+	return conv.f;
 }
 
 /**
@@ -144,14 +163,14 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 	int num_hist_values;
 
 	// For each grid
-	for(int y=0;y<h32;y++)
+	for(int y=0;y<h32;y++){
 		for(int x=0;x<w32;x++)
 		{
 			float* map0 = mapmax0+bW*x+bH*y*w;
 
 			std::fill(std::begin(gradHist), std::end(gradHist), 0);
-			num_hist_values = 0;
 
+			num_hist_values = 0;
 			// Create histogram for specific grid
 			// Each histogram bin has bH*bW float intensity values between 0 and 1
 			// For each values in a grid
@@ -163,17 +182,33 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 				// Ignore border because gradients can't be calculated at the border properly
 				if(it>w-2 || jt>h-2 || it<1 || jt<1) continue;
 
-				int g = map0[i+j*w]*2.5f;
-				if (g > 1) g = 1;
-				g = g*NUM_BINS + 0.5f;
-
-				gradHist[g] = gradHist[g]+1;
+				float g = map0[i+j*w];
+				// Apply pseudo histogram correction
+				if(g<0) g = 0;
+				g = Q_rsqrt(-globalSettings.setting_GradHistCorrect/(g+gradHistInterceptA)+gradHistInterceptB);
+				if(g>0) g = 1.0f/g;
+				else g = 0.0f;
+				// Update histogram
+				int g_int = static_cast<int>(g*NUM_BINS);
+				if(g_int >= NUM_BINS) g_int = NUM_BINS-1;
+				gradHist[g_int] = gradHist[g_int]+1;
 				num_hist_values++;
+			}
+
+			if(!setting_debugout_runquiet && !globalSettings.no_Pixel_debugMessage){
+				printf("size: %i\n", num_hist_values);
+				for (size_t i = 0; i < NUM_BINS; i++)
+				{
+					printf("%i|", gradHist[i]);
+				}
+				printf("\n");
 			}
 
 			// Calculate approximate threshold
 			ths[x+y*w32] = computeHistQuantile(gradHist, globalSettings.setting_minGradHistCut, num_hist_values) + globalSettings.setting_minGradHistAdd;
 		}
+	}
+	
 
 	// Smooth out the quantiles using a box kernel
 	// The conditons are used to handle border conditions
@@ -199,8 +234,18 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 			if(y<h32-1) {num++; 	sum+=ths[x+(y+1)*w32];}
 			num++; sum+=ths[x+y*w32];
 
-			thsSmoothed[x+y*w32] = (sum/num);
+			thsSmoothed[x+y*w32] = (sum/num) * (sum/num);
 		}
+
+	if(!setting_debugout_runquiet && !globalSettings.no_Pixel_debugMessage){
+		printf("Threshold Map\n");
+		for (size_t i = 0; i < (nbW)*(nbH); i++)
+		{
+			if(i%nbW==0) printf("\n");
+			printf("%.1f ", thsSmoothed[i]*100);
+		}
+		printf("\n");
+	}
 }
 
 /**
@@ -440,8 +485,9 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					float pixelTH1 = pixelTH0*dw1;
 					float pixelTH2 = pixelTH1*dw2;
 
-					float ag0 = mapmax0[idx]*2.5;
-					if(ag0 > 1) ag0 = 1;
+
+					float ag0 = mapmax0[idx];
+					ag0 = -globalSettings.setting_GradHistCorrect/(ag0+gradHistInterceptA)+gradHistInterceptB;
 
 					if(ag0 > pixelTH0*thFactor)
 					{
@@ -454,8 +500,10 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					}
 					if(bestIdx3==-2) continue; // Invaliate grid for 2nd and 3rd grid levels
 
-					float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1]*2.5;
-					if(ag1 > 1) ag1 = 1;
+
+					float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1];
+					ag1 = -globalSettings.setting_GradHistCorrect/(ag1+gradHistInterceptA)+gradHistInterceptB;
+
 					if(ag1 > pixelTH1*thFactor)
 					{
 						Vec2f ag0d = map0[idx].tail<2>();
@@ -467,8 +515,10 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 					}
 					if(bestIdx4==-2) continue; // Invaliate grid for 3rd grid level
 
-					float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2]*2.5;
-					if(ag2 > 1) ag2 = 1;
+
+					float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2];
+					ag2 = -globalSettings.setting_GradHistCorrect/(ag2+gradHistInterceptA)+gradHistInterceptB;
+
 					if(ag2 > pixelTH2*thFactor)
 					{
 						Vec2f ag0d = map0[idx].tail<2>();

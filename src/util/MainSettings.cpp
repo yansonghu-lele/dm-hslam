@@ -154,6 +154,9 @@ void MainSettings::registerArgs(SettingsUtil& set, dso::GlobalSettings& globalSe
     set.registerArg("setting_desiredPointDensity", globalSettings.setting_desiredPointDensity);
     set.registerArg("setting_minFrames", globalSettings.setting_minFrames);
     set.registerArg("setting_maxFrames", globalSettings.setting_maxFrames);
+    set.registerArg("setting_GradHistCorrect", globalSettings.setting_GradHistCorrect);
+    set.registerArg("setting_minGradHistAdd", globalSettings.setting_minGradHistAdd);
+    set.registerArg("setting_minGradHistCut", globalSettings.setting_minGradHistCut);
 
     // Debug message controller
     // Turns off debug messages for functions in DSO

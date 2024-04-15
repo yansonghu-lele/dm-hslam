@@ -172,7 +172,7 @@ void PangolinDSOViewer::run()
 	pangolin::Var<int> settings_nCandidates("ui.pointCandidates",globalSettings.setting_desiredImmatureDensity, 50,5000, false);
 	pangolin::Var<int> settings_nMaxFrames("ui.maxFrames",globalSettings.setting_maxFrames, 4,10, false);
 	pangolin::Var<double> settings_kfFrequency("ui.kfFrequency",globalSettings.setting_kfGlobalWeight,0.1,3, false);
-	pangolin::Var<double> settings_gradHistAdd("ui.minGradAdd",globalSettings.setting_minGradHistAdd,0,0.1, false);
+	pangolin::Var<double> settings_gradHistAdd("ui.minGradAdd",globalSettings.setting_minGradHistAdd,0,1, false);
 	pangolin::Var<double> settings_gradHistCut("ui.minGradCut",globalSettings.setting_minGradHistCut,0,1, false);
 
 	pangolin::Var<double> settings_trackFps("ui.Track fps",0,0,0,false);

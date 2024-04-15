@@ -31,7 +31,7 @@
 #include <string>
 #include <cmath>
 
-// #define GRAPHICAL_DEBUG
+#define GRAPHICAL_DEBUG
 
 
 
@@ -169,8 +169,9 @@ struct GlobalSettings{
 
 
     // parameters controlling pixel selection
-    float setting_minGradHistCut = 0.5;
-    float setting_minGradHistAdd = 0.005;
+    float setting_minGradHistCut = 0.6;
+    float setting_minGradHistAdd = 0.25;
+    float setting_GradHistCorrect = 0.015625;
     float setting_gradDownweightPerLevel = 0.75;
     bool  setting_selectDirectionDistribution = true;
 

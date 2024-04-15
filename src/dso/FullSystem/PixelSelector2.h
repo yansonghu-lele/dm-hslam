@@ -33,8 +33,8 @@
 
 // Because histogram is only used to calculate quartiles
 // Number of bins only affects quartile resolution
-// Fixed to 100 to get a resolution of 1%
-#define NUM_BINS 100
+// Ex: 100 to get a resolution of 1%
+#define NUM_BINS 50
 
 
 
@@ -79,6 +79,10 @@ private:
 	int bW, bH;
 	// number of blocks in x and y dimension.
 	int nbW, nbH;
+
+	// Variable for Pseudo Histogram Correction
+	float gradHistInterceptA;
+	float gradHistInterceptB;
 };
 
 }

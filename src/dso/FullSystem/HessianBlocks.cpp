@@ -223,7 +223,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 			dI_l[idx][2] = dy;
 
 			// Absolute max value for gradient is 32512.5
-			dabs_l[idx] = dx*dx+dy*dy;
+			dabs_l[idx] = (dx*dx+dy*dy)/32512.5;
 
 			if(globalSettings.setting_gammaWeightsPixelSelect==1 && HCalib!=0)
 			{
@@ -231,9 +231,6 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 				// convert to gradient of original color space (before removing response) by correcting gamma
 				dabs_l[idx] *= gw*gw;
 			}
-
-			// Normalize to 0-1
-			dabs_l[idx] = dabs_l[idx]/32512.5;
 		}
 	}
 }
