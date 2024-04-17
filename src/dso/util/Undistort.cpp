@@ -541,9 +541,9 @@ template<typename T>
 void Undistort::undistort_colour(MinimalImage<T>* r_image, MinimalImage<T>* g_image, MinimalImage<T>* b_image, ImageAndExposure* out_image, float exposure, double timestamp, float factor)
 {
 	MinimalImage<T>* channels[3];
-	channels[0] = r_image;
+	channels[0] = b_image;
 	channels[1] = g_image;
-	channels[2] = b_image;
+	channels[2] = r_image;
 	float* out_channels[3];
 	out_channels[0] = out_image->r_image;
 	out_channels[1] = out_image->g_image;

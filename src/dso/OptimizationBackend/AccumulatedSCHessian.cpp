@@ -114,11 +114,11 @@ void AccumulatedSCHessianSSE::stitchDoubleInternal(
 
 
 
-		for(int k=0;k<nf;k++)
+		for(int l=0;l<nf;l++)
 		{
-			int kIdx = CPARS+k*8;
-			int ijkIdx = ijIdx + k*nframes2;
-			int ikIdx = i+nf*k;
+			int kIdx = CPARS+l*8;
+			int ijkIdx = ijIdx + l*nframes2;
+			int ikIdx = i+nf*l;
 
 			Mat88 accDM = Mat88::Zero();
 

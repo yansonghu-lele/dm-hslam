@@ -284,7 +284,7 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 
 		if(var > my_absTH) continue;
 
-		// All imature points have a placeholder relObsBaseline of 0, so they are excluded from this check
+		// All immature points have a placeholder relObsBaseline of 0, so they are excluded from this check
 		if((originalInputSparse[i].relObsBaseline < my_minRelBS) && (originalInputSparse[i].status != 0)) continue;
 		bool useColour = originalInputSparse[i].colourValid;
 

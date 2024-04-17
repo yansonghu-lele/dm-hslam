@@ -338,7 +338,7 @@ void FullSystem::printPC(std::string file)
 	myfile << std::string("DATA ascii\n");
 	
 	std::unordered_map<unsigned long, PC_output>::iterator itr; 
-	for (itr = allMargPointsHistory.begin(); itr != allMargPointsHistory.end(); itr++)  
+	for (itr = allMargPointsHistory.begin(); itr != allMargPointsHistory.end(); ++itr)  
 	{
 		PC_output tmp_PC = itr->second;
 		float rgb;

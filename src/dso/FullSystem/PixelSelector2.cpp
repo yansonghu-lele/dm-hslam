@@ -355,10 +355,10 @@ int PixelSelector::makeMaps(
 
 	currentPotential = idealPotential;
 
+#ifdef GRAPHICAL_DEBUG
 	int w = wG0;
 	int h = hG0;
 
-#ifdef GRAPHICAL_DEBUG
 	if (globalSettings.setting_render_displayImmatureTracking){
 		MinimalImageB3 img(w,h);
 
