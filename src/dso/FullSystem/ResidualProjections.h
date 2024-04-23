@@ -113,7 +113,7 @@ EIGEN_STRONG_INLINE bool projectPoint(
 		float &Ku, float &Kv, Vec3f &KliP, float &new_idepth,
 		int ww, int hh)
 {
-	// Convert to projective coordinates
+	// Convert to 3D coordinates
 	KliP = Vec3f(
 			(u_pt+dx-HCalib->cxl())*HCalib->fxli(),
 			(v_pt+dy-HCalib->cyl())*HCalib->fyli(),

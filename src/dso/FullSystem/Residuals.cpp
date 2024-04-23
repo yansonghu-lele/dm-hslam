@@ -249,6 +249,7 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
 			J->resF[idx] = residual*hw;
 
+			// Calculate Jacobian of pixel intensities
 			J->JIdx[0][idx] = hitColor[1];
 			J->JIdx[1][idx] = hitColor[2];
 
