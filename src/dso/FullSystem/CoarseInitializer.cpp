@@ -382,6 +382,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 		bool plot)
 {
 	int wl = w[lvl], hl = h[lvl];
+	// Get pixel intensities
 	Eigen::Vector3f* colorRef = firstFrame->dIp[lvl];
 	Eigen::Vector3f* colorNew = newFrame->dIp[lvl];
 
@@ -396,6 +397,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 	float cxl = cx[lvl];
 	float cyl = cy[lvl];
 
+	// Intialize accumulators
 	for(auto&& acc9 : acc9s)
 	{
 		acc9.initialize();
@@ -477,6 +479,8 @@ Vec3f CoarseInitializer::calcResAndGS(
 
 
 				// Calculate residual
+				// Note that exposure is not included because first frame
+				// has no exposure ratio to compare to
 				float residual = hitColor[0] - r2new_aff[0] * rlR - r2new_aff[1];
 
 				// Huber loss
@@ -485,13 +489,14 @@ Vec3f CoarseInitializer::calcResAndGS(
 
 
 				// Calculate Hessian
-
 				float dxdd = (t[0] - t[2] * u) / pt[2];
 				float dydd = (t[1] - t[2] * v) / pt[2];
 
 				if(hw < 1) hw = sqrtf(hw); // huber weight
+				// Pixel Intensity derivatives
 				float dxInterp = hw * hitColor[1] * fxl;
 				float dyInterp = hw * hitColor[2] * fyl;
+				
 				dp0[idx] = new_idepth * dxInterp;						// inverse_depth * dx
 				dp1[idx] = new_idepth * dyInterp;						// inverse_depth * dy
 				dp2[idx] = -new_idepth * (u * dxInterp + v * dyInterp);	// inverse_depth* (u*dx + v*dy)
@@ -501,7 +506,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 				dp6[idx] = -hw * r2new_aff[0] * rlR;					// a * (b0 - I)
 				dp7[idx] = -hw * 1;										// -1
 				dd[idx] = dxInterp * dxdd + dyInterp * dydd;
-				r[idx] = hw * residual;									// residual energy				
+				r[idx] = hw * residual;									// residual energy		
 
 				float maxstep = 1.0f / Vec2f(dxdd * fxl, dydd * fyl).norm();
 				if(maxstep < point->maxstep) point->maxstep = maxstep;

@@ -204,17 +204,20 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 		}
 	}
 
-	// Adjustments on depth values
+	// Set values on every pytamid level and filtering
 
+	// Set the values at every pyramid level
 	// Do a 2 by 2 box kernal convolution on the depth and weight values
 	for(int lvl=1; lvl<globalSettings.pyrLevelsUsed; lvl++) // for all levels
 	{
 		int lvlm1 = lvl-1;
 		int wl = w[lvl], hl = h[lvl], wlm1 = w[lvlm1];
 
+		// Current level is set
 		float* idepth_l = idepth[lvl];
 		float* weightSums_l = weightSums[lvl];
 
+		// Values are obtained from the last level
 		float* idepth_lm = idepth[lvlm1];
 		float* weightSums_lm = weightSums[lvlm1];
 
@@ -236,7 +239,8 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	}
 
 
-	// dilate depth and weight by 1
+	// Interpolate values to areas without depth
+	// Only done at higher resolutions
 	for(int lvl=0; lvl<2; lvl++)
 	{
 		int numIts = 1;
@@ -252,12 +256,12 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 			float* idepthl = idepth[lvl];	// don't need to make a temp copy of depth, since the code only
 											// reads values with weightSumsl>0, and write ones with weightSumsl<=0.
 			
-			for(int i=w[lvl]+1;i<wh-1;i++) // dilate on frame area excluding border
+			for(int i=w[lvl]+1;i<wh-1;i++) // frame area excluding border
 			{
 				if(weightSumsl_bak[i] <= 0)
 				{
 					float sum=0, num=0, numn=0;
-					// Dilation matrix is a X shape
+					// Averaging matrix is a X shape
 					if(weightSumsl_bak[i+1+wl] > 0) { sum += idepthl[i+1+wl]; num+=weightSumsl_bak[i+1+wl]; numn++;}
 					if(weightSumsl_bak[i-1-wl] > 0) { sum += idepthl[i-1-wl]; num+=weightSumsl_bak[i-1-wl]; numn++;}
 					if(weightSumsl_bak[i+wl-1] > 0) { sum += idepthl[i+wl-1]; num+=weightSumsl_bak[i+wl-1]; numn++;}
@@ -269,7 +273,8 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	}
 
 
-	// dilate idepth by 1 (2 on lower levels).
+	// Interpolate values to areas without depth part 2
+	// Only done at higher resolutions
 	for(int lvl=2; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		int wh = w[lvl]*h[lvl]-w[lvl];
@@ -281,12 +286,12 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 		float* idepthl = idepth[lvl];	// don't need to make a temp copy of depth, since the code only
 										// reads values with weightSumsl>0, and write ones with weightSumsl<=0.
 		
-		for(int i=w[lvl]+1;i<wh-1;i++) // dilate on frame area excluding border
+		for(int i=w[lvl]+1;i<wh-1;i++) // frame area excluding border
 		{
 			if(weightSumsl_bak[i] <= 0)
 			{
 				float sum=0, num=0, numn=0;
-				// Dilation matrix is a + shape
+				// Averaging matrix is a + shape
 				if(weightSumsl_bak[i+1] > 0) { sum += idepthl[i+1]; num+=weightSumsl_bak[i+1]; numn++;}
 				if(weightSumsl_bak[i-1] > 0) { sum += idepthl[i-1]; num+=weightSumsl_bak[i-1]; numn++;}
 				if(weightSumsl_bak[i+wl] > 0) { sum += idepthl[i+wl]; num+=weightSumsl_bak[i+wl]; numn++;}
@@ -319,7 +324,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 			{
 				int i = x+y*wl;
 
-				// Add the active frames to the point list
+				// Add the active points to the point list
 				if(weightSumsl[i] > 0)
 				{
 					idepthl[i] /= weightSumsl[i];
@@ -350,6 +355,9 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
  * 
  * Calculates H = J^T*W*J and b = -J^T*W*r
  * where J is the jacobian, W is the weights, and r is the stack residual vector
+ * 
+ * The varaibles being optimized are [w1, w2, w3, d1, d2, d3, a, b]
+ * Point depths and calibration matrix variables are considered fixed
  * 
  * @param lvl 
  * @param H_out 
@@ -391,8 +399,10 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 		// Accumulate matrix
 		// Sum of all of the values multiplied with each other in every combination
 		acc.updateSSE_eighted(
-				_mm_mul_ps(id,dx), // inverse_depth * dx
-				_mm_mul_ps(id,dy), // inverse_depth * dy
+				// inverse_depth * dx
+				_mm_mul_ps(id,dx),
+				// inverse_depth * dy
+				_mm_mul_ps(id,dy),
 				// inverse_depth* (u*dx + v*dy)
 				_mm_sub_ps(zero, _mm_mul_ps(id,_mm_add_ps(_mm_mul_ps(u,dx), _mm_mul_ps(v,dy)))),
 				// -dx * (u*v) - dy * (1 + v^2)
@@ -405,11 +415,14 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 						_mm_mul_ps(dx,_mm_add_ps(one, _mm_mul_ps(u,u)))),
 				// dy * u - dx * v
 				_mm_sub_ps(_mm_mul_ps(u,dy), _mm_mul_ps(v,dx)),
-				// a * (b0 - I)
+				// a * (b0 - I) = (dE/da)
 				_mm_mul_ps(a,_mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor+i))),
-				minusOne, // -1
-				_mm_load_ps(buf_warped_residual+i), // Residual Energy
-				_mm_load_ps(buf_warped_weight+i));	// weights
+				// -1  = (dE/db)
+				minusOne,
+				// Residual Energy before huber loss
+				_mm_load_ps(buf_warped_residual+i),
+				// Huber loss is implemented by multiplying by the huber weight
+				_mm_load_ps(buf_warped_weight+i));
 	}
 
 	acc.finish(); // Set the H and b matrix from the accumulated values
@@ -459,6 +472,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 	float fyl = fy[lvl];
 	float cxl = cx[lvl];
 	float cyl = cy[lvl];
+	
 	// Target frame is the newly inserted frame
 	Eigen::Vector3f* dINewl = newFrame->dIp[lvl];
 
@@ -472,7 +486,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 	float sumSquaredShiftRT=0;
 	float sumSquaredShiftNum=0;
 
-	float maxEnergy = 2*globalSettings.setting_huberTH*cutoffTH-globalSettings.setting_huberTH*globalSettings.setting_huberTH;	// energy for r=setting_coarseCutoffTH.
+	// energy for r=setting_coarseCutoffTH
+	float maxEnergy = 2*globalSettings.setting_huberTH*cutoffTH-globalSettings.setting_huberTH*globalSettings.setting_huberTH;
 
 
 	MinimalImageB3* resImage = 0;
@@ -509,7 +524,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 		float Kv = fyl * v + cyl;
 		float new_idepth = id/pt[2];
 
-		// Cacluate overall shift by sampling some points
+		// Cacluate overall flow indicators by sampling some points
+		// Flow estimates are for keyframe selection
 		if(lvl==0 && i%32==0)
 		{
 			// translation only (positive)
@@ -578,9 +594,9 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 			buf_warped_idepth[numTermsInWarped] = new_idepth;		// inverse depth
 			buf_warped_u[numTermsInWarped] = u;						// new horizontal position
 			buf_warped_v[numTermsInWarped] = v;						// new vertical position
-			buf_warped_dx[numTermsInWarped] = hitColor[1];			// x derivative
-			buf_warped_dy[numTermsInWarped] = hitColor[2];			// y derivative
-			buf_warped_residual[numTermsInWarped] = residual;		// energy residual
+			buf_warped_dx[numTermsInWarped] = hitColor[1];			// pixel intensity x derivative
+			buf_warped_dy[numTermsInWarped] = hitColor[2];			// pixel intensity y derivative
+			buf_warped_residual[numTermsInWarped] = residual;		// non huber energy residual
 			buf_warped_weight[numTermsInWarped] = hw;				// huber weight
 			buf_warped_refColor[numTermsInWarped] = lpc_color[i];	// pixel intensity in reference image
 			numTermsInWarped++;
@@ -705,6 +721,8 @@ bool CoarseTracker::trackNewestCoarse(
 		}
 
 		// Calculate H and b for Gauss Newton Optimization
+		// Coarse tracker only optimizes the pose and photometric variables
+		// point depths and the calibration matrix are not optimized
 		calcGSSSE(lvl, H, b, refToNew_current, aff_g2l_current);
 
 		float lambda = 0.01;
