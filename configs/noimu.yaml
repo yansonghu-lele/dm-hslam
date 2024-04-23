@@ -1,0 +1,4 @@
+parent: /preset0.yaml
+setting_minGradHistAdd: 0.4
+setting_minGradHistCut: 0.5
+setting_minGradHistCut: 0.015625

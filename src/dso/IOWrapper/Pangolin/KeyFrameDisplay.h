@@ -62,12 +62,6 @@ struct InputPointSparse
 	unsigned char status;
 };
 
-struct MyVertex
-{
-	float point[3];
-	unsigned char color[4];
-};
-
 // stores a pointcloud associated to a Keyframe.
 class KeyFrameDisplay
 {

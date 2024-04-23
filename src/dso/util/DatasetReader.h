@@ -93,17 +93,17 @@ struct PrepImageItem
 	bool isQueud;
 	ImageAndExposure* pt;
 
-	inline PrepImageItem(int _id)
+	explicit inline PrepImageItem(int _id)
 	{
 		id=_id;
 		isQueud = false;
-		pt=0;
+		pt=nullptr;
 	}
 
 	inline void release()
 	{
-		if(pt!=0) delete pt;
-		pt=0;
+		if(pt!=nullptr) delete pt;
+		pt=nullptr;
 	}
 };
 

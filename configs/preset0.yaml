@@ -1,3 +1,4 @@
+parent: /base_debug.yaml
 setting_desiredImmatureDensity: 1500
 setting_desiredPointDensity: 1000
 setting_minFrames: 5

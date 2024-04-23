@@ -61,8 +61,9 @@ KeyFrameDisplay::KeyFrameDisplay(int w, int h) :
 	my_sparsifyFactor(1),
 	numGLBufferPoints(0),
 	bufferValid(false),
-	wG0(w),
-	hG0(h) {}
+	wG0(w), hG0(h), height (0), width (0), 
+	my_scale (0), cyi (0), cxi (0), fyi(0), fxi(0),
+	cx (-1), cy (-1), fx(-1), fy(-1) {}
 	
 void KeyFrameDisplay::setFromF(FrameShell* frame, CalibHessian* HCalib)
 {

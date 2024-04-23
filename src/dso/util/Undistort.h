@@ -71,7 +71,13 @@ class Undistort
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-	Undistort(GlobalSettings& globalSetting_) : globalSettings(globalSetting_){};
+	Undistort(GlobalSettings& globalSetting_) : 
+		globalSettings(globalSetting_),
+		remapX(nullptr), remapY(nullptr),
+		passthrough(false), valid(false),
+		upsampleUndistFactor(0),
+		w(0), h(0), wOrg(0), hOrg(0), wUp(0), hUp(0)
+	{};
 	virtual ~Undistort();
 
 	virtual void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const = 0;
@@ -123,7 +129,7 @@ public:
 
     UndistortFOV(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
 	~UndistortFOV();
-	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
+	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const override;
 };
 
 
@@ -134,7 +140,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     UndistortRadTan(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
     ~UndistortRadTan();
-    void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
+    void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const override;
 };
 
 
@@ -145,7 +151,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     UndistortEquidistant(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
     ~UndistortEquidistant();
-    void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
+    void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const override;
 };
 
 
@@ -156,7 +162,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     UndistortPinhole(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
 	~UndistortPinhole();
-	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
+	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const override;
 
 
 private:
@@ -171,7 +177,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     UndistortKB(const char* configFileName, bool noprefix, GlobalSettings& globalSetting);
 	~UndistortKB();
-	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const;
+	void distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const override;
 };
 
 }
