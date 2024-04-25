@@ -95,7 +95,6 @@ void MainSettings::parseArguments(int argc, char** argv, SettingsUtil& settingsU
         globalSettings.setting_photometricCalibration = 0;
         globalSettings.setting_affineOptModeA = -1; //-1: fix. >=0: optimize (with prior, if > 0).
         globalSettings.setting_affineOptModeB = -1; //-1: fix. >=0: optimize (with prior, if > 0).
-        globalSettings.setting_minGradHistAdd = 0.25;
     }
     if(mode == 3)
     {

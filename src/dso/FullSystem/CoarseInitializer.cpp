@@ -212,9 +212,12 @@ bool CoarseInitializer::trackFrame(FrameHessian *newFrameHessian, std::vector<IO
 				inc = -(wM * (Hl.ldlt().solve(bl)));    // = -H^-1 * b.
 			double incNorm = inc.norm();
 
-			// Calculate new photometric values
+			// Calculate new values
+			// First size values of inc are the translation and rotation (SE3 matrix)
 			refToNew_new = SE3::exp(inc.head<6>().cast<double>()) * refToNew_current;
 
+			// Calculate new photometric values
+			// Last two values of the inc are the photometric values
 			AffLight refToNew_aff_new = refToNew_aff_current;
 			refToNew_aff_new.a += inc[6];
 			refToNew_aff_new.b += inc[7];

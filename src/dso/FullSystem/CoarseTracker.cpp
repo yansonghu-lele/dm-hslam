@@ -501,8 +501,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 #endif
 
 	int nl = pc_n[lvl];						// Number of points
-	float* lpc_u = pc_u[lvl];				// x coordinates of points
-	float* lpc_v = pc_v[lvl];				// y coordinates of points
+	float* lpc_u = pc_u[lvl];				// u coordinates of points
+	float* lpc_v = pc_v[lvl];				// v coordinates of points
 	float* lpc_idepth = pc_idepth[lvl];		// depth of points
 	float* lpc_color = pc_color[lvl];		// pixel intensity of the points
 
@@ -513,15 +513,18 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 		// Get depth and position of point
 		// Every active point from the last keyframe is projected onto the new frame
 		float id = lpc_idepth[i];
-		float x = lpc_u[i];
-		float y = lpc_v[i];
+		float u_pc_i = lpc_u[i];
+		float v_pc_i = lpc_v[i];
 
 		// Transform point and reproject
-		Vec3f pt = RKi * Vec3f(x, y, 1) + t*id;
-		float u = pt[0] / pt[2];
-		float v = pt[1] / pt[2];
-		float Ku = fxl * u + cxl;
-		float Kv = fyl * v + cyl;
+		// Transform to Cartesian coordinates and apply matrixes
+		Vec3f pt = RKi * Vec3f(u_pc_i, v_pc_i, 1) + t*id;
+		// Transform to Projective Image/Sensor coordinates
+		float u_im_j = pt[0] / pt[2];
+		float v_im_j = pt[1] / pt[2];
+		// Transform to Projective Pixel coordinates
+		float Ku_pc_j = fxl * u_im_j + cxl;
+		float Kv_pc_j = fyl * v_im_j + cyl;
 		float new_idepth = id/pt[2];
 
 		// Cacluate overall flow indicators by sampling some points
@@ -529,21 +532,21 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 		if(lvl==0 && i%32==0)
 		{
 			// translation only (positive)
-			Vec3f ptT = Ki[lvl] * Vec3f(x, y, 1) + t*id;
+			Vec3f ptT = Ki[lvl] * Vec3f(u_pc_i, v_pc_i, 1) + t*id;
 			float uT = ptT[0] / ptT[2];
 			float vT = ptT[1] / ptT[2];
 			float KuT = fxl * uT + cxl;
 			float KvT = fyl * vT + cyl;
 
 			// translation only (negative)
-			Vec3f ptT2 = Ki[lvl] * Vec3f(x, y, 1) - t*id;
+			Vec3f ptT2 = Ki[lvl] * Vec3f(u_pc_i, v_pc_i, 1) - t*id;
 			float uT2 = ptT2[0] / ptT2[2];
 			float vT2 = ptT2[1] / ptT2[2];
 			float KuT2 = fxl * uT2 + cxl;
 			float KvT2 = fyl * vT2 + cyl;
 
 			// translation and rotation (negative)
-			Vec3f pt3 = RKi * Vec3f(x, y, 1) - t*id;
+			Vec3f pt3 = RKi * Vec3f(u_pc_i, v_pc_i, 1) - t*id;
 			float u3 = pt3[0] / pt3[2];
 			float v3 = pt3[1] / pt3[2];
 			float Ku3 = fxl * u3 + cxl;
@@ -552,21 +555,24 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 			// translation and rotation (positive)
 			// Is default transformation
 
-			sumSquaredShiftT += (KuT-x)*(KuT-x) + (KvT-y)*(KvT-y);
-			sumSquaredShiftT += (KuT2-x)*(KuT2-x) + (KvT2-y)*(KvT2-y);
-			sumSquaredShiftRT += (Ku-x)*(Ku-x) + (Kv-y)*(Kv-y);
-			sumSquaredShiftRT += (Ku3-x)*(Ku3-x) + (Kv3-y)*(Kv3-y);
+			sumSquaredShiftT += (KuT-u_pc_i)*(KuT-u_pc_i) + (KvT-v_pc_i)*(KvT-v_pc_i);
+			sumSquaredShiftT += (KuT2-u_pc_i)*(KuT2-u_pc_i) + (KvT2-v_pc_i)*(KvT2-v_pc_i);
+			sumSquaredShiftRT += (Ku_pc_j-u_pc_i)*(Ku_pc_j-u_pc_i) + (Kv_pc_j-v_pc_i)*(Kv_pc_j-v_pc_i);
+			sumSquaredShiftRT += (Ku3-u_pc_i)*(Ku3-u_pc_i) + (Kv3-v_pc_i)*(Kv3-v_pc_i);
 			sumSquaredShiftNum+=2;
 		}
 
 		// Ignore if out of bounds
-		if(!(Ku > 2 && Kv > 2 && Ku < wl-3 && Kv < hl-3 && new_idepth > 0)) continue;
+		if(!(Ku_pc_j > 2 && Kv_pc_j > 2 && Ku_pc_j < wl-3 && Kv_pc_j < hl-3 && new_idepth > 0)) continue;
 
 
 		// Cacluate residual
+		// Orignal pixel intensity
 		float refColor = lpc_color[i];
-		Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
+		// Pixel intensity of transformed location
+		Vec3f hitColor = getInterpolatedElement33(dINewl, Ku_pc_j, Kv_pc_j, wl);
 		if(!std::isfinite((float)hitColor[0])) continue;
+		
 		float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
 		float hw = fabs(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabs(residual);
 
@@ -592,8 +598,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 
 			// Record values of good point
 			buf_warped_idepth[numTermsInWarped] = new_idepth;		// inverse depth
-			buf_warped_u[numTermsInWarped] = u;						// new horizontal position
-			buf_warped_v[numTermsInWarped] = v;						// new vertical position
+			buf_warped_u[numTermsInWarped] = u_im_j;						// new horizontal position
+			buf_warped_v[numTermsInWarped] = v_im_j;						// new vertical position
 			buf_warped_dx[numTermsInWarped] = hitColor[1];			// pixel intensity x derivative
 			buf_warped_dy[numTermsInWarped] = hitColor[2];			// pixel intensity y derivative
 			buf_warped_residual[numTermsInWarped] = residual;		// non huber energy residual
