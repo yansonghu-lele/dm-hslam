@@ -128,7 +128,7 @@ private:
 	int buf_warped_n;
 
     std::vector<float*> ptrToDelete;
-	Accumulator9 acc;
+	Accumulator9 acc9;
 
     dmvio::IMUIntegration &imuIntegration;
 };

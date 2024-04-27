@@ -206,9 +206,8 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 
 	// Set values on every pytamid level and filtering
 
-	// Set the values at every pyramid level
 	// Do a 2 by 2 box kernal convolution on the depth and weight values
-	for(int lvl=1; lvl<globalSettings.pyrLevelsUsed; lvl++) // for all levels
+	for(int lvl=1; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
 		int lvlm1 = lvl-1;
 		int wl = w[lvl], hl = h[lvl], wlm1 = w[lvlm1];
@@ -221,7 +220,6 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 		float* idepth_lm = idepth[lvlm1];
 		float* weightSums_lm = weightSums[lvlm1];
 
-		// For all pixels
 		for(int y=0;y<hl;y++)
 			for(int x=0;x<wl;x++)
 			{
@@ -367,7 +365,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
  */
 void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l)
 {
-	acc.initialize(); // Initialize accumulater
+	acc9.initialize(); // Initialize accumulater
 
 	// Set values
 	// Camera focus
@@ -398,7 +396,7 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 
 		// Accumulate matrix
 		// Sum of all of the values multiplied with each other in every combination
-		acc.updateSSE_eighted(
+		acc9.updateSSE_eighted(
 				// inverse_depth * dx
 				_mm_mul_ps(id,dx),
 				// inverse_depth * dy
@@ -425,11 +423,11 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 				_mm_load_ps(buf_warped_weight+i));
 	}
 
-	acc.finish(); // Set the H and b matrix from the accumulated values
+	acc9.finish(); // Set the H and b matrix from the accumulated values
 
 	// Extract H and b from the Hessian Structure matrix
-	H_out = acc.H.topLeftCorner<8,8>().cast<double>() * (1.0f/n);
-	b_out = acc.H.topRightCorner<8,1>().cast<double>() * (1.0f/n);
+	H_out = acc9.H.topLeftCorner<8,8>().cast<double>() * (1.0f/n);
+	b_out = acc9.H.topRightCorner<8,1>().cast<double>() * (1.0f/n);
 
 	// Scale H and b
 	H_out.block<8,3>(0,0) *= SCALE_XI_ROT;
@@ -451,6 +449,7 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
  * @brief Calculates the coarse tracking residual
  * 
  * Only two-frame residual is done for coarse tracking
+ * Note that the pattern is not used for coarse tracking
  * 
  * @param lvl 
  * @param refToNew 
