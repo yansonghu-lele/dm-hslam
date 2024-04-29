@@ -986,7 +986,7 @@ void FullSystem::flagPointsForRemoval()
 			}
 		}
 
-		// Remove points that are flagged for removal from the pointHessians list
+		// Set the pointHessians list to exclude the removed points
 		for(int i=0;i<(int)host->pointHessians.size();i++)
 		{
 			if(host->pointHessians[i]==0)

@@ -242,7 +242,7 @@ Vec3 FullSystem::linearizeAll(bool fixLinearization)
 
 
 /**
- * @brief Does step from backup
+ * @brief Does step
  * 
  * Applies step to linearization point
  * 
@@ -532,7 +532,7 @@ float FullSystem::optimize(int mnumOptIts)
 		backupState(iteration!=0);
 
 		// Solve!
-	// imu!: Update the dynamic weight
+		// imu!: Update the dynamic weight
         if(imuIntegration.getImuSettings().updateDynamicWeightDuringOptimization || iteration==0)
         {
             // Update dynamic weight before solving (where the active DSO factor will be scaled accordingly).
