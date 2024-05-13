@@ -642,7 +642,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 	}
 
 	
-	// Calculate the HessianSC
+	// Calculate the HessianScaled
 	acc9SC.initialize();
 	for(int i=0;i<npts;i++)
 	{
