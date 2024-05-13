@@ -791,6 +791,9 @@ void FullSystem::activatePointsMT()
 			}
 
 			// Activate only if this is true.
+			// Don't activate if immature point outlier or unintialized
+			// Activate if immature point was
+			// traced recently, has good energy quality, and realistic depth
 			bool canActivate = (ph->lastTraceStatus == IPS_GOOD
 					|| ph->lastTraceStatus == IPS_SKIPPED
 					|| ph->lastTraceStatus == IPS_BADCONDITION
@@ -802,7 +805,8 @@ void FullSystem::activatePointsMT()
 			// if I cannot activate the point, skip it. Maybe also delete it.
 			if(!canActivate)
 			{
-				// if point will be out afterwards, delete it instead.
+				// if point will be out afterwards due 
+				// to being oob or in a deleted frame, delete it instead
 				if(ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB)
 				{
 					// immature_notReady_deleted++;
@@ -823,6 +827,7 @@ void FullSystem::activatePointsMT()
 
 			if((u > 0 && v > 0 && u < wG[1] && v < hG[1])) // delete point if it is out of bounds
 			{
+				// Find distance to closest point
 				float dist = coarseDistanceMap->fwdWarpedIDDistFinal[u+wG[1]*v] + (ptp[0]-floorf((float)(ptp[0])));
 
 				if(dist>=currentMinActDist * ph->my_type) // check if point meets density requirements

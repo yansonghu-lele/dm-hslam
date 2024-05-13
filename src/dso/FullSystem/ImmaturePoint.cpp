@@ -119,6 +119,7 @@ ImmaturePoint::~ImmaturePoint()
  */
 ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hostToFrame_KRKi, const Vec3f &hostToFrame_Kt, const Vec2f& hostToFrame_affine, CalibHessian* HCalib, bool debugPrint)
 {
+	// Do not trace immature points that are OOB
 	if(lastTraceStatus == ImmaturePointStatus::IPS_OOB) return lastTraceStatus;
 
 	float maxPixSearch = (wG0+hG0)*globalSettings.setting_maxPixSearch;
@@ -130,14 +131,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 				idepth_min, idepth_max,
 				hostToFrame_Kt[0],hostToFrame_Kt[1],hostToFrame_Kt[2]);
 
-	// ============== Project assumming min and max depth. Return if one of them is OOB ===================
-	Vec3f pr = hostToFrame_KRKi * Vec3f(u,v,1); // Unproject (u,v) (depth does not matter for rotation), rotate, and the re-project
-	
-	// Translation is dependent on depth, which is unknown, so depth must be estimated
-	Vec3f ptpMin = pr + hostToFrame_Kt*idepth_min;	// Translate rotated (u,v) point assuming depth is idepth_min
-	float uMin = ptpMin[0] / ptpMin[2];
-	float vMin = ptpMin[1] / ptpMin[2];
-
+	// ============== Check if points are OOB. Project assumming min and max depth and then check bounds ===================
 	// Find the maximum size of the pattern
     Mat22f Rplane = hostToFrame_KRKi.topLeftCorner<2,2>();
     int maxRotPatX = 0;
@@ -145,6 +139,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
     Vec2f rotatetPattern[MAX_RES_PER_POINT];
     for(int idx=0;idx<PATTERNNUM;idx++)
     {
+		// Calculate the new u,v positions of the pattern
+		// Calculations done on viewing plane, so depth is assumed to be zero
         rotatetPattern[idx] = Rplane * Vec2f(PATTERNP[idx][0], PATTERNP[idx][1]);
         int absX = (int) abs(rotatetPattern[idx][0]);
         int absY = (int) abs(rotatetPattern[idx][1]);
@@ -157,6 +153,16 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
     int boundV = 4;
     boundU = std::max(boundU, realBoundU);
     boundV = std::max(boundV, realBoundV);
+	
+	// Unproject (u,v) (depth does not matter for rotation), rotate, and the re-project
+	Vec3f pr = hostToFrame_KRKi * Vec3f(u,v,1); 
+	
+	// Do min depth first
+	// Translation is dependent on depth, which is unknown, so depth must be estimated
+	Vec3f ptpMin = pr + hostToFrame_Kt*idepth_min;	// Translate rotated (u,v) point assuming depth is idepth_min
+
+	float uMin = ptpMin[0] / ptpMin[2];
+	float vMin = ptpMin[1] / ptpMin[2];
 
 	if(!(uMin > boundU && vMin > boundV && uMin < wG0-boundU-1 && vMin < hG0-boundV-1)) // Pattern is OOB
 	{
@@ -167,13 +173,15 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
 	}
 
+	// Now do max depth
 	float dist;
 	float uMax;
 	float vMax;
 	Vec3f ptpMax;
-	if(std::isfinite(idepth_max))
+	if(std::isfinite(idepth_max)) // If last max depth was valid
 	{
 		ptpMax = pr + hostToFrame_Kt*idepth_max; // Repeat, but assuming the depth is idepth_max
+		
 		uMax = ptpMax[0] / ptpMax[2];
 		vMax = ptpMax[1] / ptpMax[2];
 
@@ -206,8 +214,10 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 		// Project to arbitrary depth to get direction
 		ptpMax = pr + hostToFrame_Kt*0.01;
+
 		uMax = ptpMax[0] / ptpMax[2];
 		vMax = ptpMax[1] / ptpMax[2];
+
 		float dx = uMax-uMin;
 		float dy = vMax-vMin;
 		float d = 1.0f / sqrtf(dx*dx+dy*dy);
@@ -227,7 +237,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		assert(dist>0);
 	}
 
-	if(!(idepth_min<0 || (ptpMin[2]>0.75 && ptpMin[2]<1.5))) // set OOB if scale is too big
+	// set OOB if scale is too big
+	if(!(idepth_min<0 || (ptpMin[2]>0.75 && ptpMin[2]<1.5))) 
 	{
 		if(debugPrint && !globalSettings.no_Immature_debugMessage)
 			printf("OOB SCALE %f %f %f!\n", uMax, vMax,  ptpMin[2]);
@@ -343,7 +354,9 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	float secondBest=1e10;
 	for(int i=0;i<numSteps;i++)
 	{
-		if((i < bestIdx-globalSettings.setting_minTraceTestRadius || i > bestIdx+globalSettings.setting_minTraceTestRadius) && errors[i] < secondBest)
+		if((i < bestIdx-globalSettings.setting_minTraceTestRadius 
+			|| i > bestIdx+globalSettings.setting_minTraceTestRadius) 
+			&& errors[i] < secondBest)
 			secondBest = errors[i];
 	}
 	float newQuality = secondBest / bestEnergy;
@@ -354,6 +367,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	float uBak=bestU, vBak=bestV, gnstepsize=1, stepBack=0;
 	if(globalSettings.setting_trace_GNIterations>0) bestEnergy = 1e5;
 	int gnStepsGood=0, gnStepsBad=0;
+
 	for(int it=0;it<globalSettings.setting_trace_GNIterations;it++)
 	{
 		float H=1, b=0, energy=0;
@@ -368,6 +382,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 					printf("OOB uMax  %f %f - %f %f!\n", posU, posV, uMax, vMax);
                 lastTraceUV = Vec2f(-1,-1);
                 lastTracePixelInterval=0;
+
                 return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
             }
 
@@ -452,6 +467,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		idepth_min = (pr[2]*(bestV-errorInPixel*dy) - pr[1]) / (hostToFrame_Kt[1] - hostToFrame_Kt[2]*(bestV-errorInPixel*dy));
 		idepth_max = (pr[2]*(bestV+errorInPixel*dy) - pr[1]) / (hostToFrame_Kt[1] - hostToFrame_Kt[2]*(bestV+errorInPixel*dy));
 	}
+
 	if(idepth_min > idepth_max) std::swap<float>(idepth_min, idepth_max);
 
 
@@ -467,6 +483,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 	lastTracePixelInterval=2*errorInPixel;
 	lastTraceUV = Vec2f(bestU, bestV);
+
 	return lastTraceStatus = ImmaturePointStatus::IPS_GOOD;
 }
 
