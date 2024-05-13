@@ -49,7 +49,7 @@ enum ImmaturePointStatus {
 	IPS_OOB,					// Out of Bounds: end tracking & marginalize
 	IPS_OUTLIER,				// Energy too high, treat as outlier
 	IPS_SKIPPED,				// Good enough to not need tracing, use current values
-	IPS_BADCONDITION,			// Not traced because of bad condition.
+	IPS_BADCONDITION,			// Not traced because bad error bound
 	IPS_UNINITIALIZED};			// Not even traced once
 
 

@@ -356,6 +356,7 @@ void FullSystem::printPC(std::string file)
 		float rgb;
 		unsigned char b[] = {0, 255, 0, 0};
 		memcpy(&rgb, &b, sizeof(rgb));
+		
 		myfile << camToFirst.translation().x() <<
             " " << camToFirst.translation().y() <<
             " " << camToFirst.translation().z() << " " << rgb << "\n";

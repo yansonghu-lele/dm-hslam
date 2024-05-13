@@ -73,8 +73,10 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_
 
 		if(!std::isfinite(color[idx])) {energyTH=NAN; return;}
 
-
-		gradH += ptc.tail<2>() * ptc.tail<2>().transpose(); // 2 by 2 matrix of summed dx^2 + dy^2 values
+		// 2 by 2 outer product matrix
+		// [I_dx^2 I_dx*I_dxy]
+		// [I_dx*I_dxy I_dy^2]
+		gradH += ptc.tail<2>() * ptc.tail<2>().transpose(); 
 		// Weights for gradient-dependent weighting
 		weights[idx] = sqrtf(globalSettings.setting_outlierTHSumComponent / (globalSettings.setting_outlierTHSumComponent + ptc.tail<2>().squaredNorm()));
 	}
@@ -96,6 +98,8 @@ ImmaturePoint::~ImmaturePoint()
 
 /**
  * @brief Traces the points as the frames progress
+ * 
+ * Only the depth of the point is updated
  * 
  * Steps:
  * 1. Project (u,v) point assuming min and max depth
@@ -233,12 +237,19 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	}
 
 
-	// ============== compute error-bounds on result in pixel. if the new interval is not at least 1/2 of the old, SKIP ===================
+	// ============== compute error-bounds on result in pixel ===================
 	float dx = globalSettings.setting_trace_stepsize*(uMax-uMin);
 	float dy = globalSettings.setting_trace_stepsize*(vMax-vMin);
 
+	// I_dx^2*dx^2 + 2*dx*dy*I_dx*I_dy + I_dy^2*dy^2
 	float a_err = (Vec2f(dx,dy).transpose() * gradH * Vec2f(dx,dy));
-	float b_err = (Vec2f(dy,-dx).transpose() * gradH * Vec2f(dy,-dx)); // Perpendicular to a going clockwise
+	// I_dx^2*dy^2 + I_dx*I_dy(dx^2+dy^2) + I_dy^2*dx^2
+	float b_err = (Vec2f(dy,-dx).transpose() * gradH * Vec2f(dy,-dx));
+	// errorInPixel is a function that grows extremely fast if the dx/dy isn't
+	// aligned with I_dx/Id_y or it's opposite direction
+	// It measures the alignment with the pixel derivative
+	// Searching along the pixel edge should be difficult, 
+	// so the point is considered IPS_BADCONDITION if the alignment too off
 	float errorInPixel = 0.2f + 0.2f * (a_err+b_err) / a_err;
 
 	if(errorInPixel*globalSettings.setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max))
@@ -250,10 +261,11 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		return lastTraceStatus = ImmaturePointStatus::IPS_BADCONDITION;
 	}
 
-	if(errorInPixel >10) errorInPixel=10;
+	if(errorInPixel > 10) errorInPixel = 10;
 
 
 	// ============== do the discrete search ===================
+	// Find a good starting point for the Gauss Newton optimization
 	dx /= dist;
 	dy /= dist;
 
@@ -266,7 +278,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 				errorInPixel
 				);
 
-	if(dist>maxPixSearch)
+	if(dist > maxPixSearch)
 	{
 		uMax = uMin + maxPixSearch*dx;
 		vMax = vMin + maxPixSearch*dy;
@@ -289,7 +301,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
 	}
 
-	// Start searching starting from the uMin,vMin values
+	// Start linearly searching starting from the uMin, vMin values
 	// Get point between the min and max depth points with the lowest energy
 	float errors[100];
 	float bestU=0, bestV=0, bestEnergy=1e10;
@@ -310,7 +322,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			if(!std::isfinite(hitColor)) {energy+=1e5; continue;}
 			float residual = hitColor - (float)(hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
 			float hw = fabs(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabs(residual);
-			energy += hw *residual*residual*(2-hw);
+			energy += hw*residual*residual*(2-hw);
 		}
 
 		if(debugPrint && !globalSettings.no_Immature_debugMessage)
