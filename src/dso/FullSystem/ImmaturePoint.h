@@ -48,6 +48,7 @@ enum ImmaturePointStatus {
 	IPS_GOOD=0,					// Traced is good
 	IPS_OOB,					// Out of Bounds: end tracking & marginalize
 	IPS_OUTLIER,				// Energy too high, treat as outlier
+	IPS_OUTLIER_OUT,			// Energy too high, stop optimizing
 	IPS_SKIPPED,				// Good enough to not need tracing, use current values
 	IPS_BADCONDITION,			// Not traced because bad error bound
 	IPS_UNINITIALIZED};			// Not even traced once
@@ -97,16 +98,6 @@ public:
 			CalibHessian *  HCalib, const float outlierTHSlack,
 			ImmaturePointTemporaryResidual* tmpRes,
 			float &Hdd, float &bd,
-			float idepth);
-			
-	float getdPixdd(
-			CalibHessian *  HCalib,
-			ImmaturePointTemporaryResidual* tmpRes,
-			float idepth);
-
-	float calcResidual(
-			CalibHessian *  HCalib, const float outlierTHSlack,
-			ImmaturePointTemporaryResidual* tmpRes,
 			float idepth);
 
 private:

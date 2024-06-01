@@ -237,8 +237,9 @@ namespace dso
 					if(ph->lastTraceStatus==ImmaturePointStatus::IPS_GOOD)
 						img->setPixelCirc(ph->u+0.5f, ph->v+0.5f, Vec3b(0,255,0)); // Green
 					if(ph->lastTraceStatus==ImmaturePointStatus::IPS_OOB)
-						img->setPixelCirc(ph->u+0.5f, ph->v+0.5f, Vec3b(255,0,0)); // Red (won't show because OOB)
-					if(ph->lastTraceStatus==ImmaturePointStatus::IPS_OUTLIER)
+						img->setPixelCirc(ph->u+0.5f, ph->v+0.5f, Vec3b(255,0,0)); // Red (will not be seen)
+					if(ph->lastTraceStatus==ImmaturePointStatus::IPS_OUTLIER ||
+						ph->lastTraceStatus==ImmaturePointStatus::IPS_OUTLIER_OUT)
 						img->setPixelCirc(ph->u+0.5f, ph->v+0.5f, Vec3b(0,0,255));	// Blue
 					if(ph->lastTraceStatus==ImmaturePointStatus::IPS_SKIPPED)
 						img->setPixelCirc(ph->u+0.5f, ph->v+0.5f, Vec3b(255,255,0)); // Cyan

@@ -120,7 +120,8 @@ ImmaturePoint::~ImmaturePoint()
 ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hostToFrame_KRKi, const Vec3f &hostToFrame_Kt, const Vec2f& hostToFrame_affine, CalibHessian* HCalib, bool debugPrint)
 {
 	// Do not trace immature points that are OOB
-	if(lastTraceStatus == ImmaturePointStatus::IPS_OOB) return lastTraceStatus;
+	if(lastTraceStatus == ImmaturePointStatus::IPS_OOB ||
+		lastTraceStatus == ImmaturePointStatus::IPS_OUTLIER_OUT) return lastTraceStatus;
 
 	float maxPixSearch = (wG0+hG0)*globalSettings.setting_maxPixSearch;
 
@@ -237,7 +238,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		assert(dist>0);
 	}
 
-	// set OOB if scale is too big
+	// ptpMin[2] is approximately 1+t_z/d
+	// Do not accept transformations where the z change is large compared to the depth
 	if(!(idepth_min<0 || (ptpMin[2]>0.75 && ptpMin[2]<1.5))) 
 	{
 		if(debugPrint && !globalSettings.no_Immature_debugMessage)
@@ -350,7 +352,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		pty+=dy;
 	}
 
-	// Find best score outside a +-2px radius.
+	// Find best score outside the min trace test radius.
 	float secondBest=1e10;
 	for(int i=0;i<numSteps;i++)
 	{
@@ -364,6 +366,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 
 
 	// ============== do Gauss Newton optimization ===================
+	// Use starting point from linear search
+	// 2D search is done instead of 3D projected search
 	float uBak=bestU, vBak=bestV, gnstepsize=1, stepBack=0;
 	if(globalSettings.setting_trace_GNIterations>0) bestEnergy = 1e5;
 	int gnStepsGood=0, gnStepsBad=0;
@@ -389,13 +393,18 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			Vec3f hitColor = getInterpolatedElement33(frame->dI, posU, posV, wG0);
 
 			if(!std::isfinite((float)hitColor[0])) {energy+=1e5; continue;}
+			// r = (I_j[u_j,v_j] - b_j) - a_j/a_i * (I_i[u_i,v_i] - b_i)
+			// u_j = u_i + dx*d, v_j = v_i + dy*d
 			float residual = hitColor[0] - (hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
+			// dr/dd = dI_j/dx*dx + dI_j/dy*dy
 			float dResdDist = dx*hitColor[1] + dy*hitColor[2]; // Calculate derivative for GN
 			float hw = fabs(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabs(residual);
 
+			// Calculate GN variables
 			H += hw*dResdDist*dResdDist; 
 			b += hw*residual*dResdDist;
 
+			// Calculate energy
 			energy += weights[idx]*weights[idx]*hw*residual*residual*(2-hw);
 		}
 
@@ -417,6 +426,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			// Step towards to optimal point
 			gnStepsGood++;
 
+			// Solve GN
 			float step = -gnstepsize*b/H;
 			if(step < -0.5) step = -0.5;
 			else if(step > 0.5) step = 0.5;
@@ -450,23 +460,34 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 		lastTracePixelInterval=0;
 		lastTraceUV = Vec2f(-1,-1);
 		if(lastTraceStatus == ImmaturePointStatus::IPS_OUTLIER)
-			return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
+			return lastTraceStatus = ImmaturePointStatus::IPS_OUTLIER_OUT;
 		else
 			return lastTraceStatus = ImmaturePointStatus::IPS_OUTLIER;
 	}
 
 
 	// ============== set new interval for idepth_min and idepth_max===================
-	if(dx*dx>dy*dy)
-	{
-		idepth_min = (pr[2]*(bestU-errorInPixel*dx) - pr[0]) / (hostToFrame_Kt[0] - hostToFrame_Kt[2]*(bestU-errorInPixel*dx));
-		idepth_max = (pr[2]*(bestU+errorInPixel*dx) - pr[0]) / (hostToFrame_Kt[0] - hostToFrame_Kt[2]*(bestU+errorInPixel*dx));
-	}
-	else
-	{
-		idepth_min = (pr[2]*(bestV-errorInPixel*dy) - pr[1]) / (hostToFrame_Kt[1] - hostToFrame_Kt[2]*(bestV-errorInPixel*dy));
-		idepth_max = (pr[2]*(bestV+errorInPixel*dy) - pr[1]) / (hostToFrame_Kt[1] - hostToFrame_Kt[2]*(bestV+errorInPixel*dy));
-	}
+	// depth can be calculated from either the x or y direction
+	// u_j = (r_x+t_x*p_-1) / (r_z+t_z*p_-1)
+	// p_-1 = (u_j*r_z - r_x) / (t_x - u_j*t_z)
+
+	// v_j = (r_y+t_y*p_-1) / (r_z+t_z*p_-1)
+	// p_-1 = (v_j*r_z - r_y) / (t_y - v_j*t_z)
+
+	float dx_dy_ratio = (dx*dx/(dy*dy+dx*dx));
+	idepth_min = (dx_dy_ratio)*
+		(pr[2]*(bestU-errorInPixel*dx) - pr[0]) / 
+		(hostToFrame_Kt[0] - hostToFrame_Kt[2]*(bestU-errorInPixel*dx)) +
+		(1-dx_dy_ratio)*
+		(pr[2]*(bestV-errorInPixel*dy) - pr[1]) / 
+		(hostToFrame_Kt[1] - hostToFrame_Kt[2]*(bestV-errorInPixel*dy));
+
+	idepth_max = (dx_dy_ratio)*
+		(pr[2]*(bestU+errorInPixel*dx) - pr[0]) / 
+		(hostToFrame_Kt[0] - hostToFrame_Kt[2]*(bestU+errorInPixel*dx)) +
+		(1-dx_dy_ratio)*
+		(pr[2]*(bestV+errorInPixel*dy) - pr[1]) / 
+		(hostToFrame_Kt[1] - hostToFrame_Kt[2]*(bestV+errorInPixel*dy));
 
 	if(idepth_min > idepth_max) std::swap<float>(idepth_min, idepth_max);
 
@@ -488,65 +509,10 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 }
 
 
-float ImmaturePoint::getdPixdd(
-		CalibHessian *  HCalib,
-		ImmaturePointTemporaryResidual* tmpRes,
-		float idepth)
-{
-	FrameFramePrecalc* precalc = &(host->targetPrecalc[tmpRes->target->idx]);
-	const Vec3f &PRE_tTll = precalc->PRE_tTll;
-	float drescale, u=0, v=0, new_idepth;
-	float Ku, Kv;
-	Vec3f KliP;
-
-	projectPoint(this->u,this->v, idepth, 0, 0, HCalib,
-			precalc->PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth, wG0, hG0);
-
-	float dxdd = (PRE_tTll[0]-PRE_tTll[2]*u)*HCalib->fxl();
-	float dydd = (PRE_tTll[1]-PRE_tTll[2]*v)*HCalib->fyl();
-	return drescale*sqrtf(dxdd*dxdd + dydd*dydd);
-}
-
-
-float ImmaturePoint::calcResidual(
-		CalibHessian *  HCalib, const float outlierTHSlack,
-		ImmaturePointTemporaryResidual* tmpRes,
-		float idepth)
-{
-	FrameFramePrecalc* precalc = &(host->targetPrecalc[tmpRes->target->idx]);
-
-	float energyLeft=0;
-	const Eigen::Vector3f* dIl = tmpRes->target->dI;
-	const Mat33f &PRE_KRKiTll = precalc->PRE_KRKiTll;
-	const Vec3f &PRE_KtTll = precalc->PRE_KtTll;
-	Vec2f affLL = precalc->PRE_aff_mode;
-
-	for(int idx=0;idx<PATTERNNUM;idx++)
-	{
-		float Ku, Kv;
-		if(!projectPoint(this->u+PATTERNP[idx][0], this->v+PATTERNP[idx][1], idepth, PRE_KRKiTll, PRE_KtTll, Ku, Kv, wG0, hG0))
-			{return 1e10;}
-
-		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0));
-		if(!std::isfinite((float)hitColor[0])) {return 1e10;}
-
-		float residual = hitColor[0] - (affLL[0] * color[idx] + affLL[1]);
-
-		float hw = fabsf(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabsf(residual);
-		energyLeft += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
-	}
-
-	if(energyLeft > energyTH*outlierTHSlack)
-	{
-		energyLeft = energyTH*outlierTHSlack;
-	}
-	return energyLeft;
-}
-
 /**
  * @brief Calculate some residual values for the immature points
  * 
- * Will not calculate the Hessian
+ * Will only calculate the depth Hessian
  * Calculates the energy residual and values that are helpful for point optimizations
  * 
  * @param HCalib 			Calibration matrices
@@ -603,7 +569,14 @@ double ImmaturePoint::linearizeResidual(
 		float hw = fabsf(residual) < globalSettings.setting_huberTH ? 1 : globalSettings.setting_huberTH / fabsf(residual);
 		energyLeft += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
 
-		// depth derivatives.
+		// Depth derivative
+		// r = (I_j[u_j,v_j] - b_j) - a_j/a_i * (I_i[u_i,v_i] - b_i)
+		// ptp = RK[u,v,1]^T+tp
+		// u_j = f_x*ptp_x/ptp_z+c_x, v_j = f_y*ptp_y/ptp_z+c_y
+
+		// dr/dp = dI_j/du_j*du_j/dp + dI_j/dv_j*dv_j/dp
+		// du_j/dp = f_x/ptp_z * (t_x+t_z*(ptp_x/ptp_z))
+		// dv_j/dp = f_y/ptp_z * (t_y+t_z*(ptp_y/ptp_z))
 		float dxInterp = hitColor[1]*HCalib->fxl();
 		float dyInterp = hitColor[2]*HCalib->fyl();
 		float d_idepth = derive_idepth(PRE_tTll, u, v, dx, dy, dxInterp, dyInterp, drescale);
