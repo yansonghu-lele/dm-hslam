@@ -679,7 +679,8 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
 			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_GOOD) trace_good++;
 			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_BADCONDITION) trace_badcondition++;
 			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_OOB) trace_oob++;
-			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_OUTLIER) trace_out++;
+			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_OUTLIER ||
+				ph->lastTraceStatus==ImmaturePointStatus::IPS_OUTLIER_OUT) trace_out++;
 			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_SKIPPED) trace_skip++;
 			if(ph->lastTraceStatus==ImmaturePointStatus::IPS_UNINITIALIZED) trace_uninitialized++;
 			trace_total++;
@@ -782,7 +783,8 @@ void FullSystem::activatePointsMT()
 
 			// ============== Delete invalid immature points ===================
 			// Delete points that have never been traced successfully, or that are outlier on the last trace.
-			if(!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER)
+			if(!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER ||
+			ph->lastTraceStatus == IPS_OUTLIER_OUT)
 			{
 				// immature_invalid_deleted++;
 				delete ph;
@@ -793,7 +795,7 @@ void FullSystem::activatePointsMT()
 			// Activate only if this is true.
 			// Don't activate if immature point outlier or unintialized
 			// Activate if immature point was
-			// traced recently, has good energy quality, and realistic depth
+			// traced along a good path, has good energy quality, and realistic depth
 			bool canActivate = (ph->lastTraceStatus == IPS_GOOD
 					|| ph->lastTraceStatus == IPS_SKIPPED
 					|| ph->lastTraceStatus == IPS_BADCONDITION
@@ -866,8 +868,10 @@ void FullSystem::activatePointsMT()
 		if(newpoint != 0 && newpoint != (PointHessian*)((long)(-1)))
 		{
 			// Add new point into the optimization and active point list
+			// Remove point from immature point list
 			newpoint->host->immaturePoints[ph->idxInImmaturePoints]=0;
-			newpoint->host->pointHessians.push_back(newpoint); // add active point
+			// Add active point
+			newpoint->host->pointHessians.push_back(newpoint);
 			ef->insertPoint(newpoint);
 			for(PointFrameResidual* r : newpoint->residuals)
 				ef->insertResidual(r);

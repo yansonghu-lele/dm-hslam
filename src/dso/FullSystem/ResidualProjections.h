@@ -134,5 +134,6 @@ EIGEN_STRONG_INLINE bool projectPoint(
 
 	return Ku>1.1f && Kv>1.1f && Ku<(ww-PIXEL_BORDER-1) && Kv<(hh-PIXEL_BORDER-1);
 }
+
 }
 
