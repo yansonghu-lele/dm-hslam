@@ -253,6 +253,7 @@ void FrameHessian::makeColourImages(float* r, float* g ,float* b)
 /**
  * @brief Set values that are commonly used in the optimization
  * 
+ * Gets the current values from host to target
  * Transformation matrixes, calibration matrix, and photogrammetric values
  * 
  * @param host 

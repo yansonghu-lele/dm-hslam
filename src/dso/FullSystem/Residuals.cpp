@@ -106,8 +106,8 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	// K matrix and Transformation matrix are multiplied here for effciency
 	const Mat33f &PRE_KRKiTll = precalc->PRE_KRKiTll; 	// K * rotationMatrix * K^-1
 	const Vec3f &PRE_KtTll = precalc->PRE_KtTll; 		// K * translationMatrix
-	const Mat33f &PRE_RTll_0 = precalc->PRE_RTll_0; 	// rotationMatrix
-	const Vec3f &PRE_tTll_0 = precalc->PRE_tTll_0; 		// translationMatrix
+	const Mat33f &PRE_RTll_0 = precalc->PRE_RTll_0; 	// rotationMatrix_0
+	const Vec3f &PRE_tTll_0 = precalc->PRE_tTll_0; 		// translationMatrix_0
 	// Get info about point
 	const float * const color = point->color;
 	const float * const weights = point->weights;

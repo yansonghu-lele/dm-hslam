@@ -802,7 +802,7 @@ void FullSystem::activatePointsMT()
 							&& ph->quality > globalSettings.setting_minTraceQuality
 							&& (ph->idepth_max+ph->idepth_min) > 0;
 
-			// if I cannot activate the point, skip it. Maybe also delete it.
+			// if cannot activate the point, skip it. Maybe also delete it.
 			if(!canActivate)
 			{
 				// if point will be out afterwards due 
@@ -937,7 +937,7 @@ void FullSystem::flagPointsForRemoval()
 			PointHessian* ph = host->pointHessians[i];
 			if(ph==0) continue;
 
-			// Remove points that have invalid depths
+			// Remove points that have invalid depths or no more residuals
 			if(ph->idepth_scaled < globalSettings.setting_minIdepth || ph->residuals.size()==0)
 			{
 				host->pointHessiansOut.push_back(ph);
@@ -1011,6 +1011,12 @@ void FullSystem::flagPointsForRemoval()
  * This function is the starting point for most of the other functions
  * 
  * The function is passed the IMU-data from the previous frame until the current frame.
+ * 
+ * Steps:
+ * If no frames given, set up first frame
+ * After given first frame, it does init process till init finished
+ * After init finished, does standard tracking
+ * Will create keyframes and update map as required
  * 
  * @param image 
  * @param id 
@@ -1137,6 +1143,8 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 
 		// =========================== Swap tracking reference =========================
 		bool trackingRefChanged = false;
+		// If there is a newer keyframe
+		// Set that as the reference frame for tracking
 		if(coarseTracker_forNewKF->refFrameID > coarseTracker->refFrameID)
 		{
             dmvio::TimeMeasurement referenceSwapTime("swapTrackingRef");
@@ -1539,6 +1547,8 @@ void FullSystem::blockUntilMappingIsFinished()
 /**
  * @brief Creates a non-keyframe
  * 
+ * Only sets the new poses and traces immature keypoints
+ * 
  * @param fh 
  */
 void FullSystem::makeNonKeyFrame( FrameHessian* fh)
@@ -1558,6 +1568,20 @@ void FullSystem::makeNonKeyFrame( FrameHessian* fh)
 
 /**
  * @brief Create a keyframe and optimize all of the active frames
+ * 
+ * Steps:
+ * 1. Sets new pose
+ * 2. Traces the current immature points
+ * 3. Flags frames for marginalization
+ * 4. Creates new keyframe
+ * 5. Adds current active points into the new keyframe
+ * 6. Converts immature points in new keyframe into active points
+ * 7. Do full map optimization
+ * 8. Remove outlier points
+ * 9. Set current keyframe as tracking frame
+ * 10. Remove other bad points
+ * 11. Make new immature points for keyframe
+ * 12. Marginalize flagged frames
  * 
  * @param fh 
  */
@@ -1897,6 +1921,7 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
  */
 void FullSystem::setPrecalcValues()
 {
+	// For all active frames to all other active frames
 	for(FrameHessian* fh : frameHessians)
 	{
 		fh->targetPrecalc.resize(frameHessians.size());

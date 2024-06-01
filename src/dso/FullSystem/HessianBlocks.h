@@ -163,7 +163,8 @@ struct FrameHessian
 
 
     EIGEN_STRONG_INLINE const SE3 &get_worldToCam_evalPT() const {return worldToCam_evalPT;}
-    EIGEN_STRONG_INLINE const Vec10 &get_state_zero() const {return state_zero;} // the first 6 parameters of state_zero seem to be always 0 (as this part ist represented by the worldToCam_evalPT. The last two parameters on the other hand are not zero.
+	// the first 6 parameters of state_zero seem to be always 0 (as this part isn't represented by the worldToCam_evalPT. The last two parameters on the other hand are not zero.
+    EIGEN_STRONG_INLINE const Vec10 &get_state_zero() const {return state_zero;} 
     EIGEN_STRONG_INLINE const Vec10 &get_state() const {return state;}
     EIGEN_STRONG_INLINE const Vec10 &get_state_scaled() const {return state_scaled;}
     EIGEN_STRONG_INLINE const Vec10 get_state_minus_stateZero() const {return get_state() - get_state_zero();}
@@ -214,7 +215,6 @@ struct FrameHessian
 	};
 	inline void setEvalPT(const SE3 &worldToCam_evalPT, const Vec10 &state)
 	{
-
 		this->worldToCam_evalPT = worldToCam_evalPT;
 		setState(state);
 		setStateZero(state);
