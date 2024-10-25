@@ -551,11 +551,11 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 						achievedRes[2],
 						achievedRes[3],
 						achievedRes[4],
-						coarseTracker->lastResiduals[0],
-						coarseTracker->lastResiduals[1],
-						coarseTracker->lastResiduals[2],
-						coarseTracker->lastResiduals[3],
-						coarseTracker->lastResiduals[4]);
+						coarseTracker->lastResidualsStats[0],
+						coarseTracker->lastResidualsStats[1],
+						coarseTracker->lastResidualsStats[2],
+						coarseTracker->lastResidualsStats[3],
+						coarseTracker->lastResidualsStats[4]);
 		}
 
 		// ============== Update variables if there is a good track ===================
@@ -563,7 +563,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		// 1. Tracking does not return invalid values
 		// 2. Residual is finite
 		// 3. Residual is smaller than last achieved residual
-		if(trackingIsGood && std::isfinite((float)coarseTracker->lastResiduals[0]) && !(coarseTracker->lastResiduals[0] >=  achievedRes[0]))
+		if(trackingIsGood && std::isfinite((float)coarseTracker->lastResidualsStats[0]) && !(coarseTracker->lastResidualsStats[0] >=  achievedRes[0]))
 		{
 			flowVecs = coarseTracker->lastFlowIndicators;
 			aff_g2l = aff_g2l_this;
@@ -576,8 +576,8 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
 		{
 			for(int j=0;j<5;j++)
 			{
-				if(!std::isfinite((float)achievedRes[j]) || achievedRes[j] > coarseTracker->lastResiduals[j])
-					achievedRes[j] = coarseTracker->lastResiduals[j];
+				if(!std::isfinite((float)achievedRes[j]) || achievedRes[j] > coarseTracker->lastResidualsStats[j])
+					achievedRes[j] = coarseTracker->lastResidualsStats[j];
 			}
 		}
 

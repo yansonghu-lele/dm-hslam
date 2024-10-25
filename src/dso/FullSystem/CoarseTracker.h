@@ -90,7 +90,7 @@ public:
 	int refFrameID;
 
 	// act as pure ouptut
-	Vec5 lastResiduals;
+	Vec5 lastResidualsStats;
 	Vec3 lastFlowIndicators;
 	double firstCoarseRMSE;
 
@@ -104,10 +104,8 @@ private:
 	float* weightSums_bak[PYR_LEVELS];
 
 
-	Vec6 calcResAndGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 	Vec6 calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 	void calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
-	void calcGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
 
 	// pc buffers
 	float* pc_u[PYR_LEVELS];

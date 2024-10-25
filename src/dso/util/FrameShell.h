@@ -44,6 +44,8 @@ public:
 	int incoming_id;			// ID passed into DSO
 	double timestamp;			// timestamp passed into DSO.
 
+	std::string image_name;
+
 	// Set once after tracking
 	SE3 camToTrackingRef;
 	FrameShell* trackingRef;
@@ -76,7 +78,8 @@ public:
 		statistics_outlierResOnThis(0),
 		statistics_goodResOnThis(0),
 		trackingRef(0),
-		camToTrackingRef(SE3())
+		camToTrackingRef(SE3()),
+		image_name("")
 	{}
 };
 

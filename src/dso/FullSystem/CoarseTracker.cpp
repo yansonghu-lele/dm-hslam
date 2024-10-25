@@ -693,7 +693,7 @@ bool CoarseTracker::trackNewestCoarse(
 
 	assert(coarsestLvl < 5 && coarsestLvl < globalSettings.pyrLevelsUsed);
 
-	lastResiduals.setConstant(NAN);
+	lastResidualsStats.setConstant(NAN);
 	lastFlowIndicators.setConstant(1000);
 
 	newFrame = newFrameHessian;
@@ -890,12 +890,12 @@ bool CoarseTracker::trackNewestCoarse(
 		}
 
 		// Set last residual for that level, as well as flow indicators.
-		lastResiduals[lvl] = sqrtf((float)(resOld[0] / resOld[1]));
+		lastResidualsStats[lvl] = sqrtf((float)(resOld[0] / resOld[1]));
 		lastFlowIndicators = resOld.segment<3>(2);
 
 		// Track is bad if the residual is invalid or more than many times the previously achieved residual
-		if(std::isnan(lastResiduals[lvl])) return false;
-		if(lastResiduals[lvl] > 1.5*minResForAbort[lvl]) return false;
+		if(std::isnan(lastResidualsStats[lvl])) return false;
+		if(lastResidualsStats[lvl] > 1.5*minResForAbort[lvl]) return false;
 
 
 		if(levelCutoffRepeat > 1 && !haveRepeated)

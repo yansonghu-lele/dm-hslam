@@ -37,6 +37,7 @@ class ImageAndExposure
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	float* image;			// irradiance. between 0 and 256
+	std::string image_name;
 
 	float* r_image;
 	float* g_image;
@@ -51,6 +52,7 @@ public:
 	{
 		image = new float[w*h];
 		useColour = useColourPassed;
+		image_name = "";
 
 		if (useColour){
 			r_image = new float[w*h];

@@ -643,6 +643,7 @@ private:
 	 */
 	ImageAndExposure* getImage_internal(int id, int unused)
 	{
+		ImageAndExposure* ret2;
 	    if(use16Bit)
         {
 			if(useColour){
@@ -651,13 +652,12 @@ private:
 			} else {
 				MinimalImage<unsigned short>* minimg = IOWrap::readImageBW_16U(files[id]);
 				assert(minimg);
-				ImageAndExposure* ret2 = undistort->undistort<unsigned short>(
+				ret2 = undistort->undistort<unsigned short>(
 						minimg,
 						(exposures.size() == 0 ? 1.0f : exposures[id]),
 						(timestamps.size() == 0 ? 0.0 : timestamps[id]),
 						1.0f / 256.0f);
 				delete minimg;
-				return ret2;
 			}
         }
 		else
@@ -666,7 +666,7 @@ private:
 				MinimalImageB* rimg; MinimalImageB* gimg; MinimalImageB* bimg;
 				MinimalImageB* minimg = getImageRaw3_internal(id, 0, rimg, gimg, bimg);
 
-				ImageAndExposure* ret2 = undistort->undistort<unsigned char>(
+				ret2 = undistort->undistort<unsigned char>(
 						minimg,
 						(exposures.size() == 0 ? 1.0f : exposures[id]),
 						(timestamps.size() == 0 ? 0.0 : timestamps[id]),
@@ -681,17 +681,25 @@ private:
 				
 				delete minimg;
 				delete rimg; delete gimg; delete bimg;
-				return ret2;
 			} else {
 				MinimalImageB* minimg = getImageRaw_internal(id, 0);
-				ImageAndExposure* ret2 = undistort->undistort<unsigned char>(
+				ret2 = undistort->undistort<unsigned char>(
 						minimg,
 						(exposures.size() == 0 ? 1.0f : exposures[id]),
-						(timestamps.size() == 0 ? 0.0 : timestamps[id]));
+						(timestamps.size() == 0 ? 0.0 : timestamps[id]),
+						1, false);
 				delete minimg;
-				return ret2;
 			}
         }
+
+	if(ret2){
+		const size_t last_slash_idx = files[id].find_last_of("\\/");
+		if (std::string::npos != last_slash_idx)
+			ret2->image_name = files[id].substr(files[id].find_last_of("/\\") + 1);
+		else
+			ret2->image_name = files[id];
+	}
+	return ret2;
 	}
 
 	/**
