@@ -104,16 +104,17 @@ CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegrati
 		pc_idepth[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
 		pc_color[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
 	}
+	unsigned int wh = wG0*hG0;
 
 	// Warped buffers
-	buf_warped_idepth = allocAligned<4,float>(ww*hh, ptrToDelete);
-	buf_warped_u = allocAligned<4,float>(ww*hh, ptrToDelete);
-	buf_warped_v = allocAligned<4,float>(ww*hh, ptrToDelete);
-	buf_warped_dx = allocAligned<4,float>(ww*hh, ptrToDelete);
-	buf_warped_dy = allocAligned<4,float>(ww*hh, ptrToDelete);
-	buf_warped_residual = allocAligned<4,float>(ww*hh, ptrToDelete);
-	buf_warped_weight = allocAligned<4,float>(ww*hh, ptrToDelete);
-	buf_warped_refColor = allocAligned<4,float>(ww*hh, ptrToDelete);
+	buf_warped_idepth = allocAligned<4,float>(wh, ptrToDelete);
+	buf_warped_u = allocAligned<4,float>(wh, ptrToDelete);
+	buf_warped_v = allocAligned<4,float>(wh, ptrToDelete);
+	buf_warped_dx = allocAligned<4,float>(wh, ptrToDelete);
+	buf_warped_dy = allocAligned<4,float>(wh, ptrToDelete);
+	buf_warped_residual = allocAligned<4,float>(wh, ptrToDelete);
+	buf_warped_weight = allocAligned<4,float>(wh, ptrToDelete);
+	buf_warped_refColor = allocAligned<4,float>(wh, ptrToDelete);
 
 
 	newFrame = 0;
@@ -430,17 +431,17 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 	b_out = acc9.H.topRightCorner<8,1>().cast<double>() * (1.0f/n);
 
 	// Scale H and b
-	H_out.block<8,3>(0,0) *= SCALE_XI_ROT;
-	H_out.block<8,3>(0,3) *= SCALE_XI_TRANS;
+	H_out.block<8,3>(0,0) *= SCALE_XI_TRANS;
+	H_out.block<8,3>(0,3) *= SCALE_XI_ROT;
 	H_out.block<8,1>(0,6) *= SCALE_A;
 	H_out.block<8,1>(0,7) *= SCALE_B;
-	H_out.block<3,8>(0,0) *= SCALE_XI_ROT;
-	H_out.block<3,8>(3,0) *= SCALE_XI_TRANS;
+	H_out.block<3,8>(0,0) *= SCALE_XI_TRANS;
+	H_out.block<3,8>(3,0) *= SCALE_XI_ROT;
 	H_out.block<1,8>(6,0) *= SCALE_A;
 	H_out.block<1,8>(7,0) *= SCALE_B;
 
-	b_out.segment<3>(0) *= SCALE_XI_ROT;
-	b_out.segment<3>(3) *= SCALE_XI_TRANS;
+	b_out.segment<3>(0) *= SCALE_XI_TRANS;
+	b_out.segment<3>(3) *= SCALE_XI_ROT;
 	b_out.segment<1>(6) *= SCALE_A;
 	b_out.segment<1>(7) *= SCALE_B;
 }
@@ -569,7 +570,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, floa
 		// Orignal pixel intensity
 		float refColor = lpc_color[i];
 		// Pixel intensity of transformed location
-		Vec3f hitColor = getInterpolatedElement33(dINewl, Ku_pc_j, Kv_pc_j, wl);
+		Vec3f hitColor = getInterpolatedElement33(dINewl, Ku_pc_j, Kv_pc_j, wl, hl);
 		if(!std::isfinite((float)hitColor[0])) continue;
 		
 		float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
@@ -707,6 +708,7 @@ bool CoarseTracker::trackNewestCoarse(
 
 	Mat88 H; Vec8 b;
 	int lastLvl = -1;
+	// Do all the pyramid levels from the coarsest to the normal image
 	for(int lvl=coarsestLvl; lvl>=0; lvl--)
 	{
 		// Do initial calculation
@@ -819,8 +821,8 @@ bool CoarseTracker::trackNewestCoarse(
 				// Scale increment
 				inc *= extrapFac;
 				Vec8 incScaled = inc;
-				incScaled.segment<3>(0) *= SCALE_XI_ROT;
-				incScaled.segment<3>(3) *= SCALE_XI_TRANS;
+				incScaled.segment<3>(0) *= SCALE_XI_TRANS;
+				incScaled.segment<3>(3) *= SCALE_XI_ROT;
 				incScaled.segment<1>(6) *= SCALE_A;
 				incScaled.segment<1>(7) *= SCALE_B;
 
@@ -1037,13 +1039,18 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 
 		if(globalSettings.setting_debugSaveImages)
 		{
-			char buf[1000];
-			snprintf(buf, 1000, "images_out/predicted_%05d_%05d.png", lastRef->shell->id, refFrameID);
+			char buf[1024];
+			snprintf(buf, 1024, "images_out/predicted_%05d_%05d.png", lastRef->shell->id, refFrameID);
 			IOWrap::writeImage(buf,&mf);
 		}
 	}
 }
 
+/**
+ * @brief Creates the depth map for the GUI
+ * 
+ * @param wraps 
+ */
 void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*> &wraps)
 {
 	dmvio::TimeMeasurement timeMeasurement("debugPlotIDepthMapFloat");
@@ -1111,7 +1118,7 @@ void CoarseDistanceMap::makeDistanceMap(
 	int h1 = h[1];
 	int wh1 = w1*h1;
 	for(int i=0;i<wh1;i++)
-		fwdWarpedIDDistFinal[i] = 1000;
+		fwdWarpedIDDistFinal[i] = 1024;
 
 
 	// make coarse tracking templates for latstRef.

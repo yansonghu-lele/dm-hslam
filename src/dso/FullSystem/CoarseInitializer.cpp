@@ -485,8 +485,8 @@ Vec3f CoarseInitializer::calcResAndGS(
 				}
 
 				// Get intensitives of the pixel values in the new and first frames
-				Vec3f hitColor = getInterpolatedElement33(colorNew, Ku_pc_j, Kv_pc_j, wl);
-				float rlR = getInterpolatedElement31(colorRef, point->u + dx, point->v + dy, wl);
+				Vec3f hitColor = getInterpolatedElement33(colorNew, Ku_pc_j, Kv_pc_j, wl, hl);
+				float rlR = getInterpolatedElement31(colorRef, point->u + dx, point->v + dy, wl, hl);
 
 				if(!std::isfinite(rlR) || !std::isfinite((float) hitColor[0])) // infinite residual
 				{
@@ -626,9 +626,6 @@ Vec3f CoarseInitializer::calcResAndGS(
 	EAlpha.finish();
 	float alphaEnergy = alphaW*(EAlpha.A + refToNew.translation().squaredNorm() * npts);
 
-	//printf("AE = %f * %f + %f\n", alphaW, EAlpha.A, refToNew.translation().squaredNorm() * npts);
-
-
 	// compute alpha opt
 	float alphaOpt;
 	if(alphaEnergy > alphaK*npts)
@@ -736,12 +733,9 @@ Vec3f CoarseInitializer::calcEC(int lvl)
 		float rOld = (point->idepth-point->iR);
 		float rNew = (point->idepth_new-point->iR);
 		E.updateNoWeight(Vec2f(rOld*rOld,rNew*rNew));
-
-		//printf("%f %f %f!\n", point->idepth, point->idepth_new, point->iR);
 	}
 	E.finish();
 
-	//printf("ER: %f %f %f!\n", couplingWeight*E.A1m[0], couplingWeight*E.A1m[1], (float)E.num.numIn1m);
 	return Vec3f(couplingWeight*E.A1m[0], couplingWeight*E.A1m[1], E.num);
 }
 
@@ -1260,7 +1254,6 @@ void CoarseInitializer::makeNN()
 			}
 		}
 	}
-	// done.
 
 	// Cleanup
 	for(unsigned int i=0;i<globalSettings.pyrLevelsUsed;i++)

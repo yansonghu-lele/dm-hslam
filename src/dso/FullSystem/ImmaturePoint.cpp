@@ -61,7 +61,7 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_
 		int dy = PATTERNP[idx][1];
 
 		// ptc is (pixel intensity, dx, dy)
-        Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u+dx, v+dy, wG0);
+        Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u+dx, v+dy, wG0, hG0);
 		color[idx] = ptc[0]; // Set pixel internsity
 
 		if(colourValid){
@@ -330,7 +330,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 			float hitColor = getInterpolatedElement31(frame->dI,
 										(float)(ptx+rotatetPattern[idx][0]),
 										(float)(pty+rotatetPattern[idx][1]),
-										wG0);
+										wG0, hG0);
 
 			if(!std::isfinite(hitColor)) {energy+=1e5; continue;}
 			float residual = hitColor - (float)(hostToFrame_affine[0] * color[idx] + hostToFrame_affine[1]);
@@ -390,7 +390,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
                 return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
             }
 
-			Vec3f hitColor = getInterpolatedElement33(frame->dI, posU, posV, wG0);
+			Vec3f hitColor = getInterpolatedElement33(frame->dI, posU, posV, wG0, hG0);
 
 			if(!std::isfinite((float)hitColor[0])) {energy+=1e5; continue;}
 			// r = (I_j[u_j,v_j] - b_j) - a_j/a_i * (I_i[u_i,v_i] - b_i)
@@ -559,7 +559,7 @@ double ImmaturePoint::linearizeResidual(
 		if(!projectPoint(this->u,this->v, idepth, dx, dy, HCalib,
 				PRE_RTll, PRE_tTll, drescale, u, v, Ku, Kv, KliP, new_idepth, wG0, hG0))
 			{tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}
-		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0));
+		Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0, hG0));
 
 		if(!std::isfinite((float)hitColor[0])) {tmpRes->state_NewState = ResState::OOB; return tmpRes->state_energy;}
 		

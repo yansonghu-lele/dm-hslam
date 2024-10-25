@@ -233,7 +233,7 @@ void PhotometricUndistorter::unMapFloatImage(float* image)
  * @param factor 
  */
 template<typename T>
-void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, float factor, bool setMeta)
+float* PhotometricUndistorter::processFrame(T* image_in, float exposure_time, float factor, bool setMeta)
 {
 	int wh=w*h;
     float* data = output->image;
@@ -246,7 +246,7 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 		{
 			// Multiply to factor and set to 0-255
 			// This should divide by 256 if the image is 16 bit
-			data[i] = factor*image_in[i];
+			data[i] = factor*static_cast<float>(image_in[i]);
 		}
 		if (setMeta){
 			output->exposure_time = exposure_time;
@@ -279,9 +279,10 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
 
 	if(!globalSettings.setting_useExposure && setMeta)
 		output->exposure_time = 1;
+	return output->image;
 }
-template void PhotometricUndistorter::processFrame<unsigned char>(unsigned char* image_in, float exposure_time, float factor, bool setMeta);
-template void PhotometricUndistorter::processFrame<unsigned short>(unsigned short* image_in, float exposure_time, float factor, bool setMeta);
+template float* PhotometricUndistorter::processFrame<unsigned char>(unsigned char* image_in, float exposure_time, float factor, bool setMeta);
+template float* PhotometricUndistorter::processFrame<unsigned short>(unsigned short* image_in, float exposure_time, float factor, bool setMeta);
 
 /**
  * @brief Destroy the Undistort:: Undistort object
@@ -493,8 +494,8 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 				if(x > w-1.01) x = w-1.01;
 				if(y > h-1.01) y = h-1.01;
 
-				xx = getInterpolatedElement(remapX, x, y, w);
-				yy = getInterpolatedElement(remapY, x, y, w);
+				xx = getInterpolatedElement(remapX, x, y, w, h);
+				yy = getInterpolatedElement(remapY, x, y, w, h);
 			}
 
 			if(xx<0)
@@ -537,17 +538,23 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 template ImageAndExposure* Undistort::undistort<unsigned char>(const MinimalImage<unsigned char>* image_raw, float exposure, double timestamp, float factor, bool useColourPassed) const;
 template ImageAndExposure* Undistort::undistort<unsigned short>(const MinimalImage<unsigned short>* image_raw, float exposure, double timestamp, float factor, bool useColourPassed) const;
 
+/**
+ * @brief Undistorts colour images
+ * 
+ * @tparam T 
+ * @param r_image 
+ * @param g_image 
+ * @param b_image 
+ * @param out_image 
+ * @param exposure 
+ * @param timestamp 
+ * @param factor 
+ */
 template<typename T>
 void Undistort::undistort_colour(MinimalImage<T>* r_image, MinimalImage<T>* g_image, MinimalImage<T>* b_image, ImageAndExposure* out_image, float exposure, double timestamp, float factor)
 {
 	MinimalImage<T>* channels[3];
-	channels[0] = b_image;
-	channels[1] = g_image;
-	channels[2] = r_image;
-	float* out_channels[3];
-	out_channels[0] = out_image->r_image;
-	out_channels[1] = out_image->g_image;
-	out_channels[2] = out_image->b_image;
+	channels[0] = b_image; channels[1] = g_image; channels[2] = r_image;
 
 	if(out_image->useColour == false){
 		printf("Colour not actually being used\n");
@@ -562,44 +569,60 @@ void Undistort::undistort_colour(MinimalImage<T>* r_image, MinimalImage<T>* g_im
 		}
 	}
 
-	for (unsigned short i = 0; i<3; i++){
+	if (!passthrough) // If all inputs are valid
+	{
 		// Photometric undistortion
-		photometricUndist->processFrame<T>(channels[i]->data, exposure, factor, false);
-		if (!passthrough) // If all inputs are valid
-		{
-			float* out_data = out_channels[i];
-			float* in_data = photometricUndist->output->image;
+		float* R = new float[wOrg*hOrg]; float* G = new float[wOrg*hOrg]; float* B = new float[wOrg*hOrg];
 
-			for(int idx = w*h-1;idx>=0;idx--)
-			{
-				// Remap pixels to undistorted positions
-				float xx = remapX[idx];
-				float yy = remapY[idx];
-				if(xx<0){
-					out_data[idx] = 0;
-				}
-				else
-				{
-					// Get integer and rational parts
-					int xxi = xx;
-					int yyi = yy;
-					xx -= xxi;
-					yy -= yyi;
-					float xxyy = xx*yy;
-					// Get array base pointer
-					const float* src = in_data + xxi + yyi * wOrg;
-					// Interpolate (bilinear)
-					out_data[idx] =  xxyy * src[1+wOrg]
-										+ (yy-xxyy) * src[wOrg]
-										+ (xx-xxyy) * src[1]
-										+ (1-xx-yy+xxyy) * src[0];
-				}
+		float* pu;
+		pu = photometricUndist->processFrame<T>(channels[0]->data, exposure, factor, false);
+		memcpy(R, pu, sizeof(float)*wOrg*hOrg);
+		pu = photometricUndist->processFrame<T>(channels[1]->data, exposure, factor, false);
+		memcpy(G, pu, sizeof(float)*wOrg*hOrg);
+		pu = photometricUndist->processFrame<T>(channels[2]->data, exposure, factor, false);
+		memcpy(B, pu, sizeof(float)*wOrg*hOrg);
+
+		for(int idx = w*h-1;idx>=0;idx--)
+		{
+			// Remap pixels to undistorted positions
+			float xx = remapX[idx];
+			float yy = remapY[idx];
+			if(xx<0){
+				out_image->r_image[idx] = 0;
+				out_image->g_image[idx] = 0;
+				out_image->b_image[idx] = 0;
 			}
+			else
+			{
+				// Get integer and rational parts
+				int xxi = xx;
+				int yyi = yy;
+				xx -= xxi;
+				yy -= yyi;
+				float xxyy = xx*yy;
+				// Get array base pointer
+				const float* src_R = R + xxi + yyi * wOrg;
+				const float* src_G = G + xxi + yyi * wOrg;
+				const float* src_B = B + xxi + yyi * wOrg;
+				// Interpolate (bilinear)
+				out_image->r_image[idx] =  xxyy * src_R[1+wOrg] + (yy-xxyy) * src_R[wOrg] + (xx-xxyy) * src_R[1] + (1-xx-yy+xxyy) * src_R[0];
+				out_image->g_image[idx] =  xxyy * src_G[1+wOrg] + (yy-xxyy) * src_G[wOrg] + (xx-xxyy) * src_G[1] + (1-xx-yy+xxyy) * src_G[0];
+				out_image->b_image[idx] =  xxyy * src_B[1+wOrg] + (yy-xxyy) * src_B[wOrg] + (xx-xxyy) * src_B[1] + (1-xx-yy+xxyy) * src_B[0];
+			}
+		}
+		delete [] R;
+		delete [] G;
+		delete [] B;
 		}
 		else
 		{
-			memcpy(out_channels[i], photometricUndist->output->image, sizeof(float)*w*h);
-		}
+		float* pu;
+		pu = photometricUndist->processFrame<T>(channels[0]->data, exposure, factor, false);
+		memcpy(out_image->r_image, pu, sizeof(float)*w*h);
+		pu = photometricUndist->processFrame<T>(channels[1]->data, exposure, factor, false);
+		memcpy(out_image->g_image, pu, sizeof(float)*w*h);
+		pu = photometricUndist->processFrame<T>(channels[2]->data, exposure, factor, false);
+		memcpy(out_image->b_image, pu, sizeof(float)*w*h);
 	}
 }
 template void Undistort::undistort_colour<unsigned char>(MinimalImage<unsigned char>* r_image, MinimalImage<unsigned char>* g_image, MinimalImage<unsigned char>* b_image, ImageAndExposure* out_image, float exposure, double timestamp, float factor=1);

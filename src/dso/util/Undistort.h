@@ -47,7 +47,7 @@ public:
 	// affine normalizes values to 0 <= I < 256.
 	// raw irradiance = a*I + b.
 	// output will be written in [output].
-	template<typename T> void processFrame(T* image_in, float exposure_time, float factor=1, bool setMeta = true);
+	template<typename T> float* processFrame(T* image_in, float exposure_time, float factor=1, bool setMeta = true);
 	void unMapFloatImage(float* image);
 
 	ImageAndExposure* output;

@@ -85,6 +85,7 @@ PointFrameResidual::PointFrameResidual(int ww, int hh, PointHessian* point_, Fra
  * @brief Linearize point
  * 
  * Calculates the residual and Jacobians of the point
+ * Note that the linearization is only done at one pyramid level
  * 
  * @param HCalib 
  * @return double 
@@ -218,7 +219,7 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
 		projectedTo[idx][0] = Ku;
 		projectedTo[idx][1] = Kv;
-        Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0));
+        Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG0, hG0));
 
 		// Calculate residual
         float residual = hitColor[0] - (float)(affLL[0] * color[idx] + affLL[1]);
