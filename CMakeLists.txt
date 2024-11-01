@@ -11,7 +11,7 @@ set(BUILD_TYPE RelWithDebInfo)
 
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
-set(OpenCV_DIR /home/gy/devel/fslam_ros_docker_VI/FSLAM/Thirdparty/CompiledLibs/share/OpenCV)
+set(OpenCV_DIR /home/gy/devel/fslam_ros_docker/FSLAM/Thirdparty/CompiledLibs/share/OpenCV)
 message ("OPENCV Directory: ${OpenCV_DIR}")
 message("OpenCV_LIBS=${OpenCV_LIBS}")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -88,6 +88,7 @@ set(dso_SOURCE_FILES
 		${DSO_SOURCE_DIR}/util/settings.cpp
 		${DSO_SOURCE_DIR}/util/Undistort.cpp
 		${DSO_SOURCE_DIR}/util/globalCalib.cpp
+		${DSO_SOURCE_DIR}/Indirect/Detector.cpp
 		)
 
 set(dmvio_SOURCE_FILES

@@ -60,6 +60,8 @@
 #include "util/TimeMeasurement.h"
 #include "GTSAMIntegration/ExtUtils.h"
 
+#include "Indirect/Detector.h"
+
 #include <iterator>
 
 
