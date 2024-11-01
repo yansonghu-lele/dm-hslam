@@ -73,6 +73,16 @@ struct GlobalSettings{
     // minimum idepth for keeping points in the optimization window.
     float setting_minIdepth = 0.02f;
 
+    // Parameters for indirect points
+    int minThFAST = 7; //8
+    int minIndDist = 4; //9x9
+    int minDirDist = 1; //3x3
+    int indFeaturesToExtract = 1000;
+
+    int gridSize = 10;
+    int mnGridCols = 64;
+    int mnGridRows = 48;
+
     /* Parameters controlling when KF's are taken */
     float setting_keyframesPerSecond = 0;   // if !=0, takes a fixed number of KF per second.
     bool setting_realTimeMaxKF = false;   // if true, takes as many KF's as possible (will break the system if the camera stays stationary)
