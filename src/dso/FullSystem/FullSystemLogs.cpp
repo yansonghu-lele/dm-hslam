@@ -56,7 +56,7 @@ namespace dso
 		// Shows the points of each active frame in each active frame
 		if(globalSettings.setting_disableAllDisplay) return;
 		if(!globalSettings.setting_render_plotTrackingFull) return;
-		int wh = hG[0]*wG[0];
+		int wh = globalCalib.hG[0]*globalCalib.wG[0];
 
 		int idx=0;
 		for(FrameHessian* f : frameHessians)
@@ -65,7 +65,7 @@ namespace dso
 
 			// make images for all frames. will be deleted by the FrameHessian's destructor.
 			for(FrameHessian* f2 : frameHessians)
-				if(f2->debugImage == 0) f2->debugImage = new MinimalImageB3(wG[0], hG[0]);
+				if(f2->debugImage == 0) f2->debugImage = new MinimalImageB3( globalCalib.wG[0],  globalCalib.hG[0]);
 
 			for(FrameHessian* f2 : frameHessians)
 			{
@@ -156,10 +156,10 @@ namespace dso
 		}
 
 
-		int wh = hG[0]*wG[0];
+		int wh = globalCalib.hG[0]*globalCalib.wG[0];
 		for(unsigned int f=0;f<frameHessians.size();f++)
 		{
-			MinimalImageB3* img = new MinimalImageB3(wG[0],hG[0]);
+			MinimalImageB3* img = new MinimalImageB3(globalCalib.wG[0],globalCalib.hG[0]);
 			images.push_back(img);
 			//float* fd = frameHessians[f]->I;
 			Eigen::Vector3f* fd = frameHessians[f]->dI;
@@ -317,7 +317,7 @@ namespace dso
 		{
 			for(unsigned int f=0;f<frameHessians.size();f++)
 			{
-				MinimalImageB3* img = new MinimalImageB3(wG[0],hG[0]);
+				MinimalImageB3* img = new MinimalImageB3(globalCalib.wG[0],globalCalib.hG[0]);
 				Eigen::Vector3f* fd = frameHessians[f]->dI;
 
 				for(int i=0;i<wh;i++)
@@ -347,4 +347,271 @@ namespace dso
 		}
 	}
 #endif
+
+
+void FullSystem::printResult(std::string file, bool onlyLogKFPoses, bool saveMetricPoses, bool useCamToTrackingRef)
+{
+	boost::unique_lock<boost::mutex> lock(trackMutex);
+	boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+
+	std::ofstream myfile;
+	myfile.open (file.c_str());
+	myfile << std::setprecision(15);
+
+	for(FrameShell* s : allFrameHistory)
+	{
+		if(!s->poseValid) continue;
+
+		if(onlyLogKFPoses && s->marginalizedAt == s->id) continue;
+
+        // firstPose is transformFirstToWorld. We actually want camToFirst here ->
+        Sophus::SE3d camToWorld = s->camToWorld;
+
+        // Use camToTrackingReference for nonKFs and the updated camToWorld for KFs.
+        if(useCamToTrackingRef && s->keyframeId == -1)
+        {
+            camToWorld = s->trackingRef->camToWorld * s->camToTrackingRef;
+        }
+        Sophus::SE3d camToFirst = firstPose.inverse() * camToWorld;
+
+        if(saveMetricPoses)
+        {
+            // Transform pose to IMU frame.
+            // not actually camToFirst any more...
+            camToFirst = Sophus::SE3d(imuIntegration.getTransformDSOToIMU().transformPose(camToWorld.inverse().matrix()));
+        }
+
+ 		myfile << s->timestamp <<
+			" " << camToFirst.translation().x() <<
+            " " << camToFirst.translation().y() <<
+            " " << camToFirst.translation().z() <<
+			" " << camToFirst.so3().unit_quaternion().x()<<
+			" " << camToFirst.so3().unit_quaternion().y()<<
+			" " << camToFirst.so3().unit_quaternion().z()<<
+			" " << camToFirst.unit_quaternion().w() << "\n";
+	}
+	myfile.close();
+}
+
+void FullSystem::printPC(std::string file)
+{
+	boost::unique_lock<boost::mutex> lock(trackMutex);
+	boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+
+	std::ofstream myfile;
+	myfile.open (file.c_str());
+	myfile << std::setprecision(9);
+
+	//unsigned long totalpcs = allMargPointsHistory.size();
+	unsigned long totalpcs = allMargPointsHistory.size()+allFrameHistory.size();
+	
+	myfile << std::string("# .PCD v.6 - Point Cloud Data file format\n");
+	myfile << std::string("FIELDS x y z rgb\n");
+	myfile << std::string("SIZE 4 4 4 4\n");
+	myfile << std::string("TYPE F F F F\n");
+	myfile << std::string("COUNT 1 1 1 1\n");
+	myfile << std::string("WIDTH ") << totalpcs << std::string("\n");
+	myfile << std::string("HEIGHT 1\n");
+	myfile << std::string("#VIEWPOINT 0 0 0 1 0 0 0\n");
+	myfile << std::string("POINTS ") << totalpcs << std::string("\n");
+	myfile << std::string("DATA ascii\n");
+	
+	std::unordered_map<unsigned long, PC_output>::iterator itr; 
+	for (itr = allMargPointsHistory.begin(); itr != allMargPointsHistory.end(); ++itr)  
+	{
+		PC_output tmp_PC = itr->second;
+		float rgb;
+		unsigned char b[] = {tmp_PC.r, tmp_PC.g, tmp_PC.b, 0};
+		memcpy(&rgb, &b, sizeof(rgb));
+
+		myfile << tmp_PC.x << " " << tmp_PC.y << " " << tmp_PC.z << " " << rgb << "\n";
+	} 
+
+	// Show trajectory in point cloud
+	for (FrameShell* s : allFrameHistory)  
+	{
+		Sophus::SE3d camToWorld = s->camToWorld;
+		Sophus::SE3d camToFirst = firstPose.inverse() * camToWorld;
+		float rgb;
+		unsigned char b[] = {0, 255, 0, 0};
+		memcpy(&rgb, &b, sizeof(rgb));
+		
+		myfile << camToFirst.translation().x() <<
+            " " << camToFirst.translation().y() <<
+            " " << camToFirst.translation().z() << " " << rgb << "\n";
+	} 
+
+	myfile.close();
+}
+
+
+/**
+ * @brief For debugging
+ * 
+ */
+void FullSystem::printLogLine()
+{
+    dmvio::TimeMeasurement timeMeasurementMargFrames("printLogLine");
+	
+	if(frameHessians.size()==0) return;
+
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
+        printf("LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%'d / %'d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
+                allKeyFramesHistory.back()->id,
+                statistics_lastFineTrackRMSE,
+                ef->resInA,
+                ef->resInL,
+                ef->resInM,
+                (int)statistics_numForceDroppedResFwd,
+                (int)statistics_numForceDroppedResBwd,
+                allKeyFramesHistory.back()->aff_g2l.a,
+                allKeyFramesHistory.back()->aff_g2l.b,
+                frameHessians.back()->shell->id - frameHessians.front()->shell->id,
+                (int)frameHessians.size());
+
+	if(!globalSettings.setting_logStuff) return;
+
+	if(numsLog != 0)
+	{
+		(*numsLog) << allKeyFramesHistory.back()->id << " "  <<
+				statistics_lastFineTrackRMSE << " "  <<
+				(int)statistics_numCreatedPoints << " "  <<
+				(int)statistics_numActivatedPoints << " "  <<
+				(int)statistics_numDroppedPoints << " "  <<
+				(int)statistics_lastNumOptIts << " "  <<
+				ef->resInA << " "  <<
+				ef->resInL << " "  <<
+				ef->resInM << " "  <<
+				statistics_numMargResFwd << " "  <<
+				statistics_numMargResBwd << " "  <<
+				statistics_numForceDroppedResFwd << " "  <<
+				statistics_numForceDroppedResBwd << " "  <<
+				frameHessians.back()->aff_g2l().a << " "  <<
+				frameHessians.back()->aff_g2l().b << " "  <<
+				frameHessians.back()->shell->id - frameHessians.front()->shell->id << " "  <<
+				(int)frameHessians.size() << " "  << "\n";
+		numsLog->flush();
+	}
+}
+
+/**
+ * @brief For debugging the energy function
+ * 
+ */
+void FullSystem::printEigenValLine()
+{
+    dmvio::TimeMeasurement timeMeasurementMargFrames("printEigenValLine");
+	if(!globalSettings.setting_logStuff) return;
+	if(ef->lastHS.rows() < 12) return;
+
+	MatXX Hp = ef->lastHS.bottomRightCorner(ef->lastHS.cols()-CPARS,ef->lastHS.cols()-CPARS);
+	MatXX Ha = ef->lastHS.bottomRightCorner(ef->lastHS.cols()-CPARS,ef->lastHS.cols()-CPARS);
+	int n = Hp.cols()/8;
+	assert(Hp.cols()%8==0);
+
+	// sub-select
+	for(int i=0;i<n;i++)
+	{
+		MatXX tmp6 = Hp.block(i*8,0,6,n*8);
+		Hp.block(i*6,0,6,n*8) = tmp6;
+
+		MatXX tmp2 = Ha.block(i*8+6,0,2,n*8);
+		Ha.block(i*2,0,2,n*8) = tmp2;
+	}
+	for(int i=0;i<n;i++)
+	{
+		MatXX tmp6 = Hp.block(0,i*8,n*8,6);
+		Hp.block(0,i*6,n*8,6) = tmp6;
+
+		MatXX tmp2 = Ha.block(0,i*8+6,n*8,2);
+		Ha.block(0,i*2,n*8,2) = tmp2;
+	}
+
+	VecX eigenvaluesAll = ef->lastHS.eigenvalues().real();
+	VecX eigenP = Hp.topLeftCorner(n*6,n*6).eigenvalues().real();
+	VecX eigenA = Ha.topLeftCorner(n*2,n*2).eigenvalues().real();
+	VecX diagonal = ef->lastHS.diagonal();
+
+	std::sort(eigenvaluesAll.data(), eigenvaluesAll.data()+eigenvaluesAll.size());
+	std::sort(eigenP.data(), eigenP.data()+eigenP.size());
+	std::sort(eigenA.data(), eigenA.data()+eigenA.size());
+
+	int nz = std::max(100,globalSettings.setting_maxFrames*10);
+
+	if(eigenAllLog != 0)
+	{
+		VecX ea = VecX::Zero(nz); ea.head(eigenvaluesAll.size()) = eigenvaluesAll;
+		(*eigenAllLog) << allKeyFramesHistory.back()->id << " " <<  ea.transpose() << "\n";
+		eigenAllLog->flush();
+	}
+	if(eigenALog != 0)
+	{
+		VecX ea = VecX::Zero(nz); ea.head(eigenA.size()) = eigenA;
+		(*eigenALog) << allKeyFramesHistory.back()->id << " " <<  ea.transpose() << "\n";
+		eigenALog->flush();
+	}
+	if(eigenPLog != 0)
+	{
+		VecX ea = VecX::Zero(nz); ea.head(eigenP.size()) = eigenP;
+		(*eigenPLog) << allKeyFramesHistory.back()->id << " " <<  ea.transpose() << "\n";
+		eigenPLog->flush();
+	}
+
+	if(DiagonalLog != 0)
+	{
+		VecX ea = VecX::Zero(nz); ea.head(diagonal.size()) = diagonal;
+		(*DiagonalLog) << allKeyFramesHistory.back()->id << " " <<  ea.transpose() << "\n";
+		DiagonalLog->flush();
+	}
+
+	if(variancesLog != 0)
+	{
+		VecX ea = VecX::Zero(nz); ea.head(diagonal.size()) = ef->lastHS.inverse().diagonal();
+		(*variancesLog) << allKeyFramesHistory.back()->id << " " <<  ea.transpose() << "\n";
+		variancesLog->flush();
+	}
+
+	std::vector<VecX> &nsp = ef->lastNullspaces_forLogging;
+	(*nullspacesLog) << allKeyFramesHistory.back()->id << " ";
+	for(unsigned int i=0;i<nsp.size();i++)
+		(*nullspacesLog) << nsp[i].dot(ef->lastHS * nsp[i]) << " " << nsp[i].dot(ef->lastbS) << " " ;
+	(*nullspacesLog) << "\n";
+	nullspacesLog->flush();
+
+}
+
+/**
+ * @brief For debugging the frames
+ * 
+ */
+void FullSystem::printFrameLifetimes()
+{
+	if(!globalSettings.setting_logStuff) return;
+
+	boost::unique_lock<boost::mutex> lock(trackMutex);
+
+	std::ofstream* lg = new std::ofstream();
+	lg->open("logs/lifetimeLog.txt", std::ios::trunc | std::ios::out);
+	lg->precision(15);
+
+	for(FrameShell* s : allFrameHistory)
+	{
+		(*lg) << s->id
+			<< " " << s->marginalizedAt
+			<< " " << s->statistics_goodResOnThis
+			<< " " << s->statistics_outlierResOnThis
+			<< " " << s->movedByOpt;
+
+		(*lg) << "\n";
+	}
+
+	lg->close();
+	delete lg;
+}
+
+void FullSystem::printEvalLine()
+{
+	return;
+}
+
 }

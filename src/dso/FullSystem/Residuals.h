@@ -86,7 +86,7 @@ public:
 
 	~PointFrameResidual();
 	PointFrameResidual();
-	PointFrameResidual(int ww, int hh, PointHessian* point_, FrameHessian* host_, FrameHessian* target_, GlobalSettings* globalSettings_);
+	PointFrameResidual(Global_Calib* globalCalib_, PointHessian* point_, FrameHessian* host_, FrameHessian* target_, GlobalSettings* globalSettings_);
 	double linearize(CalibHessian* HCalib);
 
 
@@ -104,10 +104,9 @@ public:
 	void debugPlot();
 #endif
 
-	void printRows(std::vector<VecX> &v, VecX &r, int nFrames, int nPoints, int M, int res);
 private:
 	GlobalSettings* globalSettings;
-
+	Global_Calib* globalCalib;
 };
 }
 

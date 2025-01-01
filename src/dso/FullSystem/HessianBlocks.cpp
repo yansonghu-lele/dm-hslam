@@ -162,22 +162,22 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 	// absSquaredGrad contains the pixel gradient
 	for(int i=0;i<globalSettings.pyrLevelsUsed;i++)
 	{
-		dIp[i] = new Eigen::Vector3f[wG[i]*hG[i]];
-		std::fill(dIp[i], dIp[i]+wG[i]*hG[i], Eigen::Vector3f(0,0,0));
-		absSquaredGrad[i] = new float[wG[i]*hG[i]];
-		std::fill(absSquaredGrad[i], absSquaredGrad[i]+wG[i]*hG[i],0);
+		dIp[i] = new Eigen::Vector3f[globalCalib.wG[i]*globalCalib.hG[i]];
+		std::fill(dIp[i], dIp[i]+globalCalib.wG[i]*globalCalib.hG[i], Eigen::Vector3f(0,0,0));
+		absSquaredGrad[i] = new float[globalCalib.wG[i]*globalCalib.hG[i]];
+		std::fill(absSquaredGrad[i], absSquaredGrad[i]+globalCalib.wG[i]*globalCalib.hG[i],0);
 	}
 	dI = dIp[0];
 
 	// make d0
-	int w=wG[0];
-	int h=hG[0];
+	int w=globalCalib.wG[0];
+	int h=globalCalib.hG[0];
 	for(int i=0;i<w*h;i++)
 		dI[i][0] = color[i];
 
 	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
-		int wl = wG[lvl], hl = hG[lvl];
+		int wl = globalCalib.wG[lvl], hl = globalCalib.hG[lvl];
 
 		// Set dI_l and dabs_l to point to the dIp and absSquaredGrad arrays
 		Eigen::Vector3f* dI_l = dIp[lvl];
@@ -186,7 +186,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 		if(lvl>0)
 		{
 			int lvlm1 = lvl-1;
-			int wlm1 = wG[lvlm1];
+			int wlm1 = globalCalib.wG[lvlm1];
 			Eigen::Vector3f* dI_lm = dIp[lvlm1];
 
 			// Take every other pixel from the last pyramid level
@@ -238,11 +238,12 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 void FrameHessian::makeColourImages(float* r, float* g ,float* b)
 {
 	colourValid = true;
-	dI_c = new Eigen::Vector3f[wG[0]*hG[0]];
-	std::fill(dI_c, dI_c+wG[0]*hG[0], Eigen::Vector3f(0,0,0));
 
-	int w=wG[0];
-	int h=hG[0];
+	dI_c = new Eigen::Vector3f[globalCalib.wG[0]*globalCalib.hG[0]];
+	std::fill(dI_c, dI_c+globalCalib.wG[0]*globalCalib.hG[0], Eigen::Vector3f(0,0,0));
+
+	int w=globalCalib.wG[0];
+	int h=globalCalib.hG[0];
 	for(int i=0;i<w*h;i++){
 		dI_c[i][0] = r[i];
 		dI_c[i][1] = g[i];
@@ -294,5 +295,6 @@ void FrameFramePrecalc::set(FrameHessian* host, FrameHessian* target, CalibHessi
 	PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(), target->aff_g2l()).cast<float>();
 	PRE_b0_mode = host->aff_g2l_0().b;
 }
+
 }
 

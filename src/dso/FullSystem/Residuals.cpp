@@ -60,20 +60,23 @@ PointFrameResidual::PointFrameResidual(){assert(false); instanceCounter++; globa
 PointFrameResidual::~PointFrameResidual(){assert(efResidual==0); instanceCounter--; delete J;}
 
 /**
- * @brief Construct a new Point Frame Residual
+ * @brief Construct a new Point Frame Residual:: Point Frame Residual object
  * 
+ * @param globalCalib_ 
  * @param point_ 
  * @param host_ 
  * @param target_ 
+ * @param globalSettings_ 
  */
-PointFrameResidual::PointFrameResidual(int ww, int hh, PointHessian* point_, FrameHessian* host_, FrameHessian* target_,  GlobalSettings* globalSettings_) :
+PointFrameResidual::PointFrameResidual(Global_Calib* globalCalib_, PointHessian* point_, FrameHessian* host_, FrameHessian* target_,  GlobalSettings* globalSettings_) :
 	point(point_),
 	host(host_),
 	target(target_),
+	globalCalib(globalCalib_),
 	globalSettings(globalSettings_)
 {
-	wG0 = ww;
-	hG0 = hh;
+	wG0 = globalCalib->wG[0];
+	hG0 = globalCalib->hG[0];
 	efResidual=0;
 	instanceCounter++;
 	resetOOB();

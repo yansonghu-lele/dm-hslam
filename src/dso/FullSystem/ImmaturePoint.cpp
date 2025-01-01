@@ -35,19 +35,23 @@ namespace dso
 {
 
 /**
- * @brief Construct a new immature point object
+ * @brief Construct a new Immature Point:: Immature Point object
  * 
  * @param u_ 		x position of point
  * @param v_ 		y position of point
+ * @param globalCalib_ 
  * @param host_ 	Frame containing point
  * @param type 		Pyramid level point is detected in
  * @param HCalib 
  */
-ImmaturePoint::ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_, float type, CalibHessian* HCalib, GlobalSettings& globalSettings_)
-: globalSettings(globalSettings_), u(u_), v(v_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
+ImmaturePoint::ImmaturePoint(int u_, int v_, Global_Calib& globalCalib_, FrameHessian* host_, float type, CalibHessian* HCalib, GlobalSettings& globalSettings_)
+: globalSettings(globalSettings_), globalCalib(globalCalib_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
 {
-	wG0 = ww;
-	hG0 = hh;
+	u = u_;
+	v = v_;
+
+	wG0 = globalCalib.wG[0];
+	hG0 = globalCalib.hG[0];
 
 	gradH.setZero();
 
@@ -132,6 +136,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 				idepth_min, idepth_max,
 				hostToFrame_Kt[0],hostToFrame_Kt[1],hostToFrame_Kt[2]);
 
+
 	// ============== Check if points are OOB. Project assumming min and max depth and then check bounds ===================
 	// Find the maximum size of the pattern
     Mat22f Rplane = hostToFrame_KRKi.topLeftCorner<2,2>();
@@ -182,7 +187,6 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	if(std::isfinite(idepth_max)) // If last max depth was valid
 	{
 		ptpMax = pr + hostToFrame_Kt*idepth_max; // Repeat, but assuming the depth is idepth_max
-		
 		uMax = ptpMax[0] / ptpMax[2];
 		vMax = ptpMax[1] / ptpMax[2];
 
@@ -309,8 +313,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hos
 	{
 		printf("CAUGHT INF / NAN dxdy!\n");
 
-		lastTracePixelInterval=0;
 		lastTraceUV = Vec2f(-1,-1);
+		lastTracePixelInterval=0;
 		return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
 	}
 

@@ -111,6 +111,7 @@ struct FrameFramePrecalc
 struct FrameHessian
 {
 	GlobalSettings& globalSettings;
+	Global_Calib& globalCalib;
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	EFFrame* efFrame;
@@ -250,14 +251,11 @@ struct FrameHessian
 		if(debugImage != 0) delete debugImage;
 	};
 
-	explicit inline FrameHessian(int (&wG_)[PYR_LEVELS], int (&hG_)[PYR_LEVELS], GlobalSettings& globalSettings_):
-		ab_exposure(0.0),
-		idx(0),
+	explicit inline FrameHessian(Global_Calib& globalCalib_, GlobalSettings& globalSettings_):
+		ab_exposure(0.0), idx(0),
+		globalCalib(globalCalib_),
 		globalSettings(globalSettings_)
 	{
-		std::copy(std::begin(wG_), std::end(wG_), std::begin(wG));
-		std::copy(std::begin(hG_), std::end(hG_), std::begin(hG));
-
 		instanceCounter++;
 		flaggedForMarginalization=false;
 		frameID = -1;

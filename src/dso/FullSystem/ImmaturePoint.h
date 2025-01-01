@@ -46,12 +46,12 @@ public:
 
 enum ImmaturePointStatus {
 	IPS_GOOD=0,					// Traced is good
-	IPS_OOB,					// Out of Bounds: end tracking & marginalize
-	IPS_OUTLIER,				// Energy too high, treat as outlier
-	IPS_OUTLIER_OUT,			// Energy too high, stop optimizing
-	IPS_SKIPPED,				// Good enough to not need tracing, use current values
-	IPS_BADCONDITION,			// Not traced because bad error bound
-	IPS_UNINITIALIZED};			// Not even traced once
+	IPS_SKIPPED=1,				// Good enough to not need tracing, use current values
+	IPS_OOB=2,					// Out of Bounds: end tracking & marginalize
+	IPS_OUTLIER=3,				// Energy too high, treat as outlier
+	IPS_OUTLIER_OUT=4,			// Energy too high, stop optimizing
+	IPS_BADCONDITION=5,			// Not traced because bad error bound
+	IPS_UNINITIALIZED=6};			// Not even traced once
 
 
 class ImmaturePoint
@@ -83,7 +83,7 @@ public:
 
 	float idepth_min;
 	float idepth_max;
-	ImmaturePoint(int u_, int v_, int ww, int hh, FrameHessian* host_, float type, CalibHessian* HCalib, GlobalSettings& globalSettings_);
+	ImmaturePoint(int u_, int v_, Global_Calib& globalCalib_, FrameHessian* host_, float type, CalibHessian* HCalib, GlobalSettings& globalSettings_);
 	~ImmaturePoint();
 
 	ImmaturePointStatus traceOn(FrameHessian* frame, const Mat33f &hostToFrame_KRKi, const Vec3f &hostToFrame_Kt, const Vec2f &hostToFrame_affine, CalibHessian* HCalib, bool debugPrint=false);
@@ -102,6 +102,7 @@ public:
 
 private:
 	GlobalSettings& globalSettings;
+	Global_Calib& globalCalib;
 
 };
 

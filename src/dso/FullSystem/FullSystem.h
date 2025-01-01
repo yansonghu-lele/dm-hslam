@@ -200,8 +200,11 @@ private:
 	GlobalSettings& globalSettings;
 	Global_Calib& globalCalib;
 
+	void setDefaults();
+	void setClasses();
+
 	dmvio::IMUIntegration imuIntegration;
-	bool imuUsedBefore = false;
+	bool imuUsedBefore;
 	dmvio::BAGTSAMIntegration* baIntegration = nullptr;
 
 public:
@@ -211,12 +214,10 @@ public:
 
 private:
 	CalibHessian Hcalib;
-	int wG[PYR_LEVELS];
-	int hG[PYR_LEVELS];
 
 	dmvio::GravityInitializer gravityInit;
 
-	double framesBetweenKFsRest = 0.0;
+	double framesBetweenKFsRest;
 
     // opt single point
 	int optimizePoint(PointHessian* point, int minObs, bool flagOOB);
