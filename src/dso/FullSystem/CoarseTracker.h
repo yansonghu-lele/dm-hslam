@@ -49,7 +49,7 @@ class CoarseTracker {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-	CoarseTracker(int w, int h, dmvio::IMUIntegration &imuIntegration, GlobalSettings& globalSettings_);
+	CoarseTracker(Global_Calib& globalCalib_, dmvio::IMUIntegration &imuIntegration, GlobalSettings& globalSettings_);
 	~CoarseTracker();
 
 	bool trackNewestCoarse(
@@ -97,6 +97,7 @@ public:
 
 private:
 	GlobalSettings& globalSettings;
+	Global_Calib& globalCalib;
 
 	void makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians);
 	float* idepth[PYR_LEVELS];
@@ -136,7 +137,7 @@ class CoarseDistanceMap {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-	CoarseDistanceMap(int w, int h, int pyrLevelsUsed_);
+	CoarseDistanceMap(Global_Calib& globalCalib_, int pyrLevelsUsed_);
 	~CoarseDistanceMap();
 
 	void makeDistanceMap(
@@ -170,6 +171,8 @@ public:
 
 
 private:
+	Global_Calib& globalCalib;
+
 	int pyrLevelsUsed;
 
 	PointFrameResidual** coarseProjectionGrid;

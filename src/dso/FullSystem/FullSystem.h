@@ -161,8 +161,8 @@ class FullSystem {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	FullSystem(bool linearizeOperationPassed, 
-				const dso::Global_Calib& globalCalib,
-				const dmvio::IMUCalibration& imuCalibration,
+				dso::Global_Calib& globalCalib,
+				dmvio::IMUCalibration& imuCalibration,
                dmvio::IMUSettings& imuSettings,
 			   GlobalSettings& globalSettings_);
 	virtual ~FullSystem();
@@ -198,10 +198,11 @@ public:
 
 private:
 	GlobalSettings& globalSettings;
+	Global_Calib& globalCalib;
 
-    dmvio::IMUIntegration imuIntegration;
-    bool imuUsedBefore = false;
-    dmvio::BAGTSAMIntegration* baIntegration = nullptr;
+	dmvio::IMUIntegration imuIntegration;
+	bool imuUsedBefore = false;
+	dmvio::BAGTSAMIntegration* baIntegration = nullptr;
 
 public:
 	dmvio::IMUIntegration &getImuIntegration();
@@ -213,9 +214,9 @@ private:
 	int wG[PYR_LEVELS];
 	int hG[PYR_LEVELS];
 
-    dmvio::GravityInitializer gravityInit;
+	dmvio::GravityInitializer gravityInit;
 
-    double framesBetweenKFsRest = 0.0;
+	double framesBetweenKFsRest = 0.0;
 
     // opt single point
 	int optimizePoint(PointHessian* point, int minObs, bool flagOOB);

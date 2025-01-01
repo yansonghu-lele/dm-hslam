@@ -43,21 +43,26 @@ namespace dso
 /**
  * @brief Construct a new Pixel Selector:: Pixel Selector object
  * 
- * @param w 	Width of image
- * @param h 	Height of image
+ * @param globalCalib_ 
+ * @param _minGradHistCut 
+ * @param _minGradHistAdd 
+ * @param globalSettings_ 
  */
-PixelSelector::PixelSelector(int w0, int h0, int w1, int w2, GlobalSettings& globalSettings_):
-globalSettings(globalSettings_)
+PixelSelector::PixelSelector(Global_Calib& globalCalib_, float _minGradHistCut, float _minGradHistAdd, GlobalSettings& globalSettings_):
+globalCalib(globalCalib_), globalSettings(globalSettings_)
 {
-	wG0 = w0;
-	hG0 = h0;
-	wG1 = w1;
-	wG2 = w2;
+	wG0 = globalCalib.wG[0];
+	hG0 = globalCalib.hG[0];
+	wG1 = globalCalib.wG[1];
+	wG2 = globalCalib.wG[2];
 	
-	randomPattern = new unsigned char[w0*h0];
+	minGradHistCut = _minGradHistCut;
+	minGradHistAdd = _minGradHistAdd;
+	
+	randomPattern = new unsigned char[wG0*hG0];
 	std::srand(3141592); // Want to be deterministic
 	// X & 0xFF sets value between 0 and 255
-	for(int i=0;i<w0*h0;i++) randomPattern[i] = rand() & 0xFF;
+	for(int i=0;i<wG0*hG0;i++) randomPattern[i] = rand() & 0xFF;
 
 	// Grid thresholding is used to chose points
 
@@ -66,13 +71,13 @@ globalSettings(globalSettings_)
     // Always use block size divisable by 16
     bW = 16;
     bH = 16;
-    nbW = w0 / bW;
-    nbH = h0 / bH;
+    nbW = wG0 / bW;
+    nbH = hG0 / bH;
 
 	ths = new float[(nbW)*(nbH)];
 	thsSmoothed = new float[(nbW)*(nbH)];
 
-    if(w0 != bW * nbW || h0 != bH * nbH)
+    if(wG0 != bW * nbW || hG0 != bH * nbH)
     {
         std::cout << "ERROR: Height or width seem to be not divisible by 16!" << std::endl;
         assert(0);
@@ -205,7 +210,7 @@ void PixelSelector::makeThresTable(const FrameHessian* const fh)
 			}
 
 			// Calculate approximate threshold
-			ths[x+y*w32] = computeHistQuantile(gradHist, globalSettings.setting_minGradHistCut, num_hist_values) + globalSettings.setting_minGradHistAdd;
+			ths[x+y*w32] = computeHistQuantile(gradHist, minGradHistCut, num_hist_values) + minGradHistAdd;
 		}
 	}
 	

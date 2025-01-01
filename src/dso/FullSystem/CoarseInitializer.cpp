@@ -52,13 +52,13 @@ namespace dso
 {
 
 /**
- * @brief Construct a new Coarse Initializer
+ * @brief Construct a new Coarse Initializer:: Coarse Initializer object
  * 
- * @param ww 
- * @param hh 
+ * @param globalCalib_ 
+ * @param globalSettings_ 
  */
-CoarseInitializer::CoarseInitializer(int ww, int hh, GlobalSettings& globalSettings_)
-		: thisToNext_aff(0, 0), thisToNext(SE3()), globalSettings(globalSettings_)
+CoarseInitializer::CoarseInitializer(Global_Calib& globalCalib_, GlobalSettings& globalSettings_)
+		: thisToNext_aff(0, 0), thisToNext(SE3()), globalCalib(globalCalib_), globalSettings(globalSettings_)
 {
 	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
@@ -66,13 +66,13 @@ CoarseInitializer::CoarseInitializer(int ww, int hh, GlobalSettings& globalSetti
 		numPoints[lvl] = 0;
 	}
 
-	wG0 = ww;
-	hG0 = hh;
+	wG0 = globalCalib.wG[0];
+	hG0 = globalCalib.hG[0];
 
 	pixelSelectorSparsity = globalSettings.setting_sparsityFactor;
 
-	JbBuffer = new Vec10f[ww*hh];
-	JbBuffer_new = new Vec10f[ww*hh];
+	JbBuffer = new Vec10f[wG0*hG0];
+	JbBuffer_new = new Vec10f[wG0*hG0];
 
 
 	frameID=-1;
@@ -626,6 +626,7 @@ Vec3f CoarseInitializer::calcResAndGS(
 	EAlpha.finish();
 	float alphaEnergy = alphaW*(EAlpha.A + refToNew.translation().squaredNorm() * npts);
 
+
 	// compute alpha opt
 	float alphaOpt;
 	if(alphaEnergy > alphaK*npts)
@@ -925,7 +926,8 @@ void CoarseInitializer::setFirst(CalibHessian* HCalib, FrameHessian* newFrameHes
 	// Attrach frame
 	firstFrame = newFrameHessian;
 
-	PixelSelector sel(w[0],h[0],w[1],w[2],globalSettings);
+	// setting_minGradHistCut and setting_minGradHistAdd can change
+	PixelSelector sel(globalCalib, globalSettings.setting_minGradHistCut, globalSettings.setting_minGradHistAdd, globalSettings);
 
 	// Stores positiions where points were selected to be
 	float* statusMap = new float[w[0]*h[0]];

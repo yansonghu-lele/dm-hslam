@@ -83,12 +83,12 @@ boost::mutex FrameShell::shellPoseMutex{};
  * @param imuSettings 
  */
 FullSystem::FullSystem(bool linearizeOperationPassed, 
-						const dso::Global_Calib& globalCalib,
-						const dmvio::IMUCalibration& imuCalibration,
+						dso::Global_Calib& globalCalib_,
+						dmvio::IMUCalibration& imuCalibration,
                        dmvio::IMUSettings& imuSettings,
 					   GlobalSettings& globalSettings_)
     : globalSettings(globalSettings_), linearizeOperation(linearizeOperationPassed), 
-	Hcalib(globalCalib),
+	Hcalib(globalCalib), globalCalib(globalCalib_), 
 	imuIntegration(&Hcalib, imuCalibration, imuSettings, linearizeOperation),
     secondKeyframeDone(false), gravityInit(imuSettings.numMeasurementsGravityInit, imuCalibration),
     shellPoseMutex(FrameShell::shellPoseMutex)
@@ -160,11 +160,11 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
 
 	selectionMap = new float[wG[0]*hG[0]];
 
-	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (wG[0], hG[0], globalSettings_.pyrLevelsUsed);
-	coarseTracker = new CoarseTracker(wG[0], hG[0], imuIntegration, globalSettings_);
-	coarseTracker_forNewKF = new CoarseTracker(wG[0], hG[0], imuIntegration, globalSettings_);
-	coarseInitializer = std::make_unique<CoarseInitializer> (wG[0], hG[0], globalSettings_);
-	pixelSelector = std::make_unique<PixelSelector> (wG[0], hG[0], wG[1], wG[2], globalSettings_);
+	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (globalCalib, globalSettings_.pyrLevelsUsed);
+	coarseTracker = new CoarseTracker(globalCalib, imuIntegration, globalSettings_);
+	coarseTracker_forNewKF = new CoarseTracker(globalCalib, imuIntegration, globalSettings_);
+	coarseInitializer = std::make_unique<CoarseInitializer> (globalCalib, globalSettings);
+	pixelSelector = std::make_unique<PixelSelector> (globalCalib, globalSettings.setting_minGradHistCut, globalSettings.setting_minGradHistAdd, globalSettings);
 
 	statistics_lastNumOptIts=0;
 	statistics_numDroppedPoints=0;

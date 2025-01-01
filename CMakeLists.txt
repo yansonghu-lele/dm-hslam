@@ -11,7 +11,6 @@ set(BUILD_TYPE RelWithDebInfo)
 
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
-set(OpenCV_DIR /home/gy/devel/fslam_ros_docker_VI/FSLAM/Thirdparty/CompiledLibs/share/OpenCV)
 message ("OPENCV Directory: ${OpenCV_DIR}")
 message("OpenCV_LIBS=${OpenCV_LIBS}")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -35,7 +34,7 @@ ENDIF()
 # optional libraries
 find_package(LibZip QUIET)
 find_package(Pangolin 0.2)
-find_package(OpenCV 3.4.16)
+find_package(OpenCV)
 
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -73,7 +72,7 @@ set(dso_SOURCE_FILES
         ${DSO_SOURCE_DIR}/FullSystem/FullSystem.cpp
         ${DSO_SOURCE_DIR}/FullSystem/FullSystemOptimize.cpp
         ${DSO_SOURCE_DIR}/FullSystem/FullSystemOptPoint.cpp
-        ${DSO_SOURCE_DIR}/FullSystem/FullSystemDebugStuff.cpp
+        ${DSO_SOURCE_DIR}/FullSystem/FullSystemLogs.cpp
         ${DSO_SOURCE_DIR}/FullSystem/FullSystemMarginalize.cpp
         ${DSO_SOURCE_DIR}/FullSystem/Residuals.cpp
         ${DSO_SOURCE_DIR}/FullSystem/CoarseTracker.cpp

@@ -82,7 +82,7 @@ public:
 class CoarseInitializer {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    CoarseInitializer(int ww, int hh, GlobalSettings& globalSettings_);
+	CoarseInitializer(Global_Calib& globalCalib_, GlobalSettings& globalSettings_);
 	~CoarseInitializer();
 
 
@@ -104,6 +104,7 @@ public:
 
 private:
 	GlobalSettings& globalSettings;
+	Global_Calib& globalCalib;
 
 	int wG0;
 	int hG0;

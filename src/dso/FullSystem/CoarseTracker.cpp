@@ -37,10 +37,12 @@
 #include "FullSystem/FullSystem.h"
 #include "FullSystem/HessianBlocks.h"
 #include "FullSystem/Residuals.h"
+
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 #include "IOWrapper/ImageRW.h"
-#include <algorithm>
 #include "util/TimeMeasurement.h"
+
+#include <algorithm>
 
 #if !defined(__SSE3__) && !defined(__SSE2__) && !defined(__SSE1__)
 #include "SSE2NEON.h"
@@ -76,24 +78,24 @@ T* allocAligned(int size, std::vector<T*> &rawPtrVec)
 /**
  * @brief Construct a new Coarse Tracker:: Coarse Tracker object
  * 
- * @param ww 
- * @param hh 
- * @param imuIntegration 
+ * @param globalCalib_ 
+ * @param imuIntegration_ 
+ * @param globalSettings_ 
  */
-CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegration, GlobalSettings& globalSettings_) 
-: lastRef_aff_g2l(0, 0), imuIntegration(imuIntegration), globalSettings(globalSettings_)
+CoarseTracker::CoarseTracker(Global_Calib& globalCalib_, dmvio::IMUIntegration &imuIntegration_, GlobalSettings& globalSettings_) 
+: lastRef_aff_g2l(0, 0), imuIntegration(imuIntegration_), globalCalib(globalCalib_), globalSettings(globalSettings_)
 {
 	// Set width and height
-	wG0 = ww;
-	hG0 = hh;
+	wG0 = globalCalib.wG[0];
+	hG0 = globalCalib.hG[0];
 
 	// Make coarse tracking templates.
 	// All arrays are aligned to allow for the use of high performance instructions
 	// All pointers are stored in ptrToDelete for the destructor
 	for(int lvl=0; lvl<globalSettings.pyrLevelsUsed; lvl++)
 	{
-		int wl = ww>>lvl;
-		int hl = hh>>lvl;
+		int wl = wG0>>lvl;
+		int hl = hG0>>lvl;
 
 		idepth[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
 		weightSums[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
@@ -104,6 +106,7 @@ CoarseTracker::CoarseTracker(int ww, int hh, dmvio::IMUIntegration &imuIntegrati
 		pc_idepth[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
 		pc_color[lvl] = allocAligned<4,float>(wl*hl, ptrToDelete);
 	}
+
 	unsigned int wh = wG0*hG0;
 
 	// Warped buffers
@@ -431,17 +434,17 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &ref
 	b_out = acc9.H.topRightCorner<8,1>().cast<double>() * (1.0f/n);
 
 	// Scale H and b
-	H_out.block<8,3>(0,0) *= SCALE_XI_TRANS;
-	H_out.block<8,3>(0,3) *= SCALE_XI_ROT;
+	H_out.block<8,3>(0,0) *= SCALE_XI_ROT;
+	H_out.block<8,3>(0,3) *= SCALE_XI_TRANS;
 	H_out.block<8,1>(0,6) *= SCALE_A;
 	H_out.block<8,1>(0,7) *= SCALE_B;
-	H_out.block<3,8>(0,0) *= SCALE_XI_TRANS;
-	H_out.block<3,8>(3,0) *= SCALE_XI_ROT;
+	H_out.block<3,8>(0,0) *= SCALE_XI_ROT;
+	H_out.block<3,8>(3,0) *= SCALE_XI_TRANS;
 	H_out.block<1,8>(6,0) *= SCALE_A;
 	H_out.block<1,8>(7,0) *= SCALE_B;
 
-	b_out.segment<3>(0) *= SCALE_XI_TRANS;
-	b_out.segment<3>(3) *= SCALE_XI_ROT;
+	b_out.segment<3>(0) *= SCALE_XI_ROT;
+	b_out.segment<3>(3) *= SCALE_XI_TRANS;
 	b_out.segment<1>(6) *= SCALE_A;
 	b_out.segment<1>(7) *= SCALE_B;
 }
@@ -821,8 +824,8 @@ bool CoarseTracker::trackNewestCoarse(
 				// Scale increment
 				inc *= extrapFac;
 				Vec8 incScaled = inc;
-				incScaled.segment<3>(0) *= SCALE_XI_TRANS;
-				incScaled.segment<3>(3) *= SCALE_XI_ROT;
+				incScaled.segment<3>(0) *= SCALE_XI_ROT;
+				incScaled.segment<3>(3) *= SCALE_XI_TRANS;
 				incScaled.segment<1>(6) *= SCALE_A;
 				incScaled.segment<1>(7) *= SCALE_B;
 
@@ -1064,29 +1067,32 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*
 
 
 /**
- * @brief Construct a new Coarse Distance Map
+ * @brief Construct a new Coarse Distance Map:: Coarse Distance Map object
  * 
  * The coarse distance map shows how far each pixel in a frame is from a valid point
  * The coarse distance map is used to maintain immature point density
  * 
- * @param ww 
- * @param hh 
+ * @param globalCalib_ 
+ * @param pyrLevelsUsed_ 
+ * 
  */
-CoarseDistanceMap::CoarseDistanceMap(int ww, int hh, int pyrLevelsUsed_):
-pyrLevelsUsed(pyrLevelsUsed_)
+CoarseDistanceMap::CoarseDistanceMap(Global_Calib& globalCalib_, int pyrLevelsUsed_):
+globalCalib(globalCalib_), pyrLevelsUsed(pyrLevelsUsed_)
 {
-	wG0 = ww;
-	hG0 = hh;
-	fwdWarpedIDDistFinal = new float[ww*hh/4];
+	wG0 = globalCalib_.wG[0];
+	hG0 = globalCalib_.hG[0];
+	unsigned int wh = wG0*hG0;
 
-	bfsList1 = new Eigen::Vector2i[ww*hh/4];
-	bfsList2 = new Eigen::Vector2i[ww*hh/4];
+	fwdWarpedIDDistFinal = new float[wh/4];
+
+	bfsList1 = new Eigen::Vector2i[wh/4];
+	bfsList2 = new Eigen::Vector2i[wh/4];
 
 	int fac = 1 << (pyrLevelsUsed-1);
 
 
-	coarseProjectionGrid = new PointFrameResidual*[2048*(ww*hh/(fac*fac))];
-	coarseProjectionGridNum = new int[ww*hh/(fac*fac)];
+	coarseProjectionGrid = new PointFrameResidual*[2048*(wh/(fac*fac))];
+	coarseProjectionGridNum = new int[wh/(fac*fac)];
 
 	w[0]=h[0]=0;
 }
@@ -1165,7 +1171,7 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 	assert(w[0] != 0);
 	int w1 = w[1], h1 = h[1];
 
-	for(int k=1;k<40;k++) // Only update points 40 pixels away
+	for(int k=1;k<64;k++) // Only update pixels a certain number of pixels away from the point
 	{
 		int bfsNum2 = bfsNum;
 		std::swap<Eigen::Vector2i*>(bfsList1,bfsList2);

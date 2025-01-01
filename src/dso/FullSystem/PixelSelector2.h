@@ -30,6 +30,7 @@
  
 #include "util/NumType.h"
 #include "util/settings.h"
+#include "util/globalCalib.h"
 
 // Because histogram is only used to calculate quartiles
 // Number of bins only affects quartile resolution
@@ -51,7 +52,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	int makeMaps( const FrameHessian* const fh, float* map_out, float density, int recursionsLeft=1, float thFactor=1);
 
-	PixelSelector(int w0, int h0, int w1, int w2, GlobalSettings& globalSettings);
+	PixelSelector(Global_Calib& globalCalib_, float _minGradHistCut, float _minGradHistAdd, GlobalSettings& globalSettings_);
 	~PixelSelector();
 
 	void makeThresTable(const FrameHessian* const fh);
@@ -62,8 +63,12 @@ private:
 			float* map_out, int pot, float thFactor=1);
 
 	GlobalSettings& globalSettings;
+	Global_Calib& globalCalib;
 
 	unsigned char* randomPattern;
+
+	float minGradHistCut;
+	float minGradHistAdd;
 
 	// Table of minimum gradient threshold
 	float* ths;
