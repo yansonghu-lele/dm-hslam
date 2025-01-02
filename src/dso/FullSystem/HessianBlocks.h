@@ -82,7 +82,7 @@ struct FrameFramePrecalc
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	// Static values
-	static int instanceCounter;
+	
 	FrameHessian* host;			// defines row
 	FrameHessian* target;		// defines column
 
@@ -174,7 +174,8 @@ struct FrameHessian
 	// precalc values
 	SE3 PRE_worldToCam;
 	SE3 PRE_camToWorld;
-	std::vector<FrameFramePrecalc,Eigen::aligned_allocator<FrameFramePrecalc>> targetPrecalc;
+	#define FRAMEPRECALCLIST std::vector<FrameFramePrecalc,Eigen::aligned_allocator<FrameFramePrecalc>>
+	FRAMEPRECALCLIST targetPrecalc;
 	MinimalImageB3* debugImage;
 
 
@@ -268,6 +269,8 @@ struct FrameHessian
 		colourValid = false;
 	};
 
+	FrameHessian(FrameHessian const&) = delete;
+    FrameHessian& operator=(FrameHessian const&) = delete;
 
     void makeImages(float* color, CalibHessian* HCalib);
 	void makeColourImages(float* r, float* g ,float* b);
@@ -435,8 +438,60 @@ struct CalibHessian
 	}
 };
 
+/**
+ * @brief Base class for PointHessian and ImmaturePoint
+ * 
+ * Store the basic information of a point
+ * 
+ */
+struct Point
+{
+	public: 
+		float color[MAX_RES_PER_POINT];			// colors in host frame
+		float weights[MAX_RES_PER_POINT];		// host-weights for respective residuals.
+
+		static unsigned long totalPointInstantCounter;
+		static unsigned int pointInstantCounter;
+		unsigned long totalPointID;
+
+		Eigen::Vector3f colour3[MAX_RES_PER_POINT];
+		bool colourValid;
+
+		float u,v;
+		int hostFrameID;
+		
+
+		Point() {
+			totalPointID = totalPointInstantCounter;
+			totalPointInstantCounter++;
+			pointInstantCounter++;
+		}
+
+		~Point(){
+			pointInstantCounter--;
+		}
+
+		// Note that this function returns values in the float (0->1) range
+		inline Eigen::Vector3f getColourRGBfloat()
+		{
+			Eigen::Vector3f outColour = Eigen::Vector3f::Zero();
+			float tmpR = 0.0f; float tmpG = 0.0f; float tmpB = 0.0f;
+			for(unsigned char i = 0; i < MAX_RES_PER_POINT; i++){
+				tmpR = (colour3[i][0]+i*tmpR)/(i+1);
+				tmpG = (colour3[i][1]+i*tmpG)/(i+1);
+				tmpB = (colour3[i][2]+i*tmpB)/(i+1);
+			}
+			outColour[0] = tmpR; outColour[1] = tmpG; outColour[2] = tmpB;
+
+			return outColour;
+		}
+
+		virtual Eigen::Vector3d getWorldPosition(float fxi, float fyi, float cxi, float cyi, SE3 camToWorld) = 0;
+};
+
+
 // Hessian component associated with one point.
-struct PointHessian
+struct PointHessian : public Point
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
@@ -447,14 +502,6 @@ struct PointHessian
 	unsigned long point_id;
 	EFPoint* efPoint;
 
-	// static values
-	float color[MAX_RES_PER_POINT];			// colors in host frame
-	float weights[MAX_RES_PER_POINT];		// host-weights for respective residuals.
-
-	Eigen::Vector3f colour3[MAX_RES_PER_POINT];
-	bool colourValid;
-
-	float u,v;
 	int idx;
 	float energyTH;
 	FrameHessian* host;
@@ -514,7 +561,7 @@ struct PointHessian
 
 
 	void release();
-	PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib, GlobalSettings& globalSettings_);
+	PointHessian(const ImmaturePoint* const rawPoint, GlobalSettings& globalSettings_);
     inline ~PointHessian() {assert(efPoint==0); release(); instanceCounter--;}
 
 
@@ -543,6 +590,14 @@ struct PointHessian
 	{
 		return (int)residuals.size() >= globalSettings.setting_minGoodActiveResForMarg
                     && numGoodResiduals >= globalSettings.setting_minGoodResForMarg;
+	}
+
+	Eigen::Vector3d getWorldPosition(float fxi, float fyi, float cxi, float cyi, SE3 camToWorld) override
+	{
+		Eigen::Vector3d worldPoint = convert_uv_xyz(u, v, idepth_scaled, 
+								fxi, fyi, cxi, cyi, camToWorld);
+
+		return worldPoint;
 	}
 };
 

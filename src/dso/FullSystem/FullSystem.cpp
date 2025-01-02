@@ -35,32 +35,33 @@
 #include "FullSystem/FullSystem.h"
 
 #include "stdio.h"
-#include "util/globalFuncs.h"
-#include <Eigen/LU>
+#include <cmath>
 #include <algorithm>
-#include "IOWrapper/ImageDisplay.h"
-#include "util/globalCalib.h"
+#include <iterator>
+
+#include <Eigen/LU>
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>
-#include "FullSystem/PixelSelector.h"
-#include "FullSystem/PixelSelector2.h"
-#include "FullSystem/ResidualProjections.h"
-#include "FullSystem/ImmaturePoint.h"
 
-#include "FullSystem/CoarseTracker.h"
-#include "FullSystem/CoarseInitializer.h"
+#include "GTSAMIntegration/ExtUtils.h"
+
+#include "util/globalFuncs.h"
+#include "util/globalCalib.h"
+#include "util/ImageAndExposure.h"
+#include "util/TimeMeasurement.h"
 
 #include "OptimizationBackend/EnergyFunctional.h"
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 
+#include "FullSystem/PixelSelector.h"
+#include "FullSystem/PixelSelector2.h"
+#include "FullSystem/ResidualProjections.h"
+#include "FullSystem/ImmaturePoint.h"
+#include "FullSystem/CoarseTracker.h"
+#include "FullSystem/CoarseInitializer.h"
+
 #include "IOWrapper/Output3DWrapper.h"
-#include "util/ImageAndExposure.h"
-#include <cmath>
-
-#include "util/TimeMeasurement.h"
-#include "GTSAMIntegration/ExtUtils.h"
-
-#include <iterator>
+#include "IOWrapper/ImageDisplay.h"
 
 
 using dmvio::GravityInitializer;
@@ -70,6 +71,8 @@ namespace dso
 
 int FrameHessian::instanceCounter=0;
 int PointHessian::instanceCounter=0;
+unsigned long Point::totalPointInstantCounter=0;
+unsigned int Point::pointInstantCounter = 0;
 unsigned long PointHessian::totalInstantCounter=0;
 int CalibHessian::instanceCounter=0;
 
@@ -141,6 +144,7 @@ void FullSystem::setDefaults()
 
 	assert(retstat!=293847);
 
+
 	statistics_lastNumOptIts=0;
 	statistics_numDroppedPoints=0;
 	statistics_numActivatedPoints=0;
@@ -150,6 +154,7 @@ void FullSystem::setDefaults()
 	statistics_numMargResFwd = 0;
 	statistics_numMargResBwd = 0;
 	statistics_lastFineTrackRMSE = 0.0f;
+
 
 	lastCoarseRMSE.setConstant(100);
 
@@ -166,15 +171,15 @@ void FullSystem::setDefaults()
 	secondKeyframeDone = false;
 	lastRefStopID=0;
 
+	firstPose = Sophus::SE3d{};
+
+	framesBetweenKFsRest = 0.0f;
+
 
 	minIdJetVisDebug = -1;
 	maxIdJetVisDebug = -1;
 	minIdJetVisTracker = -1;
 	maxIdJetVisTracker = -1;
-
-	firstPose = Sophus::SE3d{};
-
-	framesBetweenKFsRest = 0.0f;
 }
 
 /**
@@ -1781,7 +1786,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 		if(!std::isfinite(pt->energyTH)) { delete pt; continue; }
 
 		pt->idepth_max=pt->idepth_min=1;
-		PointHessian* ph = new PointHessian(pt, &Hcalib, globalSettings);
+		PointHessian* ph = new PointHessian(pt, globalSettings);
 		delete pt;
 		if(!std::isfinite(ph->energyTH)) {delete ph; continue;}
 

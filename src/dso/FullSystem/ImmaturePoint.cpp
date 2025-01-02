@@ -43,12 +43,14 @@ namespace dso
  * @param host_ 	Frame containing point
  * @param type 		Pyramid level point is detected in
  * @param HCalib 
+ * @param globalSettings_ 
  */
 ImmaturePoint::ImmaturePoint(int u_, int v_, Global_Calib& globalCalib_, FrameHessian* host_, float type, CalibHessian* HCalib, GlobalSettings& globalSettings_)
-: globalSettings(globalSettings_), globalCalib(globalCalib_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
+: globalSettings(globalSettings_), globalCalib(globalCalib_), host(host_), my_type(type), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED), Point()
 {
 	u = u_;
 	v = v_;
+	hostFrameID = host_->frameID;
 
 	wG0 = globalCalib.wG[0];
 	hG0 = globalCalib.hG[0];

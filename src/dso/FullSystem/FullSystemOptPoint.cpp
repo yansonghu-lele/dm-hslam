@@ -179,7 +179,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 
 
 	// Set new PointHessian and PointFrameResidual structs for activated points
-	PointHessian* p = new PointHessian(point, &Hcalib, globalSettings);
+	PointHessian* p = new PointHessian(point, globalSettings);
 	if(!std::isfinite(p->energyTH)) {delete p; return (PointHessian*)((long)(-1));}
 
 	p->lastResiduals[0].first = 0;

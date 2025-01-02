@@ -38,11 +38,10 @@ namespace dso
  * 
  * Hessian component associated with one point
  * 
- * @param rawPoint 
- * @param Hcalib 
+ * @param rawPoint
  */
-PointHessian::PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib, GlobalSettings& globalSettings_):
-globalSettings(globalSettings_)
+PointHessian::PointHessian(const ImmaturePoint* const rawPoint, GlobalSettings& globalSettings_):
+globalSettings(globalSettings_), Point()
 {
 	instanceCounter++;
 	point_id = totalInstantCounter;
@@ -57,6 +56,8 @@ globalSettings(globalSettings_)
 	// Set static values & initialization.
 	u = rawPoint->u;
 	v = rawPoint->v;
+	hostFrameID = rawPoint->hostFrameID;
+	
 	assert(std::isfinite(rawPoint->idepth_max));
 	// idepth_init = rawPoint->idepth_GT;
 

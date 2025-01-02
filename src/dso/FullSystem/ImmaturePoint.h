@@ -54,7 +54,7 @@ enum ImmaturePointStatus {
 	IPS_UNINITIALIZED=6};			// Not even traced once
 
 
-class ImmaturePoint
+class ImmaturePoint : public Point
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -62,18 +62,10 @@ public:
 	int wG0;
 	int hG0;
 
-	// static values
-	float color[MAX_RES_PER_POINT];
-	float weights[MAX_RES_PER_POINT];
-
-	Eigen::Vector3f colour3[MAX_RES_PER_POINT];
-	bool colourValid;
-
 	Mat22f gradH;
 	Vec2f gradH_ev;
 	Mat22f gradH_eig;
 	float energyTH;
-	float u,v;
 	FrameHessian* host;
 	int idxInImmaturePoints;
 
@@ -99,6 +91,14 @@ public:
 			ImmaturePointTemporaryResidual* tmpRes,
 			float &Hdd, float &bd,
 			float idepth);
+
+	Eigen::Vector3d getWorldPosition(float fxi, float fyi, float cxi, float cyi, SE3 camToWorld) override
+	{
+		Eigen::Vector3d worldPoint = convert_uv_xyz(u, v, (idepth_min+idepth_max)/2.0f,
+								fxi, fyi, cxi, cyi, camToWorld);
+		return worldPoint;
+	}
+
 
 private:
 	GlobalSettings& globalSettings;
