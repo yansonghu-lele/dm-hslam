@@ -188,10 +188,15 @@ void FullSystem::setDefaults()
  */
 void FullSystem::setClasses()
 {
+	memset(selectionMap, 0.0f, sizeof(float) * globalCalib.wG[0]*globalCalib.hG[0]);
+
+	coarseDistanceMap.reset();
 	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (globalCalib, globalSettings.pyrLevelsUsed);
 	coarseTracker = new CoarseTracker(globalCalib, imuIntegration, globalSettings);
 	coarseTracker_forNewKF = new CoarseTracker(globalCalib, imuIntegration, globalSettings);
+	coarseInitializer.reset();
 	coarseInitializer = std::make_unique<CoarseInitializer> (globalCalib, globalSettings);
+	pixelSelector.reset();
 	pixelSelector = std::make_unique<PixelSelector> (globalCalib, globalSettings.setting_minGradHistCut, globalSettings.setting_minGradHistAdd, globalSettings);
 }
 
@@ -1265,6 +1270,24 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 	}
 }
 
+/**
+ * @brief Clean up frames at close of system
+ * 
+ */
+void FullSystem::cleanUpFrames()
+{
+	removeOutliers();
+
+	flagPointsForRemoval();
+
+	FrameHessian* latest = frameHessians.back();
+	for(FrameHessian* fh : frameHessians)
+	{
+		if(fh != latest){
+			cleanFrame(fh);
+		}
+	}
+}
 
 /**
  * @brief Creates a keyframe or non-keyframe

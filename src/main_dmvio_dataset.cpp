@@ -313,6 +313,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 
     }
     // Handle end of operation messages and outputs
+    fullSystem->cleanUpFrames();
     fullSystem->blockUntilMappingIsFinished();
     clock_t ended = clock();
     struct timeval tv_end;

@@ -476,10 +476,19 @@ struct Point
 		{
 			Eigen::Vector3f outColour = Eigen::Vector3f::Zero();
 			float tmpR = 0.0f; float tmpG = 0.0f; float tmpB = 0.0f;
-			for(unsigned char i = 0; i < MAX_RES_PER_POINT; i++){
-				tmpR = (colour3[i][0]+i*tmpR)/(i+1);
-				tmpG = (colour3[i][1]+i*tmpG)/(i+1);
-				tmpB = (colour3[i][2]+i*tmpB)/(i+1);
+
+			if(colourValid){
+				for(unsigned char i = 0; i < MAX_RES_PER_POINT; i++){
+					tmpR = (colour3[i][0]+i*tmpR)/(i+1);
+					tmpG = (colour3[i][1]+i*tmpG)/(i+1);
+					tmpB = (colour3[i][2]+i*tmpB)/(i+1);
+				}
+			}else{
+				for(unsigned char i = 0; i < MAX_RES_PER_POINT; i++){
+					tmpR = (color[i]+i*tmpR)/(i+1);
+					tmpG = (color[i]+i*tmpG)/(i+1);
+					tmpB = (color[i]+i*tmpB)/(i+1);
+				}
 			}
 			outColour[0] = tmpR; outColour[1] = tmpG; outColour[2] = tmpB;
 

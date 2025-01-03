@@ -158,9 +158,12 @@ public:
 	virtual ~FullSystem();
 
 	// adds a new frame, and creates point & residual structs.
-    void addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData* imuData, dmvio::GTData* gtData);
+	void addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData* imuData, dmvio::GTData* gtData);
+	void cleanUpFrames();
 
 	// marginalizes a frame. drops / marginalizes points & residuals.
+	PC_output createPCOutput(Point* p, SE3 camToWorld);
+	void cleanFrame(FrameHessian* frame);
 	void marginalizeFrame(FrameHessian* frame);
 	void blockUntilMappingIsFinished();
 
@@ -218,7 +221,6 @@ private:
 	// mainPipelineFunctions
     std::pair<Vec4, bool> trackNewCoarse(FrameHessian* fh, Sophus::SE3d *referenceToFrameHint = 0);
 	void traceNewCoarse(FrameHessian* fh);
-	void activatePoints();
 	void activatePointsMT();
 	void activatePointsOldFirst();
 	void flagPointsForRemoval();

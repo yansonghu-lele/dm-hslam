@@ -165,6 +165,32 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 }
 
 /**
+ * @brief Create Point Cloud output for Point
+ * 
+ * @param p 
+ * @param camToWorld 
+ * @return PC_output 
+ */
+PC_output FullSystem::createPCOutput(Point* p, SE3 camToWorld)
+{
+	PC_output tmp_point_output;
+
+	Eigen::Vector3d worldPoint = p->getWorldPosition(1 / Hcalib.fxl(), 1 / Hcalib.fyl(), 
+								-Hcalib.cxl() / Hcalib.fxl(), -Hcalib.cyl() / Hcalib.fyl(), 
+								camToWorld);
+	tmp_point_output.x = worldPoint[0];
+	tmp_point_output.y = worldPoint[1];
+	tmp_point_output.z = worldPoint[2];
+
+	Eigen::Vector3f color = p->getColourRGBfloat();
+	tmp_point_output.r = color[0];
+	tmp_point_output.g = color[1];
+	tmp_point_output.b = color[2];
+
+	return tmp_point_output;
+}
+
+/**
  * @brief Marginalizes frame
  * 
  * Marginalizes the points in the frame and the frame itself
@@ -234,32 +260,9 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 
 	// Only marginalized points are included in the final output point cloud
 	if (globalSettings.setting_outputPC){
-		float fxi = 1 / Hcalib.fxl();
-		float fyi = 1 / Hcalib.fyl();
-		float cxi = -Hcalib.cxl() / Hcalib.fxl();
-		float cyi = -Hcalib.cyl() / Hcalib.fyl();
-
 		for(PointHessian* p : frame->pointHessiansMarginalized){
-			if (allMargPointsHistory.find(p->point_id) == allMargPointsHistory.end()) {
-				PC_output tmp_point_output;
-				Eigen::Vector3d worldPoint = convert_uv_xyz(p->u, p->v, p->idepth, fxi, fyi, cxi, cyi, firstPose.inverse() * frame->shell->camToWorld);
-
-				tmp_point_output.x = worldPoint[0];
-				tmp_point_output.y = worldPoint[1];
-				tmp_point_output.z = worldPoint[2];
-
-				if(p->colourValid){
-					tmp_point_output.r = p->colour3[0][0];
-					tmp_point_output.g = p->colour3[0][1];
-					tmp_point_output.b = p->colour3[0][2];
-				} else{
-					tmp_point_output.r = p->color[0];
-					tmp_point_output.g = p->color[0];
-					tmp_point_output.b = p->color[0];
-				}
-
-				allMargPointsHistory[p->point_id] = tmp_point_output;
-			}
+			if (allMargPointsHistory.find(p->point_id) == allMargPointsHistory.end())
+					allMargPointsHistory[p->point_id] = createPCOutput(p, firstPose.inverse() * frame->shell->camToWorld);
 		}
 	}
 
@@ -291,4 +294,16 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
     setPrecalcValues();
 	ef->setAdjointsF(&Hcalib);
 }
+
+void FullSystem::cleanFrame(FrameHessian* frame)
+{
+	// Only marginalized points are included in the final output point cloud
+	if (globalSettings.setting_outputPC){
+		for(PointHessian* p : frame->pointHessiansMarginalized){
+			if (allMargPointsHistory.find(p->point_id) == allMargPointsHistory.end())
+					allMargPointsHistory[p->point_id] = createPCOutput(p,firstPose.inverse() * frame->shell->camToWorld);
+		}
+	}
+}
+
 }
