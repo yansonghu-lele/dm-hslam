@@ -267,13 +267,12 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 	{
 		/* display modes:
 		 * my_displayMode==0 - all hessian points, color-coded
-		 * my_displayMode==1 - all immature points, color-coded
+		 * my_displayMode==1 - see immature points
 		 * my_displayMode==2 - normal points
 		 * my_displayMode==3 - active coloured
 		 */
 
 		if(my_displayMode==0 && (originalInputSparse[i].status == 0)) continue;
-		if(my_displayMode==1 && (originalInputSparse[i].status != 0)) continue;
 		if(my_displayMode==2 && originalInputSparse[i].status != 1 && originalInputSparse[i].status!= 2) continue;
 		if(my_displayMode==3 && originalInputSparse[i].status != 1 && originalInputSparse[i].status!= 2) continue;
 		if(my_displayMode>3) continue;
@@ -305,16 +304,9 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 
 			unsigned char color_intensity = originalInputSparse[i].color[pnt];
 
-			if(my_displayMode==0 || my_displayMode==1)
+			if(my_displayMode==0)
 			{
-				if(originalInputSparse[i].status==0) // immature
-				{
-					// cyan
-					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 51*3 + (color_intensity/5)*2;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
-				}
-				else if(originalInputSparse[i].status==1) // active
+				if(originalInputSparse[i].status==1) // active
 				{
 					// red
 					tmpColorBuffer[vertexBufferNumPoints][0] = 51*3 + (color_intensity/5)*2;
@@ -342,6 +334,18 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/6)*4;
 				}
 
+			} else if (my_displayMode==1){
+				if(originalInputSparse[i].status==0) // immature
+				{
+					// cyan
+					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 51*3 + (color_intensity/5)*2;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
+				} else {
+					tmpColorBuffer[vertexBufferNumPoints][0] = color_intensity;
+					tmpColorBuffer[vertexBufferNumPoints][1] = color_intensity;
+					tmpColorBuffer[vertexBufferNumPoints][2] = color_intensity;
+				}
 			} else if(my_displayMode==3)
 			{
 				if(originalInputSparse[i].status==1)
