@@ -85,7 +85,7 @@ void EFPoint::takeData(float setting_idepthFixPrior, int setting_solverMode)
 }
 
 
-void EFResidual::fixLinearizationF(EnergyFunctional* ef)
+void EFResidual::fixLinearizationF(const std::unique_ptr<EnergyFunctional>& ef)
 {
 	Vec8f dp = ef->adHTdeltaF[hostIDX+ef->nFrames*targetIDX];
 

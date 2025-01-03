@@ -150,9 +150,9 @@ void FullSystem::setNewFrameEnergyTH()
 	newFrame->frameEnergyTH *= globalSettings.setting_overallEnergyTHWeight*globalSettings.setting_overallEnergyTHWeight;
 
 	// imu!: Used to enforce a maximum energy threshold.
-	if(imuIntegration.setting_useIMU)
+	if(imuIntegration->setting_useIMU)
     {
-	    imuIntegration.newFrameEnergyTH(newFrame->frameEnergyTH);
+	    imuIntegration->newFrameEnergyTH(newFrame->frameEnergyTH);
     }
 
 //
@@ -432,7 +432,7 @@ double FullSystem::calcMEnergy(bool useNewValues)
 	//ef->makeIDX();
 	//ef->setDeltaF(&Hcalib);
 
-	return ef->calcMEnergyF(useNewValues, imuIntegration.setting_useGTSAMIntegration);
+	return ef->calcMEnergyF(useNewValues, imuIntegration->setting_useGTSAMIntegration);
 
 }
 
@@ -533,7 +533,7 @@ float FullSystem::optimize(int mnumOptIts)
 
 		// Solve!
 		// imu!: Update the dynamic weight
-        if(imuIntegration.getImuSettings().updateDynamicWeightDuringOptimization || iteration==0)
+        if(imuIntegration->getImuSettings().updateDynamicWeightDuringOptimization || iteration==0)
         {
             // Update dynamic weight before solving (where the active DSO factor will be scaled accordingly).
             dynamicGTSAMWeight = baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float) (lastEnergy[0] /
@@ -576,7 +576,7 @@ float FullSystem::optimize(int mnumOptIts)
 		double newEnergyM = calcMEnergy(true);
 
 	// imu!: Update dynamic weight before deciding whether to accept the step
-		if(imuIntegration.getImuSettings().updateDynamicWeightDuringOptimization)
+		if(imuIntegration->getImuSettings().updateDynamicWeightDuringOptimization)
         {
             dynamicGTSAMWeight = baIntegration->updateDynamicWeight(lastEnergy[0], sqrtf((float)(lastEnergy[0] / (PATTERNNUM*ef->resInA))), frameHessians.back()->shell->trackingWasGood);
         }
@@ -609,7 +609,7 @@ float FullSystem::optimize(int mnumOptIts)
             lambda = std::max(lambda, minLambda);
 
 			// imu!: Accept the update to the bundle adjustment
-			if(imuIntegration.setting_useGTSAMIntegration)
+			if(imuIntegration->setting_useGTSAMIntegration)
 			{
 				baIntegration->acceptBAUpdate(lastEnergy[0]);
 			}
@@ -709,7 +709,7 @@ void FullSystem::solveSystem(int iteration, double lambda)
 			ef->lastNullspaces_affA,
 			ef->lastNullspaces_affB);
 
-	ef->solveSystemF(iteration, lambda,&Hcalib,imuIntegration.setting_useGTSAMIntegration);
+	ef->solveSystemF(iteration, lambda,&Hcalib,imuIntegration->setting_useGTSAMIntegration);
 }
 
 
@@ -821,12 +821,6 @@ std::vector<VecX> FullSystem::getNullspaces(
 	nullspaces_scale.push_back(nullspace_x0);
 
 	return nullspaces_x0_pre;
-}
-
-
-dmvio::IMUIntegration &FullSystem::getImuIntegration()
-{
-    return imuIntegration;
 }
 
 }

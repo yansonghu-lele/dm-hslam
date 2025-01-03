@@ -151,10 +151,10 @@ class FullSystem {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	FullSystem(bool linearizeOperationPassed, 
-				dso::Global_Calib& globalCalib,
-				dmvio::IMUCalibration& imuCalibration,
-               dmvio::IMUSettings& imuSettings,
-			   GlobalSettings& globalSettings_);
+				dso::Global_Calib& globalCalib_,
+				dmvio::IMUCalibration& imuCalibration_,
+				dmvio::IMUSettings& imuSettings_,
+				GlobalSettings& globalSettings_);
 	virtual ~FullSystem();
 
 	// adds a new frame, and creates point & residual structs.
@@ -192,17 +192,17 @@ public:
 private:
 	GlobalSettings& globalSettings;
 	Global_Calib& globalCalib;
+	dmvio::IMUCalibration& imuCalibration;
+	dmvio::IMUSettings& imuSettings;
 
 	void setDefaults();
 	void setClasses();
 
-	dmvio::IMUIntegration imuIntegration;
+	std::shared_ptr<dmvio::IMUIntegration> imuIntegration;
 	bool imuUsedBefore;
 	dmvio::BAGTSAMIntegration* baIntegration = nullptr;
 
 public:
-	dmvio::IMUIntegration &getImuIntegration();
-
 	Sophus::SE3d firstPose; // contains transform from first to world.
 
 private:
@@ -212,14 +212,14 @@ private:
 
 	double framesBetweenKFsRest;
 
-    // opt single point
+	// opt single point
 	int optimizePoint(PointHessian* point, int minObs, bool flagOOB);
 	PointHessian* optimizeImmaturePoint(ImmaturePoint* point, int minObs, ImmaturePointTemporaryResidual* residuals);
 
 	double linAllPointSinle(PointHessian* point, float outlierTHSlack, bool plot);
 
 	// mainPipelineFunctions
-    std::pair<Vec4, bool> trackNewCoarse(FrameHessian* fh, Sophus::SE3d *referenceToFrameHint = 0);
+	std::pair<Vec4, bool> trackNewCoarse(FrameHessian* fh, Sophus::SE3d *referenceToFrameHint = 0);
 	void traceNewCoarse(FrameHessian* fh);
 	void activatePointsMT();
 	void activatePointsOldFirst();
@@ -299,7 +299,7 @@ private:
 	std::vector<FrameShell*> allKeyFramesHistory;
 	std::unordered_map<unsigned long, PC_output> allMargPointsHistory;
 
-	EnergyFunctional* ef;
+	std::unique_ptr<EnergyFunctional> ef;
 	IndexThreadReduce<Vec10> treadReduce;
 
 	float* selectionMap;

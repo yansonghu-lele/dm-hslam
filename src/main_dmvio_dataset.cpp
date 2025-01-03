@@ -394,15 +394,17 @@ int main(int argc, char** argv)
     // Dataset specific arguments
     // cmd line handling is done by cxxopt
     settingsUtil->registerArg("files", source, "f", "Inputted file directory in alphabetical order", "");
-    settingsUtil->registerArg("start", start, "s", "Start frame", std::to_string(start));
-    settingsUtil->registerArg("end", end, "e", "End frame", std::to_string(end));
     settingsUtil->registerArg("imuFile", imuFile, "i", "Inputted IMU file directory", "");
     settingsUtil->registerArg("gtFile", gtFile, "t", "Inputted groundtruth file directory", "");
-    settingsUtil->registerArg("sampleoutput", useSampleOutput, "o", "Use custom sample output. Default is pangolin GUI", useSampleOutput ? "1" : "0");
+
+    settingsUtil->registerArg("start", start, "s", "Start frame", std::to_string(start));
+    settingsUtil->registerArg("end", end, "e", "End frame", std::to_string(end));
     settingsUtil->registerArg("reverse", reverse, "r", "Reverse frames", reverse ? "1" : "0");
     settingsUtil->registerArg("use16Bit", use16Bit, "b", "16 Bit image input", use16Bit ? "1" : "0");
     settingsUtil->registerArg("useColour", useColour, "c", "Colour image input", useColour ? "1" : "0");
+
     settingsUtil->registerArg("maxPreloadImages", maxPreloadImages);
+    settingsUtil->registerArg("sampleoutput", useSampleOutput);	
 
     // Create Settings files.
     mainSettings.registerArgs(*settingsUtil, globalSettings);

@@ -566,7 +566,7 @@ void EnergyFunctional::marginalizeFrame(EFFrame* fh, const bool& setting_useGTSA
 
     }
 
-//    if(!imuIntegration.setting_useGTSAMIntegration) // enable to remove the redundant visual only marginalization.
+//    if(!imuIntegration->setting_useGTSAMIntegration) // enable to remove the redundant visual only marginalization.
     if(true)
     {
         dmvio::TimeMeasurement measVis("VisualMarginalization");

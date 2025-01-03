@@ -378,7 +378,7 @@ void FullSystem::printResult(std::string file, bool onlyLogKFPoses, bool saveMet
         {
             // Transform pose to IMU frame.
             // not actually camToFirst any more...
-            camToFirst = Sophus::SE3d(imuIntegration.getTransformDSOToIMU().transformPose(camToWorld.inverse().matrix()));
+            camToFirst = Sophus::SE3d(imuIntegration->getTransformDSOToIMU().transformPose(camToWorld.inverse().matrix()));
         }
 
  		myfile << s->timestamp <<

@@ -82,7 +82,7 @@ T* allocAligned(int size, std::vector<T*> &rawPtrVec)
  * @param imuIntegration_ 
  * @param globalSettings_ 
  */
-CoarseTracker::CoarseTracker(Global_Calib& globalCalib_, dmvio::IMUIntegration &imuIntegration_, GlobalSettings& globalSettings_) 
+CoarseTracker::CoarseTracker(Global_Calib& globalCalib_, std::shared_ptr<dmvio::IMUIntegration> imuIntegration_, GlobalSettings& globalSettings_) 
 : lastRef_aff_g2l(0, 0), imuIntegration(imuIntegration_), globalCalib(globalCalib_), globalSettings(globalSettings_)
 {
 	// Set width and height
@@ -766,7 +766,7 @@ bool CoarseTracker::trackNewestCoarse(
 			SE3 refToNew_new;
 			AffLight aff_g2l_new = aff_g2l_current;
 			double incNorm;
-			if(imuIntegration.setting_useIMU && imuIntegration.isCoarseInitialized())
+			if(imuIntegration->setting_useIMU && imuIntegration->isCoarseInitialized())
 			{
 				// imu!: The idea of the integration of the IMU (and GTSAM) into the coarse tracking is to replace the line
 				// Vec8 inc = Hl.ldlt().solve(-b);
@@ -774,7 +774,7 @@ bool CoarseTracker::trackNewestCoarse(
 
 				double incA, incB;
 				// Note that we pass H instead of Hl as the lambda multiplication is done inside...
-				refToNew_new = imuIntegration.computeCoarseUpdate(H, b, extrapFac, lambda, incA, incB, incNorm);
+				refToNew_new = imuIntegration->computeCoarseUpdate(H, b, extrapFac, lambda, incA, incB, incNorm);
 
 				SE3 oldVal = refToNew_current;
 				SE3 newVal = refToNew_new;
@@ -871,8 +871,8 @@ bool CoarseTracker::trackNewestCoarse(
 				refToNew_current = refToNew_new;
 				
 				// imu!: Calculate the update with IMU factors
-				if(imuIntegration.setting_useIMU)
-					imuIntegration.acceptCoarseUpdate();
+				if(imuIntegration->setting_useIMU)
+					imuIntegration->acceptCoarseUpdate();
 
 				lambda *= 0.5;
 			}
@@ -932,8 +932,8 @@ bool CoarseTracker::trackNewestCoarse(
 	// imu!: Add visual to coarse graph of last level is zero
 	if(lastLvl == 0)
 	{
-		if(imuIntegration.setting_useIMU)
-			imuIntegration.addVisualToCoarseGraph(H, b, trackingGood);
+		if(imuIntegration->setting_useIMU)
+			imuIntegration->addVisualToCoarseGraph(H, b, trackingGood);
 	}
 
 	return trackingGood;

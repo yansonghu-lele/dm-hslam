@@ -28,6 +28,7 @@
 #include "util/NumType.h"
 #include "vector"
 #include <math.h>
+#include <memory>
 #include "OptimizationBackend/RawResidualJacobian.h"
 
 namespace dso
@@ -71,7 +72,7 @@ public:
 	void takeDataF();
 
 
-	void fixLinearizationF(EnergyFunctional* ef);
+	void fixLinearizationF(const std::unique_ptr<EnergyFunctional>& ef);
 
 
 	// structural pointers

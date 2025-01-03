@@ -49,7 +49,7 @@ class CoarseTracker {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-	CoarseTracker(Global_Calib& globalCalib_, dmvio::IMUIntegration &imuIntegration, GlobalSettings& globalSettings_);
+	CoarseTracker(Global_Calib& globalCalib_, std::shared_ptr<dmvio::IMUIntegration> imuIntegration_, GlobalSettings& globalSettings_);
 	~CoarseTracker();
 
 	bool trackNewestCoarse(
@@ -129,7 +129,7 @@ private:
     std::vector<float*> ptrToDelete;
 	Accumulator9 acc9;
 
-    dmvio::IMUIntegration &imuIntegration;
+    std::shared_ptr<dmvio::IMUIntegration> imuIntegration;
 };
 
 
