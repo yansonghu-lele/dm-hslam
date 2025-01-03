@@ -91,7 +91,7 @@ MinimalImageB* readImageRGB_8U_split(std::string filename, MinimalImageB*& r, Mi
 	}
 
 	cv::Mat grey_m;
-	cv::cvtColor(m, grey_m, cv::COLOR_BGRA2GRAY);
+	cv::cvtColor(m, grey_m, cv::COLOR_BGR2GRAY);
 
 	cv::Mat channels[3];
     cv::split(m, channels);

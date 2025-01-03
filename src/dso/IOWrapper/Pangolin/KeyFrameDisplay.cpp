@@ -266,14 +266,17 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 	for(int i=0;i<numSparsePoints;i++)
 	{
 		/* display modes:
-		 * my_displayMode==0 - all pts, color-coded
-		 * my_displayMode==1 - normal points
-		 * my_displayMode==2 - active only
+		 * my_displayMode==0 - all hessian points, color-coded
+		 * my_displayMode==1 - all immature points, color-coded
+		 * my_displayMode==2 - normal points
+		 * my_displayMode==3 - active coloured
 		 */
 
-		if(my_displayMode==1 && originalInputSparse[i].status != 1 && originalInputSparse[i].status!= 2) continue;
+		if(my_displayMode==0 && (originalInputSparse[i].status == 0)) continue;
+		if(my_displayMode==1 && (originalInputSparse[i].status != 0)) continue;
 		if(my_displayMode==2 && originalInputSparse[i].status != 1 && originalInputSparse[i].status!= 2) continue;
-		if(my_displayMode>2) continue;
+		if(my_displayMode==3 && originalInputSparse[i].status != 1 && originalInputSparse[i].status!= 2) continue;
+		if(my_displayMode>3) continue;
 
 		if(originalInputSparse[i].idepth < 0) continue;
 
@@ -301,37 +304,36 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 			tmpVertexBuffer[vertexBufferNumPoints][2] = depth*(1 + 2*fxi * (rand()/(float)RAND_MAX-0.5f));
 
 			unsigned char color_intensity = originalInputSparse[i].color[pnt];
-			unsigned char scaled_color_intensity = 51 + (color_intensity/5)*4;
 
-			if(my_displayMode==0)
+			if(my_displayMode==0 || my_displayMode==1)
 			{
 				if(originalInputSparse[i].status==0) // immature
 				{
 					// cyan
-					tmpColorBuffer[vertexBufferNumPoints][0] = (81 + (color_intensity/4)*2)/2;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 81 + (color_intensity/4)*2;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 81 + (color_intensity/4)*2;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 51*3 + (color_intensity/5)*2;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
 				}
 				else if(originalInputSparse[i].status==1) // active
 				{
 					// red
-					tmpColorBuffer[vertexBufferNumPoints][0] = 255;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 51*3 + (color_intensity/5)*2;
 					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
 					tmpColorBuffer[vertexBufferNumPoints][2] = 0;
 				}
 				else if(originalInputSparse[i].status==2) // marginalized 
 				{
 					// yellow
-					tmpColorBuffer[vertexBufferNumPoints][0] = 51 + (color_intensity/6)*4;
-					tmpColorBuffer[vertexBufferNumPoints][1] = 51 + (color_intensity/6)*4;
-					tmpColorBuffer[vertexBufferNumPoints][2] = (51 + (color_intensity/6)*4)/4;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 0;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 51*3 + (color_intensity/5)*2;
 				}
 				else if(originalInputSparse[i].status==3) // outlier
 				{
 					// blue
-					tmpColorBuffer[vertexBufferNumPoints][0] = (51 + (color_intensity/6)*4)/4;
-					tmpColorBuffer[vertexBufferNumPoints][1] = (51 + (color_intensity/6)*4)/4;
-					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/6)*4;
+					tmpColorBuffer[vertexBufferNumPoints][0] = 51*3 + (color_intensity/5)*2;
+					tmpColorBuffer[vertexBufferNumPoints][1] = 0;
+					tmpColorBuffer[vertexBufferNumPoints][2] = 51*3 + (color_intensity/5)*2;
 				}
 				else
 				{
@@ -340,7 +342,7 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 					tmpColorBuffer[vertexBufferNumPoints][2] = 51 + (color_intensity/6)*4;
 				}
 
-			} else if(my_displayMode==2)
+			} else if(my_displayMode==3)
 			{
 				if(originalInputSparse[i].status==1)
 				{
