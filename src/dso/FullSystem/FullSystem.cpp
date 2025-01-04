@@ -199,8 +199,10 @@ void FullSystem::setClasses()
 
 	coarseDistanceMap.reset();
 	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (globalCalib, globalSettings.pyrLevelsUsed);
-	coarseTracker = new CoarseTracker(globalCalib, imuIntegration, globalSettings);
-	coarseTracker_forNewKF = new CoarseTracker(globalCalib, imuIntegration, globalSettings);
+	coarseTracker.reset();
+	coarseTracker = std::make_unique<CoarseTracker> (globalCalib, imuIntegration, globalSettings);
+	coarseTracker_forNewKF.reset();
+	coarseTracker_forNewKF = std::make_unique<CoarseTracker> (globalCalib, imuIntegration, globalSettings);
 	coarseInitializer.reset();
 	coarseInitializer = std::make_unique<CoarseInitializer> (globalCalib, globalSettings);
 	pixelSelector.reset();
@@ -272,8 +274,8 @@ FullSystem::~FullSystem()
 	unmappedTrackedFrames.clear();
 
 	coarseDistanceMap.reset();
-	delete coarseTracker;
-	delete coarseTracker_forNewKF;
+	coarseTracker.reset();
+	coarseTracker_forNewKF.reset();
 	coarseInitializer.reset();
 	pixelSelector.reset();
 
@@ -1112,7 +1114,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
             dmvio::TimeMeasurement referenceSwapTime("swapTrackingRef");
 
 			boost::unique_lock<boost::mutex> crlock(coarseTrackerSwapMutex);
-			CoarseTracker* tmp = coarseTracker; coarseTracker=coarseTracker_forNewKF; coarseTracker_forNewKF=tmp;
+			coarseTracker.swap(coarseTracker_forNewKF);
 
 			// imu!: Set up the imu optimzation
 			if(imuIntegration->setting_useIMU)

@@ -314,8 +314,8 @@ private:
 
 	// mutex etc. for tracker exchange.
 	boost::mutex coarseTrackerSwapMutex;			// if tracker sees that there is a new reference, tracker locks [coarseTrackerSwapMutex] and swaps the two.
-	CoarseTracker* coarseTracker_forNewKF;			// set as as reference. protected by [coarseTrackerSwapMutex].
-	CoarseTracker* coarseTracker;					// always used to track new frames. protected by [trackMutex].
+	std::unique_ptr<CoarseTracker> coarseTracker_forNewKF;			// set as as reference. protected by [coarseTrackerSwapMutex].
+	std::unique_ptr<CoarseTracker> coarseTracker;					// always used to track new frames. protected by [trackMutex].
 	float minIdJetVisTracker, maxIdJetVisTracker;
 	float minIdJetVisDebug, maxIdJetVisDebug;
 
