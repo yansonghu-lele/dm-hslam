@@ -192,7 +192,7 @@ void PangolinDSOViewer::run()
 
 
     // Default hooks for exiting (Esc) and fullscreen (tab).
-	while(running)
+	while(!pangolin::ShouldQuit() && running)
 	{
 		// Clear entire screen
 		glClearColor(0.36, 0.36, 0.55, 0.0);

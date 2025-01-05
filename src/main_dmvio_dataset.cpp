@@ -62,6 +62,7 @@
 std::string gtFile = "";
 std::string source = "";
 std::string imuFile = "";
+bool pauseEnd = false;
 
 bool reverse = false;
 int start = 0;
@@ -280,8 +281,8 @@ void run(std::shared_ptr<FullSystem> fullSystem, ImageFolderReader* reader, IOWr
             {
                 printf("RESETTING!\n");
                 std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
+
                 for(IOWrap::Output3DWrapper* ow : wraps) ow->reset();
-                
                 fullSystem->fullReset();
 
                 setting_fullResetRequested = false;
@@ -352,18 +353,12 @@ void run(std::shared_ptr<FullSystem> fullSystem, ImageFolderReader* reader, IOWr
 
 
     // Clean up
-    for(IOWrap::Output3DWrapper* ow : fullSystem->outputWrapper)
-    {
-        ow->join();
+    if(!pauseEnd){
+	    for(IOWrap::Output3DWrapper* ow : fullSystem->outputWrapper)
+	    {
+		ow->join();
+	    }
     }
-
-    printf("DELETE FULLSYSTEM!\n");
-    fullSystem.reset();
-
-    printf("DELETE READER!\n");
-    delete reader;
-
-    printf("EXIT NOW!\n");
 }
 
 
@@ -395,6 +390,9 @@ int main(int argc, char** argv)
 
     settingsUtil->registerArg("maxPreloadImages", maxPreloadImages);
     settingsUtil->registerArg("sampleoutput", useSampleOutput);	
+
+    settingsUtil->registerArg("pauseEnd", pauseEnd, "E", "Pause at end", pauseEnd ? "1" : "0");
+
 
     // Create Settings files.
     mainSettings.registerArgs(*settingsUtil, globalSettings);
@@ -455,16 +453,29 @@ int main(int argc, char** argv)
         // THIS IS WHERE THE VIEWER IS STARTED
         viewer->run();
 
-        delete viewer;
-
         // Make sure that the destructor of FullSystem, etc. finishes, so all log files are properly flushed.
         runThread.join();
+        if (fullSystem)
+        {
+            for(IOWrap::Output3DWrapper* ow : fullSystem->outputWrapper)
+            {
+                if(pauseEnd) ow->join();
+                delete ow;
+            }
+        }
     }else
     {
          // THIS IS WHERE THE MAIN THREAD IS RUN
         run(fullSystem, reader, 0);
     }
 
+    printf("DELETE FULLSYSTEM!\n");
+    fullSystem.reset();
+
+    printf("DELETE READER!\n");
+    delete reader;
+
+    printf("EXIT NOW!\n");
 
     return 0;
 }
