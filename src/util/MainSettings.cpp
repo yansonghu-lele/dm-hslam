@@ -131,7 +131,7 @@ void MainSettings::registerArgs(SettingsUtil& set, dso::GlobalSettings& globalSe
 
     // These are mostly the original DSO commandline arguments which also work for DM-VIO
     set.registerArg("quiet", setting_debugout_runquiet, "q", "Turn console text output off", setting_debugout_runquiet ? "1" : "0");
-    set.registerArg("nolog", globalSettings.setting_logStuff, "n", "Turn logging off", globalSettings.setting_logStuff ? "1" : "0");
+    set.registerArg("nolog", globalSettings.setting_nologStuff, "n", "Turn logging off", globalSettings.setting_nologStuff ? "1" : "0");
     set.registerArg("nogui", globalSettings.setting_disableAllDisplay, "g", "Turn gui output off", globalSettings.setting_disableAllDisplay ? "1" : "0");
     set.registerArg("outPC", globalSettings.setting_outputPC, "p", "Output point cloud", globalSettings.setting_outputPC ? "1" : "0");
     set.registerArg("save", globalSettings.setting_debugSaveImages, "a", "Save data", globalSettings.setting_debugSaveImages ? "1" : "0");

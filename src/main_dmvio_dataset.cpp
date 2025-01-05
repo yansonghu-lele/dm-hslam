@@ -98,7 +98,7 @@ void exitThread()
 
 
 
-void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
+void run(std::shared_ptr<FullSystem> fullSystem, ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
 {
     // Handle Settings
     if(globalSettings.setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0)
@@ -129,12 +129,6 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
         std::cout << "Using setting_minFramesBetweenKeyframes=" << globalSettings.setting_minFramesBetweenKeyframes
                   << " because of non-realtime mode." << std::endl;
     }
-
-
-    // Create system
-    std::unique_ptr<FullSystem> fullSystem;
-    fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings, globalSettings);
-    fullSystem->setGammaFunction(reader->getPhotometricGamma());
 
     // Set GUI
     if(viewer != 0)
@@ -266,7 +260,6 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             }
             // FRAME IS ADDED TO SYSTEM!!!
             fullSystem->addActiveFrame(img, i, imuData.get(), (gtDataThere && found) ? &data : 0);
-            
             if(gtDataThere && found && !globalSettings.setting_disableAllDisplay)
             {
                 viewer->addGTCamPose(data.pose);
@@ -287,12 +280,9 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
             {
                 printf("RESETTING!\n");
                 std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
-                fullSystem.reset();
                 for(IOWrap::Output3DWrapper* ow : wraps) ow->reset();
-
-                fullSystem = std::make_unique<FullSystem>(linearizeOperation, globalCalib, imuCalibration, imuSettings, globalSettings);
-                fullSystem->setGammaFunction(reader->getPhotometricGamma());
-                fullSystem->outputWrapper = wraps;
+                
+                fullSystem->fullReset();
 
                 setting_fullResetRequested = false;
             }
@@ -349,7 +339,7 @@ void run(ImageFolderReader* reader, IOWrap::PangolinDSOViewer* viewer)
            1000 / (MilliSecondsTakenMT / numSecondsProcessed));
     fullSystem->printFrameLifetimes();
 
-    if(globalSettings.setting_logStuff)
+    if(!globalSettings.setting_nologStuff)
     {
         std::ofstream tmlog;
         tmlog.open("logs/time.txt", std::ios::trunc | std::ios::out);
@@ -448,6 +438,11 @@ int main(int argc, char** argv)
     reader->loadIMUData(imuFile);
     reader->setGlobalCalibration(globalCalib, globalSettings.pyrLevelsUsed);
 
+    // Create system
+    std::shared_ptr<FullSystem> fullSystem;
+    fullSystem = std::make_shared<FullSystem>((mainSettings.playbackSpeed == 0), globalCalib, imuCalibration, imuSettings, globalSettings);
+    fullSystem->setGammaFunction(reader->getPhotometricGamma());
+
     // Main operationing loop
     if(!globalSettings.setting_disableAllDisplay)
     {
@@ -455,7 +450,7 @@ int main(int argc, char** argv)
                                                                           nullptr);
 
         // THIS IS WHERE THE MAIN THREAD IS RUN
-        boost::thread runThread = boost::thread(boost::bind(run, reader, viewer));
+        boost::thread runThread = boost::thread(boost::bind(run, fullSystem, reader, viewer));
 
         // THIS IS WHERE THE VIEWER IS STARTED
         viewer->run();
@@ -467,7 +462,7 @@ int main(int argc, char** argv)
     }else
     {
          // THIS IS WHERE THE MAIN THREAD IS RUN
-        run(reader, 0);
+        run(fullSystem, reader, 0);
     }
 
 

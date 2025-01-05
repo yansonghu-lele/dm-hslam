@@ -156,6 +156,7 @@ public:
 				dmvio::IMUSettings& imuSettings_,
 				GlobalSettings& globalSettings_);
 	virtual ~FullSystem();
+	void fullReset();
 
 	// adds a new frame, and creates point & residual structs.
 	void addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData* imuData, dmvio::GTData* gtData);
@@ -184,6 +185,7 @@ public:
 	bool isLost;
 	bool initFailed;
 	bool initialized;
+
 	bool linearizeOperation;
 
 	void setGammaFunction(float* BInv);
@@ -208,7 +210,7 @@ public:
 private:
 	CalibHessian Hcalib;
 
-	dmvio::GravityInitializer gravityInit;
+	std::unique_ptr<dmvio::GravityInitializer> gravityInit;
 
 	double framesBetweenKFsRest;
 
@@ -319,7 +321,7 @@ private:
 	float minIdJetVisTracker, maxIdJetVisTracker;
 	float minIdJetVisDebug, maxIdJetVisDebug;
 
-	// mutex for camToWorl's in shells (these are always in a good configuration).
+	// mutex for camToWorld's in shells (these are always in a good configuration).
 	boost::mutex& shellPoseMutex;
 
 /*

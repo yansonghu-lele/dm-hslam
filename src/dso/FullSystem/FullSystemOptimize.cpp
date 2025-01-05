@@ -191,7 +191,7 @@ Vec3 FullSystem::linearizeAll(bool fixLinearization)
 	else
 	{
 		Vec10 stats;
-		linearizeAll_Reductor(fixLinearization, toRemove, 0,activeResiduals.size(),&stats,0);
+		linearizeAll_Reductor(fixLinearization, toRemove, 0, activeResiduals.size(),&stats,0);
 		lastEnergyP = stats[0];
 	}
 

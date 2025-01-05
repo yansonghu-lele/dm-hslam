@@ -85,7 +85,7 @@ boost::mutex FrameShell::shellPoseMutex{};
 void FullSystem::setDefaults()
 {
 	int retstat = 0;
-	if(globalSettings.setting_logStuff)
+	if(!globalSettings.setting_nologStuff)
 	{
 		retstat += system("rm -rf logs");
 		retstat += system("mkdir logs");
@@ -160,9 +160,10 @@ void FullSystem::setDefaults()
 
 	currentMinActDist=2;
 
-	initialized=false;
 	isLost=false;
 	initFailed=false;
+	initialized=false;
+
 	imuUsedBefore = false;
 
 	needNewKFAfter = -1;
@@ -190,12 +191,12 @@ void FullSystem::setClasses()
 {
 	memset(selectionMap, 0.0f, sizeof(float) * globalCalib.wG[0]*globalCalib.hG[0]);
 
-
+	gravityInit.reset();
+	gravityInit = std::make_unique<dmvio::GravityInitializer> (imuSettings.numMeasurementsGravityInit, imuCalibration);
 	imuIntegration.reset();
 	imuIntegration = std::make_shared<dmvio::IMUIntegration>(&Hcalib, imuCalibration, imuSettings, linearizeOperation);
 
 	baIntegration = imuIntegration->getBAGTSAMIntegration().get();
-
 
 	coarseDistanceMap.reset();
 	coarseDistanceMap = std::make_unique<CoarseDistanceMap> (globalCalib, globalSettings.pyrLevelsUsed);
@@ -229,7 +230,6 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
     : globalSettings(globalSettings_), linearizeOperation(linearizeOperationPassed), 
 	Hcalib(globalCalib_), globalCalib(globalCalib_), 
 	imuCalibration(imuCalibration_), imuSettings(imuSettings_),
-	gravityInit(imuSettings.numMeasurementsGravityInit, imuCalibration),
 	shellPoseMutex(FrameShell::shellPoseMutex)
 {
 	setDefaults();
@@ -243,6 +243,47 @@ FullSystem::FullSystem(bool linearizeOperationPassed,
 }
 
 /**
+ * @brief Deletes the variables and classes
+ * 
+ * Sets variables to default values
+ */
+void FullSystem::fullReset()
+{
+	blockUntilMappingIsFinished();
+	boost::unique_lock<boost::mutex> lock(trackMutex);
+	boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+
+	setDefaults();
+	setClasses();
+
+	for(FrameShell* s : allFrameHistory)
+		delete s;
+	allFrameHistory.clear();
+	allKeyFramesHistory.clear();
+	for(FrameHessian* fh : unmappedTrackedFrames)
+		delete fh;
+	unmappedTrackedFrames.clear();
+	for(FrameHessian* fh : frameHessians)
+		delete fh;
+	frameHessians.clear();
+	activeResiduals.clear();
+
+	gtPoses.clear();
+	allMargPointsHistory.clear();
+	allResVec.clear();
+
+	FrameHessian::instanceCounter=0;
+	PointHessian::instanceCounter=0;
+	Point::totalPointInstantCounter=0;
+	Point::pointInstantCounter = 0;
+	PointHessian::totalInstantCounter=0;
+	CalibHessian::instanceCounter=0;
+
+
+	mappingThread = boost::thread(&FullSystem::mappingLoop, this);
+}
+
+/**
  * @brief Destroy the FullSystem Object
  * 
  */
@@ -250,7 +291,7 @@ FullSystem::~FullSystem()
 {
 	blockUntilMappingIsFinished();
 
-	if(globalSettings.setting_logStuff)
+	if(!globalSettings.setting_nologStuff)
 	{
 		calibLog->close(); delete calibLog;
 		numsLog->close(); delete numsLog;
@@ -577,7 +618,7 @@ std::pair<Vec4, bool> FullSystem::trackNewCoarse(FrameHessian* fh, Sophus::SE3d 
         printf("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
 
 
-	if(globalSettings.setting_logStuff)
+	if(!globalSettings.setting_nologStuff)
 	{
 		(*coarseTrackingLog) << std::setprecision(16)
 						<< fh->shell->id << " "
@@ -1035,7 +1076,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 		// imu!: Start calculating gravity
             if(imuIntegration->setting_useIMU)
             {
-                gravityInit.addMeasure(*imuData, Sophus::SE3d());
+                gravityInit->addMeasure(*imuData, Sophus::SE3d());
             }
             for(IOWrap::Output3DWrapper* ow : outputWrapper)
                 ow->publishSystemStatus(dmvio::VISUAL_INIT);
@@ -1051,7 +1092,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id, dmvio::IMUData*
 			if(imuIntegration->setting_useIMU)
 			{
 				imuIntegration->addIMUDataToBA(*imuData);
-				Sophus::SE3d imuToWorld = gravityInit.addMeasure(*imuData, Sophus::SE3d());
+				Sophus::SE3d imuToWorld = gravityInit->addMeasure(*imuData, Sophus::SE3d());
 				if(initDone)
 				{
 					firstPose = imuToWorld * imuIntegration->TS_cam_imu.inverse();
@@ -1457,7 +1498,7 @@ void FullSystem::mappingLoop()
 
 		if(unmappedTrackedFrames.size() > 3)
 			needToKetchupMapping=true;
-
+		
 		// if there are other frames to track, do that first.
 		if(unmappedTrackedFrames.size() > 0)
 		{

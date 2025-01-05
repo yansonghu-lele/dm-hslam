@@ -469,7 +469,7 @@ void FullSystem::printLogLine()
                 frameHessians.back()->shell->id - frameHessians.front()->shell->id,
                 (int)frameHessians.size());
 
-	if(!globalSettings.setting_logStuff) return;
+	if(globalSettings.setting_nologStuff) return;
 
 	if(numsLog != 0)
 	{
@@ -501,7 +501,7 @@ void FullSystem::printLogLine()
 void FullSystem::printEigenValLine()
 {
     dmvio::TimeMeasurement timeMeasurementMargFrames("printEigenValLine");
-	if(!globalSettings.setting_logStuff) return;
+	if(globalSettings.setting_nologStuff) return;
 	if(ef->lastHS.rows() < 12) return;
 
 	MatXX Hp = ef->lastHS.bottomRightCorner(ef->lastHS.cols()-CPARS,ef->lastHS.cols()-CPARS);
@@ -586,7 +586,7 @@ void FullSystem::printEigenValLine()
  */
 void FullSystem::printFrameLifetimes()
 {
-	if(!globalSettings.setting_logStuff) return;
+	if(globalSettings.setting_nologStuff) return;
 
 	boost::unique_lock<boost::mutex> lock(trackMutex);
 

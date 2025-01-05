@@ -206,7 +206,7 @@ struct GlobalSettings{
     bool settings_no_multiThreading = false;
     bool setting_disableAllDisplay = false;
     bool setting_outputPC = false;
-    bool setting_logStuff = true;
+    bool setting_nologStuff = false;
 
 
 
