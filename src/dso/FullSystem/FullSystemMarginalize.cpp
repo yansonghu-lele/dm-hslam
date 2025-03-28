@@ -36,14 +36,15 @@
 #include "FullSystem/FullSystem.h"
 
 #include "stdio.h"
-#include "util/globalFuncs.h"
-#include <Eigen/LU>
 #include <algorithm>
-#include "IOWrapper/ImageDisplay.h"
+
+#include "util/globalFuncs.h"
 #include "util/globalCalib.h"
 
+#include <Eigen/LU>
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>
+
 #include "FullSystem/ResidualProjections.h"
 #include "FullSystem/ImmaturePoint.h"
 
@@ -51,6 +52,7 @@
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 
 #include "IOWrapper/Output3DWrapper.h"
+#include "IOWrapper/ImageDisplay.h"
 
 #include "FullSystem/CoarseTracker.h"
 
@@ -58,6 +60,106 @@
 
 namespace dso
 {
+
+
+/**
+ * @brief Flags bad points for removal
+ * 
+ */
+void FullSystem::flagPointsForRemoval()
+{
+	assert(EFIndicesValid);
+
+	std::vector<FrameHessian*> fhsToKeepPoints;
+	std::vector<FrameHessian*> fhsToMargPoints;
+
+	//if(globalSettings.setting_margPointVisWindow>0)
+	{
+		for(int i=((int)frameHessians.size())-1;i>=0 && i >= ((int)frameHessians.size());i--)
+			if(!frameHessians[i]->flaggedForMarginalization) fhsToKeepPoints.push_back(frameHessians[i]);
+
+		for(int i=0; i< (int)frameHessians.size();i++)
+			if(frameHessians[i]->flaggedForMarginalization) fhsToMargPoints.push_back(frameHessians[i]);
+	}
+
+	//ef->setAdjointsF();
+	//ef->setDeltaF(&Hcalib);
+	int flag_oob=0, flag_in=0, flag_inin=0, flag_nores=0;
+
+	for(FrameHessian* host : frameHessians)	// go through all active frames
+	{
+		for(unsigned int i=0;i<host->pointHessians.size();i++)
+		{
+			PointHessian* ph = host->pointHessians[i];
+			if(ph==0) continue;
+
+			// Remove points that have invalid depths or no more residuals
+			if(ph->idepth_scaled < globalSettings.setting_minIdepth || ph->residuals.size()==0)
+			{
+				host->pointHessiansOut.push_back(ph);
+				ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
+				host->pointHessians[i]=0;
+				flag_nores++;
+			}
+			// Remove points that are out of bounds or are in frames that are to be marginalized
+			else if(ph->isOOB(fhsToKeepPoints, fhsToMargPoints) || host->flaggedForMarginalization)
+			{
+				flag_oob++;
+
+				if(ph->isInlierNew()) // Case for points with low residual values
+				{
+					flag_in++;
+					int ngoodRes=0;
+
+					// Linearize all
+					for(PointFrameResidual* r : ph->residuals)
+					{
+						r->resetOOB();
+						r->linearize(&Hcalib);
+						r->efResidual->isLinearized = false;
+						r->applyRes(true);
+						if(r->efResidual->isActive())
+						{
+							r->efResidual->fixLinearizationF(ef);
+							ngoodRes++;
+						}
+					}
+
+                    if(ph->idepth_hessian > globalSettings.setting_minIdepthH_marg)
+					{
+						flag_inin++;
+						ph->efPoint->stateFlag = EFPointStatus::PS_MARGINALIZE;
+						host->pointHessiansMarginalized.push_back(ph);
+					}
+					else
+					{
+						ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
+						host->pointHessiansOut.push_back(ph);
+					}
+				}
+				else
+				{
+					host->pointHessiansOut.push_back(ph);
+					ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
+
+					//printf("drop point in frame %d (%d goodRes, %d activeRes)\n", ph->host->idx, ph->numGoodResiduals, (int)ph->residuals.size());
+				}
+				host->pointHessians[i]=0;
+			}
+		}
+
+		// Set the pointHessians list to exclude the removed points
+		for(int i=0;i<(int)host->pointHessians.size();i++)
+		{
+			if(host->pointHessians[i]==0)
+			{
+				host->pointHessians[i] = host->pointHessians.back();
+				host->pointHessians.pop_back();
+				i--;
+			}
+		}
+	}
+}
 
 /**
  * @brief Flags frames for marginalization

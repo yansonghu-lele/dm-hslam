@@ -188,15 +188,17 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 	memset(idepth[0], 0, sizeof(float)*w[0]*h[0]);
 	memset(weightSums[0], 0, sizeof(float)*w[0]*h[0]);
 
-	// Set the depth and weight for the points involved in coarse tracking
+	// Determines the pixel points involved in coarse tracking
 	for(FrameHessian* fh : frameHessians) // for all active frames
 	{
-		for(PointHessian* ph : fh->pointHessians) // for all points in frame
+		for(PointHessian* ph : fh->pointHessians) // for all pixel points in frame
 		{
+			// If pixel point is viewable in the reference frame
 			if(ph->lastResiduals[0].first != 0 && ph->lastResiduals[0].second == ResState::IN)
 			{
 				PointFrameResidual* r = ph->lastResiduals[0].first;
 				assert(r->efResidual->isActive() && r->target == lastRef);
+				// Include pixel point in coarse tracking
 				int u = r->centerProjectedTo[0] + 0.5f;
 				int v = r->centerProjectedTo[1] + 0.5f;
 				float new_idepth = r->centerProjectedTo[2];

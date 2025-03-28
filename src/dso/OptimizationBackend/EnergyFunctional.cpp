@@ -137,6 +137,7 @@ EnergyFunctional::EnergyFunctional(dmvio::BAGTSAMIntegration &gtsamIntegration,G
 	resInA = resInL = resInM = 0;
 	currentLambda=0;
 }
+
 EnergyFunctional::~EnergyFunctional()
 {
 	for(EFFrame* f : frames)
@@ -367,7 +368,6 @@ void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10* stats, int tid)
 			RawResidualJacobian* rJ = r->J;
 
 
-
 			// compute Jp*delta
 			float Jp_delta_x_1 =  rJ->Jpdxi[0].dot(dp.head<6>())
 						   +rJ->Jpdc[0].dot(dc)
@@ -410,8 +410,6 @@ void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10* stats, int tid)
 }
 
 
-
-
 double EnergyFunctional::calcLEnergyF_MT()
 {
 	assert(EFDeltaValid);
@@ -432,7 +430,6 @@ double EnergyFunctional::calcLEnergyF_MT()
 }
 
 
-
 EFResidual* EnergyFunctional::insertResidual(PointFrameResidual* r)
 {
 	EFResidual* efr = new EFResidual(r, r->point->efPoint, r->host->efFrame, r->target->efFrame);
@@ -445,6 +442,7 @@ EFResidual* EnergyFunctional::insertResidual(PointFrameResidual* r)
 	r->efResidual = efr;
 	return efr;
 }
+
 EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
 {
 	EFFrame* eff = new EFFrame(fh);
@@ -483,6 +481,7 @@ EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
 
 	return eff;
 }
+
 EFPoint* EnergyFunctional::insertPoint(PointHessian* ph)
 {
 	EFPoint* efp = new EFPoint(ph, ph->host->efFrame, globalSettings.setting_idepthFixPrior, globalSettings.setting_solverMode);

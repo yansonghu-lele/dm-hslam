@@ -33,21 +33,240 @@
 #include "FullSystem/FullSystem.h"
 
 #include "stdio.h"
-#include "util/globalFuncs.h"
-#include <Eigen/LU>
 #include <algorithm>
-#include "IOWrapper/ImageDisplay.h"
-#include "util/globalCalib.h"
 
+#include "util/globalFuncs.h"
+#include "util/globalCalib.h"
+#include "util/TimeMeasurement.h"
+
+#include <Eigen/LU>
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>
+
+#include "FullSystem/CoarseTracker.h"
 #include "FullSystem/ImmaturePoint.h"
+#include "IOWrapper/ImageDisplay.h"
+
 #include "math.h"
 
 
 
 namespace dso
 {
+
+/**
+ * @brief Helper function for activatePointsMT
+ * 
+ * Does the type conversion from ImmaturePoints to PointHessians
+ * 
+ * @param optimized 
+ * @param toOptimize 
+ * @param min 
+ * @param max 
+ * @param stats 
+ * @param tid 
+ */
+void FullSystem::activatePointsMT_Reductor(
+		std::vector<PointHessian*>* optimized,
+		std::vector<ImmaturePoint*>* toOptimize,
+		int min, int max, Vec10* stats, int tid)
+{
+	ImmaturePointTemporaryResidual* tr = new ImmaturePointTemporaryResidual[frameHessians.size()];
+	for(int k=min;k<max;k++)
+	{
+		(*optimized)[k] = optimizeImmaturePoint((*toOptimize)[k],1,tr);
+	}
+	delete[] tr;
+}
+
+/**
+ * @brief Converts immature points to active points
+ * 
+ */
+void FullSystem::activatePointsMT()
+{
+    dmvio::TimeMeasurement timeMeasurement("activatePointsMT");
+
+	// ============== Update variables for desired point density ===================
+	// Change the currentMinActDist in order to achieve the desired point number
+    if(ef->nPoints < globalSettings.setting_desiredPointDensity*0.66)
+		currentMinActDist -= 0.8;
+	if(ef->nPoints < globalSettings.setting_desiredPointDensity*0.8)
+		currentMinActDist -= 0.5;
+	else if(ef->nPoints < globalSettings.setting_desiredPointDensity*0.9)
+		currentMinActDist -= 0.2;
+	else if(ef->nPoints < globalSettings.setting_desiredPointDensity)
+		currentMinActDist -= 0.1;
+
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity*1.5)
+		currentMinActDist += 0.8;
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity*1.3)
+		currentMinActDist += 0.5;
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity*1.15)
+		currentMinActDist += 0.2;
+	if(ef->nPoints > globalSettings.setting_desiredPointDensity)
+		currentMinActDist += 0.1;
+
+	// Max and min currentMinActDist values
+	if(currentMinActDist < 0) currentMinActDist = 0;
+	if(currentMinActDist > 4) currentMinActDist = 4;
+
+    if(!setting_debugout_runquiet && !globalSettings.no_FullSystem_debugMessage)
+        printf("SPARSITY:  MinActDist %f (need %d points, have %d points)!\n",
+                currentMinActDist, (int)(globalSettings.setting_desiredPointDensity), ef->nPoints);
+
+	// ============== Loop through all of the immature points in active frames ===================
+	FrameHessian* newestHs = frameHessians.back();
+
+	// Make dist map.
+	coarseDistanceMap->makeK(&Hcalib);
+	coarseDistanceMap->makeDistanceMap(frameHessians, newestHs);
+	//coarseTracker->debugPlotDistMap("distMap");
+
+	unsigned int max_points = globalSettings.setting_desiredImmatureDensity;
+	std::vector<ImmaturePoint*> toOptimize; toOptimize.reserve(max_points);
+
+	for(FrameHessian* host : frameHessians)	// go through all active frames
+	{
+		if(host == newestHs) continue; // exclude newest frame
+
+		SE3 fhToNew = newestHs->PRE_worldToCam * host->PRE_camToWorld; // Transformation matrix from host to newest frame
+		// Seperate transformation matrix to rotation and translation parts
+		Mat33f KRKi = (coarseDistanceMap->K[1] * fhToNew.rotationMatrix().cast<float>() * coarseDistanceMap->Ki[0]);
+		Vec3f Kt = (coarseDistanceMap->K[1] * fhToNew.translation().cast<float>());
+
+		for(unsigned int i=0;i<host->immaturePoints.size();i+=1) // for every immature point in the frame
+		{
+			ImmaturePoint* ph = host->immaturePoints[i];
+			ph->idxInImmaturePoints = i;
+
+			// ============== Delete invalid immature points ===================
+			// Delete points that have never been traced successfully, or that are outlier on the last trace.
+			if(!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER ||
+			ph->lastTraceStatus == IPS_OUTLIER_OUT)
+			{
+				// immature_invalid_deleted++;
+				delete ph;
+				host->immaturePoints[i]=0;
+				continue;
+			}
+
+			// Activate only if this is true.
+			// Don't activate if immature point outlier or unintialized
+			// Activate if immature point was
+			// traced along a good path, has good energy quality, and realistic depth
+			bool canActivate = (ph->lastTraceStatus == IPS_GOOD
+					|| ph->lastTraceStatus == IPS_SKIPPED
+					|| ph->lastTraceStatus == IPS_BADCONDITION
+					|| ph->lastTraceStatus == IPS_OOB )
+							&& ph->lastTracePixelInterval < 8
+							&& ph->quality > globalSettings.setting_minTraceQuality
+							&& (ph->idepth_max+ph->idepth_min) > 0;
+
+			// if cannot activate the point, skip it. Maybe also delete it.
+			if(!canActivate)
+			{
+				// if point will be out afterwards due 
+				// to being oob or in a deleted frame, delete it instead
+				if(ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB)
+				{
+					// immature_notReady_deleted++;
+					delete ph;
+					host->immaturePoints[i]=0;
+				}
+				// immature_notReady_skipped++;
+				continue;
+			}
+
+			// ============== Add immature point to activation list if it meets conditions ===================
+			// Determine if the point is far away enough from other points
+			// Points are only activated if it has good spacing compared to other active points
+			// once projected on the newest keyframe
+			Vec3f ptp = KRKi * Vec3f(ph->u, ph->v, 1) + Kt*(0.5f*(ph->idepth_max+ph->idepth_min));
+			int u = ptp[0] / ptp[2] + 0.5f;
+			int v = ptp[1] / ptp[2] + 0.5f;
+
+			if((u > 0 && v > 0 && u < globalCalib.wG[1] && v < globalCalib.hG[1])) // delete point if it is out of bounds
+			{
+				// Find distance to closest point
+				float dist = coarseDistanceMap->fwdWarpedIDDistFinal[u+globalCalib.wG[1]*v] + (ptp[0]-floorf((float)(ptp[0])));
+
+				if(dist>=currentMinActDist * ph->my_type) // check if point meets density requirements
+				{
+					coarseDistanceMap->addIntoDistFinal(u,v);
+					toOptimize.push_back(ph); // add point to list of points to be optimized
+				}
+			}
+			else
+			{
+				delete ph;
+				host->immaturePoints[i]=0;
+			}
+		}
+	}
+
+
+//	printf("ACTIVATE: %d. (del %d, notReady %d, marg %d, good %d, marg-skip %d)\n",
+//			(int)toOptimize.size(), immature_deleted, immature_notReady, immature_needMarg, immature_want, immature_margskip);
+
+	std::vector<PointHessian*> optimized; optimized.resize(toOptimize.size());
+
+	// ============== Activate points in activation list ===================
+	// Activate points by optimizing them and converting them into PointHessians
+	if(!globalSettings.settings_no_multiThreading)
+		treadReduce.reduce(boost::bind(&FullSystem::activatePointsMT_Reductor, this, &optimized, &toOptimize, _1, _2, _3, _4), 0, toOptimize.size(), 50);
+	else
+		activatePointsMT_Reductor(&optimized, &toOptimize, 0, toOptimize.size(), 0, 0);
+
+	// Check if all the points are valid after optimization
+	for(unsigned k=0;k<toOptimize.size();k++)
+	{
+		PointHessian* newpoint = optimized[k];
+		ImmaturePoint* ph = toOptimize[k];
+
+		if(newpoint != 0 && newpoint != (PointHessian*)((long)(-1)))
+		{
+			// Add new point into the optimization and active point list
+			// Remove point from immature point list
+			newpoint->host->immaturePoints[ph->idxInImmaturePoints]=0;
+			// Add active point
+			newpoint->host->pointHessians.push_back(newpoint);
+			ef->insertPoint(newpoint);
+			for(PointFrameResidual* r : newpoint->residuals)
+				ef->insertResidual(r);
+			assert(newpoint->efPoint != 0);
+			delete ph;
+		}
+		else if(newpoint == (PointHessian*)((long)(-1)) || ph->lastTraceStatus==IPS_OOB)
+		{
+			ph->host->immaturePoints[ph->idxInImmaturePoints]=0;
+            delete ph;
+		}
+		else
+		{
+			assert(newpoint == 0 || newpoint == (PointHessian*)((long)(-1)));
+		}
+	}
+
+	// Removes immature points that have been deleted from the frames
+	for(FrameHessian* host : frameHessians)
+	{
+		for(int i=0;i<(int)host->immaturePoints.size();i++)
+		{
+			if(host->immaturePoints[i]==0)
+			{
+				host->immaturePoints[i] = host->immaturePoints.back();
+				host->immaturePoints.pop_back();
+				i--;
+			}
+		}
+	}
+}
+
+void FullSystem::activatePointsOldFirst()
+{
+	assert(false);
+}
 
 /**
  * @brief Do optimization calculations for immature points that are being activated
